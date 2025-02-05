@@ -8,6 +8,13 @@ namespace Telegram.Bot.Controllers;
 [Route("[controller]")]
 public class BotController : ControllerBase
 {
+    private readonly ILogger<BotController> _logger;
+
+    public BotController(ILogger<BotController> logger)
+    {
+        _logger = logger;
+    }
+
     [HttpPost]
     public async Task<IActionResult> Post(
         [FromBody] Update? update,
@@ -16,11 +23,11 @@ public class BotController : ControllerBase
     {
         if (update == null)
         {
-            Console.WriteLine("🚨 Received empty update.");
+            _logger.LogWarning("🚨 Received empty update.");
             return BadRequest("Update is null.");
         }
 
-        Console.WriteLine($"✅ Received update: {update}");
+        _logger.LogInformation("✅ Received update: {update}", update);
 
         if (update.Message != null || update.CallbackQuery != null)
         {

@@ -6,6 +6,7 @@ using Telegram.Bot.Examples.WebHook.Infrastructure.Configs;
 using Telegram.Bot.Examples.WebHook.Services;
 using Telegram.Bot.Services;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging.AzureAppServices;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using System.Text.Json;
 
@@ -14,7 +15,8 @@ var builder = WebApplication.CreateBuilder(args);
 // ✅ Improved Logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Debug);
+builder.Logging.AddDebug();
+builder.Logging.AddAzureWebAppDiagnostics();
 
 var environment = builder.Environment.EnvironmentName;
 builder.Configuration
