@@ -112,4 +112,10 @@ app.MapHealthChecks("/health/details", new HealthCheckOptions
     }
 });
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
+
 app.Run();
