@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Azure.Identity;
 using Telegram.Bot;
-using Telegram.Bot.Controllers;
 using Telegram.Bot.Examples.WebHook;
 using Telegram.Bot.Examples.WebHook.Infrastructure.Configs;
 using Telegram.Bot.Examples.WebHook.Services;
 using Telegram.Bot.Services;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +67,10 @@ builder.Services.AddHostedService<ConfigureWebhook>();
 // ✅ FIX: Enable Request Buffering (Prevents Empty Request Body)
 builder.Services.ConfigureTelegramBotMvc();
 builder.Services.AddControllers();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy("The API is running."))
+    .AddNpgSql(builder.Configuration.GetConnectionString("BookingDatabase") ?? "", name: "Database");
+
 var app = builder.Build();
 
 // ✅ FIX: Enable Request Buffering Middleware
@@ -82,5 +88,26 @@ if (string.IsNullOrEmpty(botConfiguration.Route))
 
 //app.MapBotWebhookRoute<BotController>(route: botConfiguration.Route);
 app.MapControllers();
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/details", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description
+            }),
+            duration = report.TotalDuration
+        });
+
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(result);
+    }
+});
 
 app.Run();
