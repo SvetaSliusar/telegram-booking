@@ -41,23 +41,6 @@ namespace Telegram.Bot.Examples.WebHook.Services
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task<string> GenerateClientToken(int companyId, int clientId)
-        {
-            var clientToken = new Token
-            {
-                TokenValue = Guid.NewGuid().ToString(),
-                Type = TokenType.Client,
-                CompanyId = companyId,
-                ClientId = clientId,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _dbContext.Tokens.Add(clientToken);
-            await _dbContext.SaveChangesAsync();
-
-            return clientToken.TokenValue; // Return the token value to be used by the client
-        }
-
         public async Task<Token> GetTokenByValue(string tokenValue)
         {
             return await _dbContext.Tokens

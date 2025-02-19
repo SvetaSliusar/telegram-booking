@@ -8,8 +8,6 @@ namespace Telegram.Bot.Examples.WebHook.Models
         public virtual List<Employee> Employees { get; set; }
         public int TokenId { get; set; }
         public Token Token { get; set; }
-        // A list of services provided by the company
-        public ICollection<Service> Services { get; set; }
     }
 
     public class Employee

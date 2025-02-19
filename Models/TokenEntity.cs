@@ -9,7 +9,5 @@ public class Token
     public DateTime CreatedAt { get; set; }
     public bool Used { get; set; }
     public int? CompanyId { get; set; }
-    public int? ClientId { get; set; }
     public virtual Company Company { get; set; }
-    public virtual Client Client { get; set; }
 } 

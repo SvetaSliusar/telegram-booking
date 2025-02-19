@@ -29,6 +29,49 @@ public class CompanyUpdateHandler
         _dbContext = dbContext;
     }
 
+    public async Task StartCompanyFlow(long chatId, CancellationToken cancellationToken)
+    {
+        var existingToken = await _dbContext.Tokens.FirstOrDefaultAsync(t => t.ChatId == chatId, cancellationToken);
+
+        if (existingToken == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: "🔑 Please enter your company token to continue.",
+                replyMarkup: new ForceReplyMarkup { Selective = true },
+                cancellationToken: cancellationToken);
+
+            userConversations[chatId] = "WaitingForToken";
+            return;
+        }
+
+        await SendMainMenu(chatId, cancellationToken);
+    }
+
+    public Mode GetMode(long chatId)
+    {
+        return _dbContext.Tokens.Any(t => t.ChatId == chatId) ? Mode.Company : Mode.Client;
+    }
+
+    public async Task ShowRoleSelection(long chatId, CancellationToken cancellationToken)
+    {
+        InlineKeyboardMarkup inlineKeyboard = new(
+            new[]
+            {
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("🏢 I am a Company", "choose_company"),
+                    InlineKeyboardButton.WithCallbackData("👤 I am a Client", "choose_client")
+                }
+            });
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: "Welcome! Please select your role:",
+            replyMarkup: inlineKeyboard,
+            cancellationToken: cancellationToken);
+    }
+
     public async Task HandleUpdateAsync(Update update, CancellationToken cancellationToken)
     {
         if (update == null) return;
@@ -49,26 +92,7 @@ public class CompanyUpdateHandler
         if (message?.Text is not { } messageText) return;
 
         var chatId = message.Chat.Id;
-
-        if (messageText.StartsWith("/start"))
-        {
-            var existingToken = await _dbContext.Tokens.FirstOrDefaultAsync(t => t.ChatId == chatId, cancellationToken);
-
-            if (existingToken == null)
-            {
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                    text: "🔑 Please enter your company token to continue.",
-                    replyMarkup: new ForceReplyMarkup { Selective = true },
-                    cancellationToken: cancellationToken);
-
-                userConversations[chatId] = "WaitingForToken";
-                return;
-            }
-
-            await SendMainMenu(chatId, cancellationToken);
-        }
-        else if (userConversations.TryGetValue(chatId, out var state) && state == "WaitingForToken")
+        if (userConversations.TryGetValue(chatId, out var state) && state == "WaitingForToken")
         {
             await ValidateAndSaveToken(chatId, messageText, cancellationToken);
         }
@@ -115,7 +139,7 @@ public class CompanyUpdateHandler
         var chatId = callbackQuery.Message.Chat.Id;
         string data = callbackQuery.Data;
 
-    if (data.StartsWith("service_duration:"))
+        if (data.StartsWith("service_duration:"))
         {
             var durationValue = data.Split(':')[1];
             if (durationValue == "custom")
@@ -381,52 +405,24 @@ public class CompanyUpdateHandler
 
                 // Move to the next state
                 userConversations[chatId] = "WaitingForEmployeeWorkingDays";
-
-                await _botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: $"📅 What are {userMessage}'s **working days**? (e.g., Monday, Wednesday)",
-                    cancellationToken: cancellationToken);
-                break;
+               await SendReplyWithWorkingDays(chatId, cancellationToken);
+               break;
 
             case "WaitingForEmployeeWorkingDays":
-            // Retrieve the current employee
-            var currentEmployeeIndex = userData.Employees.Count - 1;
-            if (currentEmployeeIndex < 0 || userData.Employees[currentEmployeeIndex] == null)
-            {
-                await _botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: "❌ Something went wrong. Please start again.",
-                    cancellationToken: cancellationToken);
-                userConversations.Remove(chatId, out _); // Clear the conversation state
-                return;
-            }
-            // Parse and validate working days
-            var workingDays = userMessage
-                .Split(',')
-                .Select(day => Enum.TryParse(day.Trim(), true, out DayOfWeek dayOfWeek) ? dayOfWeek : (DayOfWeek?)null)
-                .Where(day => day.HasValue)
-                .Select(day => day.Value)
-                .ToList();
-
-            if (!workingDays.Any())
-            {
-                await _botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: "❌ Invalid format. Please enter valid working days (e.g., Monday, Wednesday).",
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            // Assign working days to the employee
-            currentEmployee.WorkingDays = workingDays;
-
-            // Move to the next state
-            userConversations[chatId] = "WaitingForEmployeeWorkingHours";
-            await _botClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: $"🕒 What are {currentEmployee.Name}'s **working hours**? (e.g., 09:00-17:00)",
-                cancellationToken: cancellationToken);
-            break;
+                // Retrieve the current employee
+                var currentEmployeeIndex = userData.Employees.Count - 1;
+                if (currentEmployeeIndex < 0 || userData.Employees[currentEmployeeIndex] == null)
+                {
+                    await _botClient.SendMessage(
+                        chatId: chatId,
+                        text: "❌ Something went wrong. Please start again.",
+                        cancellationToken: cancellationToken);
+                    userConversations.Remove(chatId, out _); // Clear the conversation state
+                    return;
+                }
+                await SendReplyWithWorkingDays(chatId, cancellationToken);
+                break;
+            
             case "WaitingForEmployeeWorkingHours":
                 currentEmployee = userData.Employees[userData.CurrentEmployeeIndex];
 
@@ -519,6 +515,7 @@ public class CompanyUpdateHandler
         // Ask for another service for the current employee
         if (currentEmployee.Services.Count < 2) // Example limit of 3 services per employee
         {
+            userConversations[chatId] = "WaitingForServiceName";
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: $"🛠 Enter the name of another service provided by {currentEmployee.Name}:",
@@ -618,9 +615,11 @@ public class CompanyUpdateHandler
                 cancellationToken: cancellationToken);
             return;
         }
+        var userData = userInputs[chatId];
+        var currentEmployee = userData.Employees?.ElementAtOrDefault(userData.CurrentEmployeeIndex);
 
-        var employee = await _dbContext.Employees.FirstOrDefaultAsync(c => c.Company.Token.ChatId == chatId, cancellationToken);
-        if (employee == null)
+        //var employee = await _dbContext.Employees.FirstOrDefaultAsync(c => c.Company.Token.ChatId == chatId, cancellationToken);
+        if (currentEmployee == null)
         {
             await _botClient.SendMessage(
                 chatId: chatId,
@@ -630,29 +629,28 @@ public class CompanyUpdateHandler
         }
 
         // ✅ Remove existing working hours for this specific day
-        _dbContext.WorkingHours.RemoveRange(
-            _dbContext.WorkingHours.Where(wh => wh.EmployeeId == employee.Id && wh.DayOfWeek == selectedDay));
+        // _dbContext.WorkingHours.RemoveRange(
+        //     _dbContext.WorkingHours.Where(wh => wh.EmployeeId == employee.Id && wh.DayOfWeek == selectedDay));
 
-        await _dbContext.SaveChangesAsync(cancellationToken); // Ensure deletion before adding new records
+        // await _dbContext.SaveChangesAsync(cancellationToken); // Ensure deletion before adding new records
 
         // ✅ Insert new working hours for the selected day
+        if (currentEmployee.WorkingHours == null)
+                currentEmployee.WorkingHours = new List<WorkingHoursData>();
         foreach (var timeSlot in userHoursSelections[chatId][selectedDay])
         {
-            _dbContext.WorkingHours.Add(new WorkingHours
+            currentEmployee.WorkingHours.Add(new WorkingHoursData
             {
-                EmployeeId = employee.Id,
                 DayOfWeek = selectedDay,
                 StartTime = timeSlot,
                 EndTime = timeSlot.Add(TimeSpan.FromMinutes(30)) // Default to 30-minute slots
             });
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        userHoursSelections[chatId].Remove(selectedDay); // ✅ Remove only the saved day from selection
-
+        userConversations[chatId] = "WaitingForServiceName";
         await _botClient.SendMessage(
             chatId: chatId,
-            text: $"✅ Your working hours for {selectedDay} have been saved successfully!",
+            text: $"🛠 Enter the name of the first service provided by {userData.Employees[userData.CurrentEmployeeIndex].Name}:",
             cancellationToken: cancellationToken);
     }
 
@@ -662,6 +660,7 @@ public class CompanyUpdateHandler
         var company = new Company
         {
             Name = companyData.CompanyName,
+            TokenId = _dbContext.Tokens.First(t => t.ChatId == chatId).Id,
             Employees = companyData.Employees.Select(e => new Employee
             {
                 Name = e.Name,
@@ -729,43 +728,51 @@ public class CompanyUpdateHandler
                 cancellationToken: cancellationToken);
             return;
         }
+        var userData = userInputs[chatId];
+        var currentEmployee = userData.Employees?.ElementAtOrDefault(userData.CurrentEmployeeIndex);
+        currentEmployee.WorkingDays = selectedDays.Select(day => Enum.TryParse(day.Trim(), true, out DayOfWeek dayOfWeek) ? dayOfWeek : (DayOfWeek?)null)
+                .Where(day => day.HasValue)
+                .Select(day => day.Value)
+                .ToList();
+        userConversations[chatId] = "WaitingForEmployeeWorkingHours";
+        await SendReplyWithWorkingHours(chatId, currentEmployee.WorkingDays.First(), cancellationToken);
 
-        var employee = await _dbContext.Employees.FirstOrDefaultAsync(c => c.Company.Token.ChatId == chatId, cancellationToken);
-        if (employee == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: "❌ Error: No employee found for your company.",
-                cancellationToken: cancellationToken);
-            return;
-        }
+        // var employee = await _dbContext.Employees.FirstOrDefaultAsync(c => c.Company.Token.ChatId == chatId, cancellationToken);
+        // if (employee == null)
+        // {
+        //     await _botClient.SendMessage(
+        //         chatId: chatId,
+        //         text: "❌ Error: No employee found for your company.",
+        //         cancellationToken: cancellationToken);
+        //     return;
+        // }
 
-        // ✅ Remove existing working days for this company
-        _dbContext.WorkingHours.RemoveRange(
-            _dbContext.WorkingHours.Where(wh => wh.EmployeeId == employee.Id)
-        );
+        // // ✅ Remove existing working days for this company
+        // _dbContext.WorkingHours.RemoveRange(
+        //     _dbContext.WorkingHours.Where(wh => wh.EmployeeId == employee.Id)
+        // );
 
-        await _dbContext.SaveChangesAsync(cancellationToken); // Ensure deletion before adding new records
+        // await _dbContext.SaveChangesAsync(cancellationToken); // Ensure deletion before adding new records
 
-        // ✅ Insert new working hours (default 9 AM - 6 PM)
-        foreach (var day in selectedDays)
-        {
-            _dbContext.WorkingHours.Add(new WorkingHours
-            {
-                EmployeeId = employee.Id,
-                DayOfWeek = GetDayOfWeek(day),
-                StartTime = TimeSpan.FromHours(9), // Default start time
-                EndTime = TimeSpan.FromHours(18)  // Default end time
-            });
-        }
+        // // ✅ Insert new working hours (default 9 AM - 6 PM)
+        // foreach (var day in selectedDays)
+        // {
+        //     _dbContext.WorkingHours.Add(new WorkingHours
+        //     {
+        //         EmployeeId = employee.Id,
+        //         DayOfWeek = GetDayOfWeek(day),
+        //         StartTime = TimeSpan.FromHours(9), // Default start time
+        //         EndTime = TimeSpan.FromHours(18)  // Default end time
+        //     });
+        // }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        userDaysSelections.TryRemove(chatId, out _);
+        // await _dbContext.SaveChangesAsync(cancellationToken);
+        // userDaysSelections.TryRemove(chatId, out _);
 
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: "✅ Your working days have been saved successfully!",
-            cancellationToken: cancellationToken);
+        // await _botClient.SendMessage(
+        //     chatId: chatId,
+        //     text: "✅ Your working days have been saved successfully!",
+        //     cancellationToken: cancellationToken);
     }
 
     // ✅ Helper function to convert string to DayOfWeek enum
@@ -894,7 +901,7 @@ public class CompanyUpdateHandler
 
         var sentMessage = await _botClient.SendMessage(
             chatId: chatId,
-            text: $"🕒 Select working hours for {selectedDay} (you can select multiple):",
+            text: $"🕒 Select working hours for {selectedDay} (start and end):",
             replyMarkup: inlineKeyboardMarkup,
             cancellationToken: cancellationToken);
 

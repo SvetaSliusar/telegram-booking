@@ -37,11 +37,6 @@ namespace Telegram.Bot.Examples.WebHook
                 .HasOne(t => t.Company)
                 .WithOne(c => c.Token)
                 .HasForeignKey<Company>(o => o.TokenId);
-
-            modelBuilder.Entity<Token>()
-                .HasOne(t => t.Client)
-                .WithOne(c => c.Token)
-                .HasForeignKey<Client>(o => o.TokenId);
             
             modelBuilder.Entity<Company>()
                 .HasMany(c => c.Employees)

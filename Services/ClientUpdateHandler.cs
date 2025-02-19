@@ -1,531 +1,355 @@
-using System;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Examples.WebHook;
-using Telegram.Bot.Examples.WebHook.Enums;
 using Telegram.Bot.Examples.WebHook.Models;
-using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.ReplyMarkups;
-using System.Globalization;
-using Telegram.Bot.Examples.WebHook.Services.Constants;
 using Telegram.Bot.Examples.WebHook.Services;
-using Telegram.Bot.Examples.WebHook.Models;
+using System.Collections.Concurrent;
 
 namespace Telegram.Bot.Services;
 public class ClientUpdateHandler
 {
     private readonly ITelegramBotClient _botClient;
     private readonly BookingDbContext _dbContext;
-    private readonly ILogger<ClientUpdateHandler> _logger;
-    private readonly UserStateService _userStateService;
 
     public ClientUpdateHandler(
         ITelegramBotClient botClient,
-        BookingDbContext dbContext,
-        ILogger<ClientUpdateHandler> logger,
-        UserStateService userStateService)
+        BookingDbContext dbContext)
     {
         _botClient = botClient;
         _dbContext = dbContext;
-        _logger = logger;
-        _userStateService = userStateService;
     }
 
-    public async Task HandleUpdateAsync(Update update, Token token, CancellationToken cancellationToken)
+    public async Task StartClientFlow(long chatId, CancellationToken cancellationToken)
     {
-        if (token?.CompanyId == null)
-        {
-            var chatId = update.Type switch
+        InlineKeyboardMarkup categoriesKeyboard = new(
+            new[]
             {
-                UpdateType.Message => update.Message?.Chat.Id,
-                UpdateType.CallbackQuery => update.CallbackQuery?.Message?.Chat.Id,
-                _ => null
-            };
+                new [] { InlineKeyboardButton.WithCallbackData("💅 Nail Master", "category_nail") },
+                new [] { InlineKeyboardButton.WithCallbackData("✂️ Hairdresser", "category_hair") },
+                new [] { InlineKeyboardButton.WithCallbackData("🧖 Spa", "category_spa") }
+            });
 
-            if (chatId.HasValue)
-            {
-                await _botClient.SendTextMessageAsync(
-                    chatId: chatId.Value,
-                    text: "Invalid company token. Please contact support.",
-                    cancellationToken: cancellationToken);
-            }
-            return;
-        }
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: "Select a service category:",
+            replyMarkup: categoriesKeyboard,
+            cancellationToken: cancellationToken);
+    }
 
-        var handler = update.Type switch
+    public async Task HandleUpdateAsync(Update update, CancellationToken cancellationToken)
+    {
+        if (update == null) return;
+
+        var handler = update switch
         {
-            UpdateType.Message => HandleMessageAsync(update.Message!, token, cancellationToken),
-            UpdateType.CallbackQuery => HandleCallbackQueryAsync(update.CallbackQuery!, cancellationToken),
+            { Message: { } message } => BotOnMessageReceived(message, cancellationToken),
+            //{ EditedMessage: { } message } => BotOnMessageReceived(message, cancellationToken),
+            { CallbackQuery: { } callbackQuery } => BotOnCallbackQueryReceived(callbackQuery, cancellationToken),
             _ => Task.CompletedTask
         };
 
         await handler;
     }
 
-    private async Task HandleMessageAsync(Message message, Token token, CancellationToken cancellationToken)
+    private async Task BotOnMessageReceived(Message message, CancellationToken cancellationToken)
     {
+        if (message?.Text is not { } messageText) return;
+
         var chatId = message.Chat.Id;
-
-        if (message.Text == "/start")
-        {
-            if (token?.CompanyId == null)
-            {
-                await _botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: "Invalid company token. Please contact support.",
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            // Just create the state without storing the return value
-            _userStateService.GetOrCreate(chatId, token.CompanyId.Value);
-            await SendLanguageSelectionAsync(chatId, cancellationToken);
-            return;
-        }
-
-        // Get existing state for all other messages
-        if (!_userStateService.TryGetState(chatId, out var currentState))
-        {
-            _logger.LogInformation("No state found for chatId: {ChatId}", chatId);
-            await _botClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: "Please start over with /start",
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        _logger.LogInformation("Processing step {Step} for chatId: {ChatId}", currentState.CurrentStep, chatId);
-
-        switch (currentState.CurrentStep)
-        {
-            case ConversationStep.AwaitingLanguage:
-                if (message.Text == "English" || message.Text == "Українська")
-                {
-                    await HandleLanguageSelectionAsync(chatId, message.Text, currentState, cancellationToken);
-                }
-                else
-                {
-                    await _botClient.SendTextMessageAsync(
-                        chatId: chatId,
-                        text: "Please select a language using the provided buttons. / Будь ласка, використовуйте кнопки для вибору мови.",
-                        cancellationToken: cancellationToken);
-                }
-                break;
-
-            case ConversationStep.SelectingService:
-                await _botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: "Please use the provided buttons to select a service.",
-                    cancellationToken: cancellationToken);
-                break;
-
-            default:
-                await _botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: "Please use the provided buttons to navigate.",
-                    cancellationToken: cancellationToken);
-                break;
-        }
-    }
-
-    private async Task HandleCallbackQueryAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
-    {
-        var chatId = callbackQuery.Message!.Chat.Id;
-        var data = callbackQuery.Data!;
-
-        if (!_userStateService.TryGetState(chatId, out var state))
-        {
-            await _botClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: "Please start over with /start",
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        switch (state.CurrentStep)
-        {
-            case ConversationStep.SelectingService:
-                if (data.StartsWith("service_"))
-                    await HandleServiceSelectionAsync(chatId, data, state, cancellationToken);
-                break;
-            case ConversationStep.SelectingMonth:
-                if (data.StartsWith("month_"))
-                    await HandleMonthSelectionAsync(chatId, data, state, cancellationToken);
-                break;
-            case ConversationStep.SelectingDay:
-                if (data.StartsWith("day_"))
-                    await HandleDaySelectionAsync(chatId, data, state, cancellationToken);
-                break;
-            case ConversationStep.SelectingTimeSlot:
-                if (data.StartsWith("time_"))
-                    await HandleTimeSlotSelectionAsync(chatId, data, state, cancellationToken);
-                break;
-        }
-    }
-
-    private async Task SendLanguageSelectionAsync(long chatId, CancellationToken cancellationToken)
-    {
-        var keyboard = new ReplyKeyboardMarkup(new[]
-        {
-            new[] { new KeyboardButton("English"), new KeyboardButton("Українська") }
-        })
-        {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = true
-        };
-
-        await _botClient.SendTextMessageAsync(
+        await _botClient.SendMessage(
             chatId: chatId,
-            text: "Please select your language / Будь ласка, оберіть мову",
-            replyMarkup: keyboard,
+            text: "Don't understand your message. Please use the provided buttons.",
             cancellationToken: cancellationToken);
     }
 
-    private async Task HandleLanguageSelectionAsync(long chatId, string language, ClientConversationState state, CancellationToken cancellationToken)
+
+    private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Setting language to {Language} for chatId: {ChatId}", language, chatId);
-        
-        state.Language = language;
-        state.CurrentStep = ConversationStep.SelectingService;
-        
-        await SendServiceSelectionAsync(chatId, state, cancellationToken);
+        if (callbackQuery?.Message == null) return;
+        var chatId = callbackQuery.Message.Chat.Id;
+        string data = callbackQuery.Data;
+
+        if (data.StartsWith("category_"))
+        {
+            var category = data.Replace("category_", "");
+            await HandleCategorySelection(chatId, category, cancellationToken);
+        }
+        else if (data.StartsWith("company_"))
+        {
+            var companyId = int.Parse(data.Replace("company_", ""));
+            await HandleCompanySelection(chatId, companyId, cancellationToken);
+        }
+        else if (data.StartsWith("service_"))
+        {
+            var serviceId = int.Parse(data.Replace("service_", ""));
+            await HandleServiceSelection(chatId, serviceId, cancellationToken);
+        }
+        else if (data.StartsWith("date_"))
+        {
+            var selectedDate = DateTime.Parse(data.Replace("date_", ""));
+            await HandleDateSelection(chatId, selectedDate, cancellationToken);
+        }
+        else if (data.StartsWith("prev_") || data.StartsWith("next_"))
+        {
+            var referenceDate = DateTime.Parse(data.Replace("prev_", "").Replace("next_", ""));
+            DateTime newMonth = data.StartsWith("prev_") 
+                ? referenceDate.AddMonths(-1) 
+                : referenceDate.AddMonths(1);
+
+            await ShowCalendar(chatId, newMonth, cancellationToken);
+        }
+
+        else if (data.StartsWith("time_"))
+        {
+            var time = data.Replace("time_", "");
+            await HandleTimeSelection(chatId, time, cancellationToken);
+        }
+
     }
 
-    private async Task SendServiceSelectionAsync(long chatId, ClientConversationState state, CancellationToken cancellationToken)
+
+    public async Task HandleCategorySelection(long chatId, string category, CancellationToken cancellationToken)
     {
-        var services = await _dbContext.Services
-            .Where(s => s.EmployeeId == state.CompanyId)
+        var companies = await _dbContext.Companies
+        // .Where(c => c.Category == category)
             .ToListAsync(cancellationToken);
 
-        var buttons = services.Select(s => new[]
+        if (!companies.Any())
         {
-            InlineKeyboardButton.WithCallbackData(
-                $"{s.Name} - {s.Price:C}",
-                $"service_{s.Id}")
-        }).ToArray();
-
-        var keyboard = new InlineKeyboardMarkup(buttons);
-
-        var text = state.Language == ClientConversationState.EnglishLanguage 
-            ? "Please select a service:"
-            : "Пожалуйста, выберите услугу:";
-
-        await _botClient.SendTextMessageAsync(
-            chatId: chatId,
-            text: text,
-            replyMarkup: keyboard,
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleServiceSelectionAsync(long chatId, string callbackData, ClientConversationState state, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var serviceId = int.Parse(callbackData.Split('_')[1]);
-            
-            var service = await _dbContext.Services.FindAsync(serviceId);
-            if (service == null)
-            {
-                await _botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: state.Language == ClientConversationState.EnglishLanguage
-                        ? "Service not found. Please try again."
-                        : "Послугу не знайдено. Будь лас��а, спробуйте ще раз.",
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            state.SelectedServiceId = serviceId;
-            state.CurrentStep = ConversationStep.SelectingMonth;
-
-            await SendMonthSelectionAsync(chatId, state, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing service selection. CallbackData: {CallbackData}", callbackData);
-            var errorText = state.Language == ClientConversationState.EnglishLanguage
-                ? "Sorry, there was an error processing your selection. Please try again."
-                : "Извините, произошла ошибка при обработке вашего выбора. Пожалуйста, попробуйте снова.";
-            
-            await _botClient.SendTextMessageAsync(
+            await _botClient.SendMessage(
                 chatId: chatId,
-                text: errorText,
+                text: "❌ No companies found for this category. Please try another.",
                 cancellationToken: cancellationToken);
-        }
-    }
-
-    private async Task SendMonthSelectionAsync(long chatId, ClientConversationState state, CancellationToken cancellationToken)
-    {
-        var currentMonth = DateTime.UtcNow;
-        var buttons = new List<IEnumerable<InlineKeyboardButton>>();
-
-        // Show current month and next 2 months
-        for (int i = 0; i < 3; i++)
-        {
-            var month = currentMonth.AddMonths(i);
-            buttons.Add(new[]
-            {
-                InlineKeyboardButton.WithCallbackData(
-                    GetMonthName(month, state.Language),
-                    $"month_{month:yyyyMM}")
-            });
+            return;
         }
 
-        var keyboard = new InlineKeyboardMarkup(buttons);
+        var companyButtons = companies.Select(c =>
+            new[] { InlineKeyboardButton.WithCallbackData(c.Name, $"company_{c.Id}") }).ToArray();
 
-        var text = state.Language == ClientConversationState.EnglishLanguage
-            ? "Please select a month:"
-            : "Будь ласка, оберіть місяць:";
+        InlineKeyboardMarkup companyKeyboard = new(companyButtons);
 
-        await _botClient.SendTextMessageAsync(
+        await _botClient.SendMessage(
             chatId: chatId,
-            text: text,
-            replyMarkup: keyboard,
+            text: "Here are the companies offering this service:",
+            replyMarkup: companyKeyboard,
             cancellationToken: cancellationToken);
     }
 
-    private async Task HandleMonthSelectionAsync(long chatId, string callbackData, ClientConversationState state, CancellationToken cancellationToken)
+    private static ConcurrentDictionary<long, string> userConversations = new ConcurrentDictionary<long, string>();
+
+    public async Task HandleCompanySelection(long chatId, int companyId, CancellationToken cancellationToken)
     {
-        var monthStr = callbackData.Replace("month_", "");
-        var selectedMonth = DateTime.SpecifyKind(
-            DateTime.ParseExact(monthStr, "yyyyMM", CultureInfo.InvariantCulture),
-            DateTimeKind.Utc);
-        
-        state.SelectedMonth = selectedMonth;
-        state.CurrentStep = ConversationStep.SelectingDay;
+        var company = await _dbContext.Companies
+            .FirstOrDefaultAsync(c => c.Id == companyId, cancellationToken);
 
-        await SendDaySelectionAsync(chatId, state, cancellationToken);
+        if (company == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: "❌ Company not found. Please try again.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+        var services = await (from s in _dbContext.Services
+                      join e in _dbContext.Employees on s.EmployeeId equals e.Id
+                      where e.CompanyId == company.Id
+                      select s).ToListAsync(cancellationToken);
+
+
+        if (services == null || !services.Any())
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: $"❌ No services available for {company.Name}.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        // Generate buttons for services
+        var serviceButtons = services
+            .Select(service => new[]
+            {
+                InlineKeyboardButton.WithCallbackData(service.Name, $"service_{service.Id}")
+            })
+            .ToArray();
+
+        InlineKeyboardMarkup serviceKeyboard = new(serviceButtons);
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: $"📋 Services offered by {company.Name}:",
+            replyMarkup: serviceKeyboard,
+            cancellationToken: cancellationToken);
     }
-
-    private async Task SendDaySelectionAsync(long chatId, ClientConversationState state, CancellationToken cancellationToken)
+    public async Task HandleServiceSelection(long chatId, int serviceId, CancellationToken cancellationToken)
     {
         var service = await _dbContext.Services
-            .Include(s => s.Employee)
-                .ThenInclude(c => c.WorkingHours)
-            .FirstOrDefaultAsync(s => s.Id == state.SelectedServiceId);
+            .FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
 
-        if (service == null) return;
-
-        var buttons = new List<IEnumerable<InlineKeyboardButton>>();
-        var currentRow = new List<InlineKeyboardButton>();
-        var month = state.SelectedMonth;
-        var daysInMonth = DateTime.DaysInMonth(month.Year, month.Month);
-
-        for (int day = 1; day <= daysInMonth; day++)
+        if (service == null)
         {
-            var date = DateTime.SpecifyKind(
-                new DateTime(month.Year, month.Month, day), 
-                DateTimeKind.Utc);
-            
-            // Skip past days
-            if (date.Date < DateTime.UtcNow.Date) continue;
-
-            // Skip days where company doesn't work
-            var dayOfWeek = date.DayOfWeek;
-            if (!service.Employee.WorkingHours.Any(wh => wh.DayOfWeek == dayOfWeek)) continue;
-
-            currentRow.Add(InlineKeyboardButton.WithCallbackData(
-                day.ToString(),
-                $"day_{date:yyyyMMdd}"));
-
-            if (currentRow.Count == 7 || day == daysInMonth)
-            {
-                buttons.Add(currentRow.ToArray());
-                currentRow = new List<InlineKeyboardButton>();
-            }
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: "❌ Service not found. Please try again.",
+                cancellationToken: cancellationToken);
+            return;
         }
 
-        var keyboard = new InlineKeyboardMarkup(buttons);
+        userConversations[chatId] = $"WaitingForDate_{serviceId}";
+        await ShowCalendar(chatId, DateTime.UtcNow, cancellationToken);
+    }
 
-        var text = state.Language == ClientConversationState.EnglishLanguage
-            ? "Please select a day:"
-            : "Будь ласка, оберіть день:";
+    public async Task HandleDateSelection(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
+    {
+        if (!userConversations.ContainsKey(chatId) || !userConversations[chatId].StartsWith("WaitingForDate_"))
+            return;
 
-        await _botClient.SendTextMessageAsync(
+        var serviceId = int.Parse(userConversations[chatId].Split('_')[1]);
+        userConversations[chatId] = $"WaitingForTime_{serviceId}_{selectedDate:yyyy-MM-dd}";
+
+        InlineKeyboardMarkup timeSlots = new(
+            new[]
+            {
+                new [] { InlineKeyboardButton.WithCallbackData("10:00 AM", "time_10:00") },
+                new [] { InlineKeyboardButton.WithCallbackData("12:00 PM", "time_12:00") },
+                new [] { InlineKeyboardButton.WithCallbackData("2:00 PM", "time_14:00") }
+            });
+
+        await _botClient.SendMessage(
             chatId: chatId,
-            text: text,
-            replyMarkup: keyboard,
+            text: $"⏰ Select a time slot for {selectedDate:yyyy-MM-dd}:",
+            replyMarkup: timeSlots,
             cancellationToken: cancellationToken);
     }
 
-    private  static string GetMonthName(DateTime date, string language)
+    public async Task HandleTimeSelection(long chatId, string time, CancellationToken cancellationToken)
     {
-        return language == ClientConversationState.EnglishLanguage
-            ? date.ToString("MMMM yyyy", CultureInfo.InvariantCulture)
-            : date.ToString("MMMM yyyy", new CultureInfo("uk-UA"));
+        if (!userConversations.ContainsKey(chatId))
+            return;
+
+        var userState = userConversations[chatId];
+        if (!userState.StartsWith("WaitingForTime_"))
+            return;
+
+        var parts = userState.Split('_');
+        int serviceId = int.Parse(parts[1]);
+        DateTime selectedDate = DateTime.Parse(parts[2]);
+
+        var service = await _dbContext.Services
+            .Include(s => s.Employee)
+            .FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
+
+        if (service == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: "❌ Service not found. Please try again.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        // Parse the time from string and create a TimeSpan
+        TimeSpan selectedTime = TimeSpan.Parse(time); // Example: "10:00" -> 10 hours, 0 minutes
+
+        // Combine Date + Time
+        DateTime bookingTime = selectedDate.Date + selectedTime; // Keeps only date + time, removes time zone
+
+        // Convert to UTC
+        DateTime bookingTimeUtc = DateTime.SpecifyKind(bookingTime, DateTimeKind.Utc);
+
+        var client = _dbContext.Clients.FirstOrDefault(c => c.ChatId == chatId);
+
+        if (client == null)
+        {
+            client = new Client { ChatId = chatId, Name = "Test" };
+            _dbContext.Clients.Add(client);
+            await _dbContext.SaveChangesAsync(cancellationToken); // Ensure the Client ID is generated
+        }
+
+        var clientId = client.Id; // Now we have a valid client ID
+
+        // Save booking in database
+        var booking = new Booking
+        {
+            ClientId = clientId,
+            ServiceId = serviceId,
+            BookingTime = bookingTimeUtc,
+        };
+
+        _dbContext.Bookings.Add(booking);
+
+
+        userConversations.TryRemove(chatId, out _);
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: $"✅ Your booking for {service.Name} with {service.Employee.Name} on {selectedDate:yyyy-MM-dd} at {time} has been confirmed!",
+            cancellationToken: cancellationToken);
+
+        // // Notify company
+        // await _botClient.SendMessage(
+        //     chatId: service.Company.ChatId ?? 0, // Notify company if chat ID exists
+        //     text: $"📢 New Booking: {service.ServiceName} booked on {selectedDate:yyyy-MM-dd} at {time}!",
+        //     cancellationToken: cancellationToken);
     }
 
-    private async Task HandleTimeSlotSelectionAsync(long chatId, string callbackData, ClientConversationState state, CancellationToken cancellationToken)
+    public async Task ShowCalendar(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
     {
-        try 
+        var daysInMonth = DateTime.DaysInMonth(selectedDate.Year, selectedDate.Month);
+        var firstDayOfMonth = new DateTime(selectedDate.Year, selectedDate.Month, 1);
+
+        List<List<InlineKeyboardButton>> calendarButtons = new();
+
+        // Weekday headers
+        calendarButtons.Add(new List<InlineKeyboardButton>
         {
-            var timeString = callbackData.Replace("time_", "");
-            var selectedTime = DateTime.SpecifyKind(
-                DateTime.ParseExact(timeString, "yyyyMMddHHmm", CultureInfo.InvariantCulture),
-                DateTimeKind.Utc);
+            InlineKeyboardButton.WithCallbackData("Mo", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Tu", "ignore"),
+            InlineKeyboardButton.WithCallbackData("We", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Th", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Fr", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Sa", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Su", "ignore"),
+        });
 
-            var booking = new Booking
-            {
-                ServiceId = state.SelectedServiceId,
-                BookingTime = selectedTime,
-                ClientId = chatId,
-                CompanyId = state.CompanyId
-            };
+        List<InlineKeyboardButton> weekRow = new();
 
-            _dbContext.Bookings.Add(booking);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            var localTime = TimeZoneInfo.ConvertTimeFromUtc(selectedTime, TimeZoneInfo.Local);
-            var confirmationText = state.Language == ClientConversationState.EnglishLanguage
-                ? $"Your booking is confirmed for {localTime:g}"
-                : $"Ваш запис підтверджено на {localTime:g}";
-
-            await _botClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: confirmationText,
-                cancellationToken: cancellationToken);
-
-            _userStateService.RemoveState(chatId);
+        // Add empty buttons before the first day of the month
+        for (int i = 1; i < (int)firstDayOfMonth.DayOfWeek; i++)
+        {
+            weekRow.Add(InlineKeyboardButton.WithCallbackData(" ", "ignore"));
         }
-        catch (Exception ex)
+
+        // Generate day buttons
+        for (int day = 1; day <= daysInMonth; day++)
         {
-            _logger.LogError(ex, "Error processing time slot selection. CallbackData: {CallbackData}", callbackData);
-            var errorText = state.Language == ClientConversationState.EnglishLanguage
-                ? "Sorry, there was an error processing your selection. Please try again."
-                : "Вибачте, сталась помилка при обробці вашого запиту. Будь ласка, спробуйте ще раз.";
-            
-            await _botClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: errorText,
-                cancellationToken: cancellationToken);
-        }
-    }
+            var date = new DateTime(selectedDate.Year, selectedDate.Month, day);
+            weekRow.Add(InlineKeyboardButton.WithCallbackData(day.ToString(), $"date_{date:yyyy-MM-dd}"));
 
-    private async Task<IEnumerable<DateTime>> GenerateAvailableTimeSlotsAsync(Service service, CancellationToken cancellationToken)
-    {
-        var slots = new List<DateTime>();
-        var currentDate = DateTime.UtcNow.Date;
-        
-        // Get existing bookings for this service
-        var existingBookings = await _dbContext.Bookings
-            .Where(b => b.ServiceId == service.Id && 
-                        b.BookingTime >= currentDate && 
-                        b.BookingTime <= currentDate.AddDays(7))
-            .Select(b => new { b.BookingTime, b.ServiceId })
-            .ToListAsync(cancellationToken);
-
-        for (int day = 0; day < 7; day++)
-        {
-            var date = currentDate.AddDays(day);
-            var workingHours = service.Employee.WorkingHours
-                .FirstOrDefault(wh => (int)wh.DayOfWeek == (int)date.DayOfWeek);
-
-            if (workingHours != null)
+            if (weekRow.Count == 7) // New row after each week
             {
-                var startTime = DateTime.SpecifyKind(date.Add(workingHours.StartTime), DateTimeKind.Utc);
-                var endTime = DateTime.SpecifyKind(date.Add(workingHours.EndTime), DateTimeKind.Utc);
-                var currentSlot = startTime;
-
-                // Generate slots based on service duration
-                while (currentSlot.Add(service.Duration) <= endTime)
-                {
-                    // Check if the entire duration of the service fits within working hours
-                    var slotEnd = currentSlot.Add(service.Duration);
-                    
-                    // Check if this slot overlaps with any existing bookings
-                    bool isSlotAvailable = !existingBookings.Any(b => 
-                        (b.BookingTime >= currentSlot && b.BookingTime < slotEnd) || // booking starts during our slot
-                        (b.BookingTime.Add(service.Duration) > currentSlot && b.BookingTime < slotEnd)); // booking overlaps our slot
-
-                    if (isSlotAvailable)
-                    {
-                        slots.Add(currentSlot);
-                    }
-
-                    // Move to next slot
-                    currentSlot = currentSlot.AddMinutes(30); // Standard 30-minute intervals
-                }
+                calendarButtons.Add(weekRow);
+                weekRow = new List<InlineKeyboardButton>();
             }
         }
 
-        return slots.OrderBy(s => s);
-    }
+        if (weekRow.Any()) // Add last row if not full
+            calendarButtons.Add(weekRow);
 
-    private async Task HandleDaySelectionAsync(long chatId, string callbackData, ClientConversationState state, CancellationToken cancellationToken)
-    {
-        try
+        // Navigation buttons
+        calendarButtons.Add(new List<InlineKeyboardButton>
         {
-            var dayStr = callbackData.Replace("day_", "");
-            var selectedDay = DateTime.ParseExact(dayStr, "yyyyMMdd", CultureInfo.InvariantCulture);
-            
-            state.SelectedDay = selectedDay;
-            state.CurrentStep = ConversationStep.SelectingTimeSlot;
+            InlineKeyboardButton.WithCallbackData("⬅️ Prev", $"prev_{selectedDate:yyyy-MM-dd}"),
+            InlineKeyboardButton.WithCallbackData("➡️ Next", $"next_{selectedDate:yyyy-MM-dd}")
+        });
 
-            var service = await _dbContext.Services
-                .Include(s => s.Employee)
-                    .ThenInclude(c => c.WorkingHours)
-                .FirstOrDefaultAsync(s => s.Id == state.SelectedServiceId);
+        var keyboard = new InlineKeyboardMarkup(calendarButtons);
 
-            if (service == null)
-            {
-                await _botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: state.Language == ClientConversationState.EnglishLanguage 
-                        ? "Service not found. Please start over."
-                        : "Послугу не знайдено. Будь ласка, почніть спочатку.",
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            var availableTimeSlots = await GenerateAvailableTimeSlotsAsync(service, cancellationToken);
-            var dayTimeSlots = availableTimeSlots.Where(ts => ts.Date == selectedDay.Date);
-
-            if (!dayTimeSlots.Any())
-            {
-                await _botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: state.Language == ClientConversationState.EnglishLanguage
-                        ? "No available time slots for the selected day."
-                        : "Немає доступних часових проміжків на обраний день.",
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            var buttons = dayTimeSlots.Select(ts => new[]
-            {
-                InlineKeyboardButton.WithCallbackData(
-                    $"{ts:HH:mm} - {ts.Add(service.Duration):HH:mm}",
-                    $"time_{ts:yyyyMMddHHmm}")
-            }).ToArray();
-
-            var keyboard = new InlineKeyboardMarkup(buttons);
-
-            var text = state.Language == ClientConversationState.EnglishLanguage
-                ? "Please select a time slot:"
-                : "Будь ласка, оберіть час:";
-
-            await _botClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: text,
-                replyMarkup: keyboard,
-                cancellationToken: cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing day selection. CallbackData: {CallbackData}", callbackData);
-            var errorText = state.Language == ClientConversationState.EnglishLanguage
-                ? "Sorry, there was an error processing your selection. Please try again."
-                : "Вибачте, сталась помилка при обробці вашого запиту. Будь ласка, спробуйте ще раз.";
-            
-            await _botClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: errorText,
-                cancellationToken: cancellationToken);
-        }
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: $"📅 Select a date: {selectedDate:MMMM yyyy}",
+            replyMarkup: keyboard,
+            cancellationToken: cancellationToken);
     }
 }

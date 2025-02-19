@@ -16,7 +16,7 @@ namespace TelegramBookingBot.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql("DELETE FROM public.\"Tokens\" WHERE \"TokenValue\" = 'initial-token-value';");
+            migrationBuilder.Sql("DELETE FROM public.\"Tokens\" WHERE \"TokenValue\" = '123';");
         }
     }
 }
