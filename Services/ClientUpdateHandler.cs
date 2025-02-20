@@ -191,7 +191,7 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Service not found. Please try again.",
+                text: "❌ Service not found. Please try again",
                 cancellationToken: cancellationToken);
             return;
         }
