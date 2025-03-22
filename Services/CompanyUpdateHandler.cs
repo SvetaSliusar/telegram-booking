@@ -50,7 +50,7 @@ public class CompanyUpdateHandler
 
     public Mode GetMode(long chatId)
     {
-        return _dbContext.Tokens.Any(t => t.ChatId == chatId) ? Mode.Company : Mode.Client;
+        return _dbContext.Tokens.Any(t => t.ChatId == chatId) || (userConversations.ContainsKey(chatId) && userConversations[chatId] == "WaitingForToken") ? Mode.Company : Mode.Client;
     }
 
     public async Task ShowRoleSelection(long chatId, CancellationToken cancellationToken)
