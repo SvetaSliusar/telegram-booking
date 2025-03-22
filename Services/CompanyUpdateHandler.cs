@@ -362,15 +362,16 @@ public class CompanyUpdateHandler
         {
             case "WaitingForCompanyName":
                 userData.CompanyName = userMessage;
-                userConversations[chatId] = "WaitingForEmployeeCount";
-
+                // Generate alias from company name
+                userData.CompanyAlias = GenerateCompanyAlias(userMessage);
+                userConversations[chatId] = "WaitingForNumberOfEmployees";
                 await _botClient.SendMessage(
                     chatId: chatId,
-                    text: "👥 How many employees does your company have?",
+                    text: "👥 How many employees do you have?",
                     cancellationToken: cancellationToken);
                 break;
 
-            case "WaitingForEmployeeCount":
+            case "WaitingForNumberOfEmployees":
                 if (!int.TryParse(userMessage, out var employeeCount) || employeeCount < 1)
                 {
                     await _botClient.SendMessage(
@@ -508,6 +509,29 @@ public class CompanyUpdateHandler
         }
     }
 
+    private string GenerateCompanyAlias(string companyName)
+    {
+        // Convert to lowercase and replace spaces with underscores
+        var alias = companyName.ToLower()
+            .Replace(" ", "_")
+            .Replace("-", "_")
+            .Replace(".", "_")
+            .Replace(",", "_")
+            .Replace("'", "")
+            .Replace("\"", "");
+
+        // Remove any non-alphanumeric characters except underscores
+        alias = new string(alias.Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray());
+
+        // Remove consecutive underscores
+        alias = alias.Replace("__", "_");
+
+        // Trim underscores from start and end
+        alias = alias.Trim('_');
+
+        return alias;
+    }
+
     private async Task ProceedToNextServiceOrEmployee(long chatId, CompanyCreationData userData, CancellationToken cancellationToken)
     {
         var currentEmployee = userData.Employees[userData.CurrentEmployeeIndex];
@@ -537,7 +561,7 @@ public class CompanyUpdateHandler
         {
             // Finalize company creation
             userConversations.TryRemove(chatId, out _);
-            await SaveCompanyToDatabase(chatId, userData);
+            await SaveCompanyData(chatId, userData, cancellationToken);
             userInputs.TryRemove(chatId, out _);
 
             await _botClient.SendMessage(
@@ -655,13 +679,14 @@ public class CompanyUpdateHandler
     }
 
     // ✅ Step 3: Save Company to Database
-   private async Task SaveCompanyToDatabase(long chatId, CompanyCreationData companyData)
+   private async Task SaveCompanyData(long chatId, CompanyCreationData userData, CancellationToken cancellationToken)
     {
         var company = new Company
         {
-            Name = companyData.CompanyName,
+            Name = userData.CompanyName,
+            Alias = userData.CompanyAlias,
             TokenId = _dbContext.Tokens.First(t => t.ChatId == chatId).Id,
-            Employees = companyData.Employees.Select(e => new Employee
+            Employees = userData.Employees.Select(e => new Employee
             {
                 Name = e.Name,
                 Services = e.Services.Select(s => new Service
@@ -680,10 +705,10 @@ public class CompanyUpdateHandler
         };
 
         _dbContext.Companies.Add(company);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task SendMainMenu(long chatId, CancellationToken cancellationToken)
+    public async Task SendMainMenu(long chatId, CancellationToken cancellationToken)
     {
         var company = await _dbContext.Companies.FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
@@ -967,6 +992,7 @@ public class CompanyCreationData
     public int EmployeeCount { get; set; }
     public List<EmployeeCreationData> Employees { get; set; }
     public int CurrentEmployeeIndex { get; set; }
+    public string CompanyAlias { get; set; }
 }
 
 public class EmployeeCreationData

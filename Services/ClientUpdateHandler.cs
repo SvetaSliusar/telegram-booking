@@ -11,29 +11,65 @@ public class ClientUpdateHandler
 {
     private readonly ITelegramBotClient _botClient;
     private readonly BookingDbContext _dbContext;
+    private readonly UserStateService _userStateService;
 
     public ClientUpdateHandler(
         ITelegramBotClient botClient,
-        BookingDbContext dbContext)
+        BookingDbContext dbContext,
+        UserStateService userStateService)
     {
         _botClient = botClient;
         _dbContext = dbContext;
+        _userStateService = userStateService;
     }
 
-    public async Task StartClientFlow(long chatId, CancellationToken cancellationToken)
+    public async Task StartClientFlow(long chatId, int companyId, CancellationToken cancellationToken)
     {
-        InlineKeyboardMarkup categoriesKeyboard = new(
-            new[]
+        var company = await _dbContext.Companies
+            .FirstOrDefaultAsync(c => c.Id == companyId, cancellationToken);
+
+        if (company == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: "❌ Company not found. Please try again.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var services = await (from s in _dbContext.Services
+                            join e in _dbContext.Employees on s.EmployeeId equals e.Id
+                            where e.CompanyId == companyId
+                            select s).ToListAsync(cancellationToken);
+
+        if (!services.Any())
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: $"❌ No services available for {company.Name}.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        // Generate buttons for services
+        var serviceButtons = services
+            .Select(service => new[]
             {
-                new [] { InlineKeyboardButton.WithCallbackData("💅 Nail Master", "category_nail") },
-                new [] { InlineKeyboardButton.WithCallbackData("✂️ Hairdresser", "category_hair") },
-                new [] { InlineKeyboardButton.WithCallbackData("🧖 Spa", "category_spa") }
-            });
+                InlineKeyboardButton.WithCallbackData(service.Name, $"service_{service.Id}")
+            })
+            .ToArray();
+
+        InlineKeyboardMarkup serviceKeyboard = new(serviceButtons);
+
+        // Initialize or update user state
+        var userState = _userStateService.GetOrCreate(chatId, companyId);
+        userState.CurrentStep = ConversationStep.SelectingService;
+        _userStateService.SetState(chatId, userState);
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "Select a service category:",
-            replyMarkup: categoriesKeyboard,
+            text: $"📋 Services offered by {company.Name}:",
+            replyMarkup: serviceKeyboard,
             cancellationToken: cancellationToken);
     }
 
