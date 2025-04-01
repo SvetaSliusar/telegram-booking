@@ -21,6 +21,7 @@ public class CompanyUpdateHandler
     
     // Thread-safe dictionary for conversation states
     private static ConcurrentDictionary<long, string> userConversations = new ConcurrentDictionary<long, string>();
+    private static ConcurrentDictionary<long, string> userLanguages = new ConcurrentDictionary<long, string>();
 
     public CompanyUpdateHandler(ITelegramBotClient botClient, ILogger<CompanyUpdateHandler> logger, BookingDbContext dbContext)
     {
@@ -31,6 +32,8 @@ public class CompanyUpdateHandler
 
     public async Task StartCompanyFlow(long chatId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        
         // Add persistent menu button
         var replyKeyboard = new ReplyKeyboardMarkup(new[]
         {
@@ -47,7 +50,7 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "🔑 Please enter your company token to continue.",
+                text: Translations.GetMessage(language, "EnterToken"),
                 replyMarkup: new ForceReplyMarkup { Selective = true },
                 cancellationToken: cancellationToken);
 
@@ -57,7 +60,7 @@ public class CompanyUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "Welcome back! Use the Menu button to access all features.",
+            text: Translations.GetMessage(language, "WelcomeBack"),
             replyMarkup: replyKeyboard,
             cancellationToken: cancellationToken);
 
@@ -71,19 +74,21 @@ public class CompanyUpdateHandler
 
     public async Task ShowRoleSelection(long chatId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        
         InlineKeyboardMarkup inlineKeyboard = new(
             new[]
             {
                 new []
                 {
-                    InlineKeyboardButton.WithCallbackData("🏢 I am a Company", "choose_company"),
-                    InlineKeyboardButton.WithCallbackData("👤 I am a Client", "choose_client")
+                    InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "IAmCompany"), "choose_company"),
+                    InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "IAmClient"), "choose_client")
                 }
             });
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "Welcome! Please select your role:",
+            text: Translations.GetMessage(language, "Welcome"),
             replyMarkup: inlineKeyboard,
             cancellationToken: cancellationToken);
     }
@@ -133,6 +138,7 @@ public class CompanyUpdateHandler
         if (callbackQuery?.Message == null) return;
         var chatId = callbackQuery.Message.Chat.Id;
         string data = callbackQuery.Data;
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
 
         try
         {
@@ -341,12 +347,29 @@ public class CompanyUpdateHandler
                     break;
 
                 case "change_language":
-                    await SetLanguage(chatId, "EN", cancellationToken);
-                    break;
+                    var languageKeyboard = new InlineKeyboardMarkup(new[]
+                    {
+                        new[] { InlineKeyboardButton.WithCallbackData("English", "set_language:EN") },
+                        new[] { InlineKeyboardButton.WithCallbackData("Українська", "set_language:UK") }
+                    });
+
+                    await _botClient.SendMessage(
+                        chatId: chatId,
+                        text: "🌐 Select your language / Оберіть мову:",
+                        replyMarkup: languageKeyboard,
+                        cancellationToken: cancellationToken);
+                    return;
 
                 default:
                     _logger.LogInformation("Unknown callback data: {CallbackData}", callbackQuery.Data);
                     break;
+            }
+
+            if (data.StartsWith("set_language:"))
+            {
+                var selectedLanguage = data.Split(':')[1];
+                await SetLanguage(chatId, selectedLanguage, cancellationToken);
+                return;
             }
         }
         catch (Exception ex)
@@ -391,6 +414,8 @@ public class CompanyUpdateHandler
     // ✅ Step 1: Prompt User for Company Name
     private async Task StartCompanyCreation(long chatId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        
         // Initialize userInputs for this chat ID
         if (!userInputs.ContainsKey(chatId))
         {
@@ -405,7 +430,7 @@ public class CompanyUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "🏢 Please enter your **business name**:",
+            text: Translations.GetMessage(language, "EnterBusinessName"),
             parseMode: ParseMode.Markdown,
             cancellationToken: cancellationToken);
     }
@@ -415,6 +440,7 @@ public class CompanyUpdateHandler
     private async Task HandleCompanyCreationInput(long chatId, string userMessage, CancellationToken cancellationToken)
     {
         if (!userConversations.TryGetValue(chatId, out var state)) return;
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
 
         // Ensure userInputs is initialized for this chat ID
         if (!userInputs.ContainsKey(chatId))
@@ -435,7 +461,7 @@ public class CompanyUpdateHandler
                 userConversations[chatId] = "WaitingForEmployeeName";
                 await _botClient.SendMessage(
                     chatId: chatId,
-                    text: "👤 Enter **your name** (business owner):",
+                    text: Translations.GetMessage(language, "EnterYourName"),
                     parseMode: ParseMode.Markdown,
                     cancellationToken: cancellationToken);
                 break;
@@ -459,7 +485,7 @@ public class CompanyUpdateHandler
 
                 await _botClient.SendMessage(
                     chatId: chatId,
-                    text: "✅ Your business has been created successfully! Use the menu to set up working hours and services.",
+                    text: Translations.GetMessage(language, "BusinessCreated"),
                     cancellationToken: cancellationToken);
 
                 await SendMainMenu(chatId, cancellationToken);
@@ -475,7 +501,7 @@ public class CompanyUpdateHandler
 
                 await _botClient.SendMessage(
                     chatId: chatId,
-                    text: "💵 Enter the price of this service (e.g., 25):",
+                    text: Translations.GetMessage(language, "EnterServicePrice"),
                     cancellationToken: cancellationToken);
                 break;
 
@@ -501,7 +527,7 @@ public class CompanyUpdateHandler
 
                 await _botClient.SendMessage(
                     chatId: chatId,
-                    text: "⏳ Choose a time duration for this service:",
+                    text: Translations.GetMessage(language, "ChooseDuration"),
                     replyMarkup: predefinedDurations,
                     cancellationToken: cancellationToken);
                 break;
@@ -586,6 +612,7 @@ public class CompanyUpdateHandler
 
    private async Task<Message> SendReplyWithWorkingDays(long chatId, CancellationToken cancellationToken)
 {
+    var language = userLanguages.GetValueOrDefault(chatId, "EN");
     // Get existing company and employee
     var company = await _dbContext.Companies
         .Include(c => c.Employees)
@@ -603,10 +630,10 @@ public class CompanyUpdateHandler
     var selectedDays = userDaysSelections[chatId];
 
     var messageBuilder = new System.Text.StringBuilder();
-    messageBuilder.AppendLine("📅 Current Working Days:");
+    messageBuilder.AppendLine(Translations.GetMessage(language, "CurrentWorkingDays"));
     messageBuilder.AppendLine(selectedDays.Any() 
         ? string.Join(", ", selectedDays)
-        : "No days selected");
+        : Translations.GetMessage(language, "NoDaysSelected"));
 
     InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup(new[]
     {
@@ -616,8 +643,8 @@ public class CompanyUpdateHandler
         CreateDayRow(new[] { "Sunday" }, selectedDays, chatId),
         new []
         {
-            InlineKeyboardButton.WithCallbackData("✅ Confirm", "workingdays:Confirm"),
-            InlineKeyboardButton.WithCallbackData("❌ Clear Selection", "workingdays:ClearSelection")
+            InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Confirm"), "workingdays:Confirm"),
+            InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ClearSelection"), "workingdays:ClearSelection")
         }
     });
 
@@ -893,38 +920,42 @@ public class CompanyUpdateHandler
 
     public async Task SendMainMenu(long chatId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var company = await _dbContext.Companies.FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
         var keyboardButtons = company == null
             ? new List<List<InlineKeyboardButton>>
             {
-                new() { InlineKeyboardButton.WithCallbackData("🏢 Create Company", "create_company") }
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "CreateCompany"), "create_company") }
             }
             : new List<List<InlineKeyboardButton>>
             {
-                new() { InlineKeyboardButton.WithCallbackData("📅 Setup Work Days", "setup_work_days") },
-                new() { InlineKeyboardButton.WithCallbackData("🕒 Setup Work Time", "setup_work_time") },
-                new() { InlineKeyboardButton.WithCallbackData("💼 List Services", "list_services") },
-                new() { InlineKeyboardButton.WithCallbackData("➕ Add Service", "add_service") },
-                new() { InlineKeyboardButton.WithCallbackData("🔗 Get Client Link", "get_client_link") },
-                new() { InlineKeyboardButton.WithCallbackData("🌐 Change Language", "change_language") }
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "SetupWorkDays"), "setup_work_days") },
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "SetupWorkTime"), "setup_work_time") },
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ListServices"), "list_services") },
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") },
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "GetClientLink"), "get_client_link") },
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") }
             };
 
         var keyboard = new InlineKeyboardMarkup(keyboardButtons);
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "📌 Main Menu",
+            text: Translations.GetMessage(language, "MainMenu"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
 
     private async Task SetLanguage(long chatId, string language, CancellationToken cancellationToken)
     {
+        userLanguages[chatId] = language;
         await _botClient.SendMessage(
             chatId: chatId,
-            text: $"🌎 Language set to: {language}",
+            text: Translations.GetMessage(language, "LanguageSet", language),
             cancellationToken: cancellationToken);
+        
+        await SendMainMenu(chatId, cancellationToken);
     }
 
     private async Task SaveWorkingDays(long chatId, CancellationToken cancellationToken)
@@ -1138,6 +1169,7 @@ public class CompanyUpdateHandler
 
     private async Task<Message> SendReplyWithWorkingHours(long chatId, DayOfWeek selectedDay, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         // Get existing company and employee
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
@@ -1168,7 +1200,7 @@ public class CompanyUpdateHandler
         bool eveningSelected = eveningWorkingHours.All(h => selectedHours.Contains(TimeSpan.Parse(h)));
 
         var messageBuilder = new System.Text.StringBuilder();
-        messageBuilder.AppendLine($"🕒 Current Working Hours for {selectedDay}:");
+        messageBuilder.AppendLine(Translations.GetMessage(language, "CurrentWorkingHours", selectedDay));
         if (selectedHours.Any())
         {
             var sortedHours = selectedHours.OrderBy(h => h).ToList();
@@ -1180,11 +1212,11 @@ public class CompanyUpdateHandler
                     intervals.Add($"{sortedHours[i]:hh\\:mm}-{sortedHours[i + 1]:hh\\:mm}");
                 }
             }
-            messageBuilder.AppendLine(string.Join(", ", intervals));
+            messageBuilder.AppendLine(Translations.GetMessage(language, "WorkingHoursIntervals", string.Join(", ", intervals)));
         }
         else
         {
-            messageBuilder.AppendLine("No hours selected");
+            messageBuilder.AppendLine(Translations.GetMessage(language, "NoHoursSelected"));
         }
 
         // Get all selected working days
@@ -1333,6 +1365,7 @@ public class CompanyUpdateHandler
 
     private async Task ListServices(long chatId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
                 .ThenInclude(e => e.Services)
@@ -1342,13 +1375,13 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ No services found. Please add services first.",
+                text: Translations.GetMessage(language, "NoServices"),
                 cancellationToken: cancellationToken);
             return;
         }
 
         var messageBuilder = new System.Text.StringBuilder();
-        messageBuilder.AppendLine("📋 Company Services:");
+        messageBuilder.AppendLine(Translations.GetMessage(language, "ListServices"));
 
         foreach (var employee in company.Employees)
         {
@@ -1363,7 +1396,7 @@ public class CompanyUpdateHandler
 
         var keyboard = new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("🔙 Back to Menu", "back_to_menu") }
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
         });
 
         await _botClient.SendMessage(
@@ -1495,12 +1528,13 @@ public class CompanyUpdateHandler
 
     private async Task SaveNewService(long chatId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var userData = userInputs[chatId];
         if (userData == null || userData.Services == null || !userData.Services.Any())
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Error: No service data found.",
+                text: Translations.GetMessage(language, "NoServiceDataFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -1513,7 +1547,7 @@ public class CompanyUpdateHandler
             {
                 await _botClient.SendMessage(
                     chatId: chatId,
-                    text: "❌ Error: No employee found in creation flow.",
+                    text: Translations.GetMessage(language, "NoEmployeeFoundInCreation"),
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -1537,7 +1571,7 @@ public class CompanyUpdateHandler
             {
                 await _botClient.SendMessage(
                     chatId: chatId,
-                    text: "❌ Error: Company not found.",
+                    text: Translations.GetMessage(language, "NoCompanyFound"),
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -1547,7 +1581,7 @@ public class CompanyUpdateHandler
             {
                 await _botClient.SendMessage(
                     chatId: chatId,
-                    text: "❌ Error: Employee not found.",
+                    text: Translations.GetMessage(language, "NoEmployeeFound"),
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -1571,7 +1605,7 @@ public class CompanyUpdateHandler
 
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: $"✅ Service '{service.Name}' added successfully for {employee.Name}!",
+                text: Translations.GetMessage(language, "ServiceAddedForEmployee", service.Name, employee.Name),
                 cancellationToken: cancellationToken);
 
             userConversations.Remove(chatId, out _);
@@ -1626,6 +1660,7 @@ public class CompanyUpdateHandler
 
     private async Task GenerateClientLink(long chatId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var company = await _dbContext.Companies
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
@@ -1643,7 +1678,7 @@ public class CompanyUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: $"🔗 Your client booking link:\n\n`{clientLink}`\n\nCopy this link and share it with your clients to allow them to book appointments with you.",
+            text: Translations.GetMessage(language, "ClientLink", clientLink),
             parseMode: ParseMode.Markdown,
             cancellationToken: cancellationToken);
     }

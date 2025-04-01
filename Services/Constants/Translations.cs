@@ -1,0 +1,143 @@
+using System.Collections.Generic;
+
+namespace Telegram.Bot.Examples.WebHook.Services.Constants;
+
+public static class Translations
+{
+    private static readonly Dictionary<string, Dictionary<string, string>> Messages = new()
+    {
+        ["EN"] = new Dictionary<string, string>
+        {
+            ["Welcome"] = "Welcome! Please select your role:",
+            ["IAmCompany"] = "🏢 I am a Company",
+            ["IAmClient"] = "👤 I am a Client",
+            ["EnterToken"] = "🔑 Please enter your company token to continue.",
+            ["WelcomeBack"] = "Welcome back! Use the Menu button to access all features.",
+            ["MainMenu"] = "📌 Main Menu",
+            ["SetupWorkDays"] = "📅 Setup Work Days",
+            ["SetupWorkTime"] = "🕒 Setup Work Time",
+            ["ListServices"] = "💼 List Services",
+            ["AddService"] = "➕ Add Service",
+            ["GetClientLink"] = "🔗 Get Client Link",
+            ["ChangeLanguage"] = "🌐 Change Language",
+            ["BackToMenu"] = "🔙 Back to Menu",
+            ["CreateCompany"] = "🏢 Create Company",
+            ["EnterBusinessName"] = "🏢 Please enter your **business name**:",
+            ["EnterYourName"] = "👤 Enter **your name** (business owner):",
+            ["BusinessCreated"] = "✅ Your business has been created successfully! Use the menu to set up working hours and services.",
+            ["EnterServiceName"] = "🛠 Enter the name of the new service:",
+            ["EnterServicePrice"] = "💵 Enter the price of this service (e.g., 25):",
+            ["ChooseDuration"] = "⏳ Choose a time duration for this service:",
+            ["ServiceAdded"] = "✅ Service '{0}' added successfully!",
+            ["NoServices"] = "❌ No services found. Please add services first.",
+            ["CurrentWorkingDays"] = "📅 Current Working Days:",
+            ["NoDaysSelected"] = "No days selected",
+            ["Confirm"] = "✅ Confirm",
+            ["ClearSelection"] = "❌ Clear Selection",
+            ["CurrentWorkingHours"] = "🕒 Current Working Hours for {0}:",
+            ["NoHoursSelected"] = "No hours selected",
+            ["Morning"] = "🌅 Morning",
+            ["Afternoon"] = "🌞 Afternoon",
+            ["Evening"] = "🌙 Evening",
+            ["CopyTo"] = "📋 Copy to {0}",
+            ["SelectBreakTime"] = "⏳ Select the break time between services:",
+            ["WorkingHoursUpdated"] = "✅ Working hours and break time have been updated successfully!",
+            ["ClientLink"] = "🔗 Your client booking link:\n\n`{0}`\n\nCopy this link and share it with your clients to allow them to book appointments with you.",
+            ["LanguageSet"] = "🌎 Language set to: {0}",
+            ["ServiceAddedForEmployee"] = "✅ Service '{0}' added successfully for {1}!",
+            ["WorkingHoursIntervals"] = "{0}",
+            ["WorkingDaysUpdated"] = "✅ Working days have been updated successfully!",
+            ["EnterCustomBreakTime"] = "⏳ Enter the custom break time in minutes (e.g., 25):",
+            ["InvalidBreakTime"] = "❌ Please enter a valid break time in minutes (e.g., 25):",
+            ["BreakTimeUpdated"] = "✅ Working hours and break time have been updated successfully!",
+            ["InvalidPrice"] = "❌ Please enter a valid price.",
+            ["InvalidDuration"] = "❌ Please enter a valid duration in minutes (e.g., 20):",
+            ["NoEmployeeFound"] = "❌ No employee found. Please contact support.",
+            ["NoCompanyFound"] = "❌ Error: Company not found. Please start over.",
+            ["NoEmployeeFoundForCompany"] = "❌ Error: No employee found for your company.",
+            ["NoDaysSelectedError"] = "❌ No days selected. Please select at least one.",
+            ["InvalidDaySelected"] = "❌ Invalid day selected.",
+            ["NoHoursSelectedToCopy"] = "❌ Error: No hours selected to copy.",
+            ["InvalidDaySelection"] = "❌ Error: Invalid day selection.",
+            ["SessionExpired"] = "❌ Error: Session expired. Please try again from the main menu.",
+            ["NoServiceDataFound"] = "❌ Error: No service data found.",
+            ["NoEmployeeFoundInCreation"] = "❌ Error: No employee found in creation flow.",
+            ["TokenAccepted"] = "✅ Token accepted! Use the Menu button to access all features.",
+            ["InvalidToken"] = "❌ Invalid token or company not found. Please check and enter again.",
+            ["SelectLanguage"] = "🌐 Select your language / Оберіть мову:",
+            ["ErrorOccurred"] = "❌ An error occurred. Please try again."
+        },
+        ["UK"] = new Dictionary<string, string>
+        {
+            ["Welcome"] = "Ласкаво просимо! Будь ласка, оберіть вашу роль:",
+            ["IAmCompany"] = "🏢 Я Компанія",
+            ["IAmClient"] = "👤 Я Клієнт",
+            ["EnterToken"] = "🔑 Будь ласка, введіть токен вашої компанії для продовження.",
+            ["WelcomeBack"] = "З поверненням! Використовуйте кнопку Меню для доступу до всіх функцій.",
+            ["MainMenu"] = "📌 Головне Меню",
+            ["SetupWorkDays"] = "📅 Налаштувати Робочі Дні",
+            ["SetupWorkTime"] = "🕒 Налаштувати Робочий Час",
+            ["ListServices"] = "💼 Список Послуг",
+            ["AddService"] = "➕ Додати Послугу",
+            ["GetClientLink"] = "🔗 Отримати Посилання для Клієнтів",
+            ["ChangeLanguage"] = "🌐 Змінити Мову",
+            ["BackToMenu"] = "🔙 Назад до Меню",
+            ["CreateCompany"] = "🏢 Створити Компанію",
+            ["EnterBusinessName"] = "🏢 Будь ласка, введіть **назву вашого бізнесу**:",
+            ["EnterYourName"] = "👤 Введіть **ваше ім'я** (власник бізнесу):",
+            ["BusinessCreated"] = "✅ Ваш бізнес успішно створено! Використовуйте меню для налаштування робочого часу та послуг.",
+            ["EnterServiceName"] = "🛠 Введіть назву нової послуги:",
+            ["EnterServicePrice"] = "💵 Введіть ціну цієї послуги (наприклад, 25):",
+            ["ChooseDuration"] = "⏳ Виберіть тривалість цієї послуги:",
+            ["ServiceAdded"] = "✅ Послугу '{0}' успішно додано!",
+            ["NoServices"] = "❌ Послуги не знайдено. Будь ласка, спочатку додайте послуги.",
+            ["CurrentWorkingDays"] = "📅 Поточні Робочі Дні:",
+            ["NoDaysSelected"] = "Дні не вибрані",
+            ["Confirm"] = "✅ Підтвердити",
+            ["ClearSelection"] = "❌ Очистити Вибір",
+            ["CurrentWorkingHours"] = "🕒 Поточний Робочий Час для {0}:",
+            ["NoHoursSelected"] = "Час не вибрано",
+            ["Morning"] = "🌅 Ранок",
+            ["Afternoon"] = "🌞 День",
+            ["Evening"] = "🌙 Вечір",
+            ["CopyTo"] = "📋 Копіювати на {0}",
+            ["SelectBreakTime"] = "⏳ Виберіть час перерви між послугами:",
+            ["WorkingHoursUpdated"] = "✅ Робочий час та час перерви успішно оновлено!",
+            ["ClientLink"] = "🔗 Ваше посилання для клієнтів:\n\n`{0}`\n\nСкопіюйте це посилання та поділіться ним з вашими клієнтами, щоб вони могли записуватися на прийом.",
+            ["LanguageSet"] = "🌎 Мову встановлено: {0}",
+            ["ServiceAddedForEmployee"] = "✅ Послугу '{0}' успішно додано для {1}!",
+            ["WorkingHoursIntervals"] = "{0}",
+            ["WorkingDaysUpdated"] = "✅ Робочі дні успішно оновлено!",
+            ["EnterCustomBreakTime"] = "⏳ Введіть час перерви в хвилинах (наприклад, 25):",
+            ["InvalidBreakTime"] = "❌ Будь ласка, введіть коректний час перерви в хвилинах (наприклад, 25):",
+            ["BreakTimeUpdated"] = "✅ Робочий час та час перерви успішно оновлено!",
+            ["InvalidPrice"] = "❌ Будь ласка, введіть коректну ціну.",
+            ["InvalidDuration"] = "❌ Будь ласка, введіть коректну тривалість у хвилинах (наприклад, 20):",
+            ["NoEmployeeFound"] = "❌ Співробітника не знайдено. Будь ласка, зверніться до служби підтримки.",
+            ["NoCompanyFound"] = "❌ Помилка: Компанію не знайдено. Будь ласка, почніть спочатку.",
+            ["NoEmployeeFoundForCompany"] = "❌ Помилка: Для вашої компанії не знайдено співробітників.",
+            ["NoDaysSelectedError"] = "❌ Дні не вибрані. Будь ласка, виберіть хоча б один день.",
+            ["InvalidDaySelected"] = "❌ Невірно вибраний день.",
+            ["NoHoursSelectedToCopy"] = "❌ Помилка: Не вибрано годин для копіювання.",
+            ["InvalidDaySelection"] = "❌ Помилка: Невірний вибір дня.",
+            ["SessionExpired"] = "❌ Помилка: Сесія закінчилася. Будь ласка, спробуйте знову з головного меню.",
+            ["NoServiceDataFound"] = "❌ Помилка: Дані про послугу не знайдено.",
+            ["NoEmployeeFoundInCreation"] = "❌ Помилка: Співробітника не знайдено в процесі створення.",
+            ["TokenAccepted"] = "✅ Токен прийнято! Використовуйте кнопку Меню для доступу до всіх функцій.",
+            ["InvalidToken"] = "❌ Невірний токен або компанію не знайдено. Будь ласка, перевірте та введіть знову.",
+            ["SelectLanguage"] = "🌐 Оберіть мову / Select your language:",
+            ["ErrorOccurred"] = "❌ Сталася помилка. Будь ласка, спробуйте знову."
+        }
+    };
+
+    public static string GetMessage(string language, string key, params object[] args)
+    {
+        if (!Messages.ContainsKey(language))
+            language = "EN";
+
+        if (!Messages[language].ContainsKey(key))
+            return Messages["EN"][key];
+
+        return string.Format(Messages[language][key], args);
+    }
+} 
