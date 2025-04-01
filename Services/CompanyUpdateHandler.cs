@@ -156,6 +156,10 @@ public class CompanyUpdateHandler
                 case "back_to_menu":
                     await SendMainMenu(chatId, cancellationToken);
                     return;
+
+                case "get_client_link":
+                    await GenerateClientLink(chatId, cancellationToken);
+                    return;
             }
 
             if (data.StartsWith("select_employee:"))
@@ -902,6 +906,7 @@ public class CompanyUpdateHandler
                 new() { InlineKeyboardButton.WithCallbackData("🕒 Setup Work Time", "setup_work_time") },
                 new() { InlineKeyboardButton.WithCallbackData("💼 List Services", "list_services") },
                 new() { InlineKeyboardButton.WithCallbackData("➕ Add Service", "add_service") },
+                new() { InlineKeyboardButton.WithCallbackData("🔗 Get Client Link", "get_client_link") },
                 new() { InlineKeyboardButton.WithCallbackData("🌐 Change Language", "change_language") }
             };
 
@@ -1617,6 +1622,30 @@ public class CompanyUpdateHandler
 
         // Refresh the UI for the target day
         await SendReplyWithWorkingHours(chatId, targetDay, cancellationToken);
+    }
+
+    private async Task GenerateClientLink(long chatId, CancellationToken cancellationToken)
+    {
+        var company = await _dbContext.Companies
+            .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
+
+        if (company == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: "❌ Error: Company not found.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var botUsername = (await _botClient.GetMeAsync(cancellationToken)).Username;
+        var clientLink = $"https://t.me/{botUsername}?start={company.Alias}";
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: $"🔗 Your client booking link:\n\n`{clientLink}`\n\nCopy this link and share it with your clients to allow them to book appointments with you.",
+            parseMode: ParseMode.Markdown,
+            cancellationToken: cancellationToken);
     }
 }
 
