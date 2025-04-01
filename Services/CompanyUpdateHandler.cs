@@ -112,6 +112,7 @@ public class CompanyUpdateHandler
     {
         if (message?.Text is not { } userMessage) return;
         var chatId = message.Chat.Id;
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
 
         // Handle Menu button click
         if (userMessage == "/menu")
@@ -129,7 +130,7 @@ public class CompanyUpdateHandler
         // Handle default message
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "Please use the provided buttons or type /menu to see the main menu.",
+            text: Translations.GetMessage(language, "UseMenuButton"),
             cancellationToken: cancellationToken);
     }
 
@@ -224,7 +225,7 @@ public class CompanyUpdateHandler
 
                 if (!Enum.TryParse(selectedDay, true, out DayOfWeek dayOfWeek))
                 {
-                    await _botClient.SendMessage(chatId, "❌ Invalid day selected.", cancellationToken: cancellationToken);
+                    await _botClient.SendMessage(chatId, Translations.GetMessage(language, "InvalidDaySelected"), cancellationToken: cancellationToken);
                     return;
                 }
 
@@ -350,7 +351,7 @@ public class CompanyUpdateHandler
                     var languageKeyboard = new InlineKeyboardMarkup(new[]
                     {
                         new[] { InlineKeyboardButton.WithCallbackData("English", "set_language:EN") },
-                        new[] { InlineKeyboardButton.WithCallbackData("Українська", "set_language:UK") }
+                        new[] { InlineKeyboardButton.WithCallbackData("Українська", "set_language:UA") }
                     });
 
                     await _botClient.SendMessage(
@@ -506,30 +507,7 @@ public class CompanyUpdateHandler
                 break;
 
             case "WaitingForServicePrice":
-                if (!decimal.TryParse(userMessage, out var price) || price < 0)
-                {
-                    await _botClient.SendMessage(
-                        chatId: chatId,
-                        text: "❌ Please enter a valid price.",
-                        cancellationToken: cancellationToken);
-                    return;
-                }
-
-                userData.Services[0].Price = price;
-                userConversations[chatId] = "WaitingForServiceDuration";
-
-                var predefinedDurations = new InlineKeyboardMarkup(new[]
-                {
-                    new [] { InlineKeyboardButton.WithCallbackData("10 min", "service_duration:10"), InlineKeyboardButton.WithCallbackData("15 min", "service_duration:15") },
-                    new [] { InlineKeyboardButton.WithCallbackData("30 min", "service_duration:30"), InlineKeyboardButton.WithCallbackData("45 min", "service_duration:45") },
-                    new [] { InlineKeyboardButton.WithCallbackData("Custom", "service_duration:custom") }
-                });
-
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                    text: Translations.GetMessage(language, "ChooseDuration"),
-                    replyMarkup: predefinedDurations,
-                    cancellationToken: cancellationToken);
+                await HandleServicePriceInput(chatId, userMessage, cancellationToken);
                 break;
 
             case "WaitingForCustomDuration":
@@ -607,9 +585,6 @@ public class CompanyUpdateHandler
     private static ConcurrentDictionary<long, List<string>> userDaysSelections = new ConcurrentDictionary<long, List<string>>();
     private static ConcurrentDictionary<long, int> lastSentMessageIds = new ConcurrentDictionary<long, int>();
 
-    // Available working days
-    private static readonly string[] weekDays = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
-
    private async Task<Message> SendReplyWithWorkingDays(long chatId, CancellationToken cancellationToken)
 {
     var language = userLanguages.GetValueOrDefault(chatId, "EN");
@@ -677,6 +652,8 @@ public class CompanyUpdateHandler
 
     private async Task SaveWorkingHours(long chatId, DayOfWeek selectedDay, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        
         // Get the company for this chat ID
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
@@ -687,7 +664,7 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Error: No company found. Please start over.",
+                text: Translations.GetMessage(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -708,7 +685,7 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Error: No employee found for your company.",
+                text: Translations.GetMessage(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -800,11 +777,12 @@ public class CompanyUpdateHandler
                 .ThenInclude(e => e.WorkingHours)
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         if (company == null)
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Error: No company found. Please start over.",
+                text: Translations.GetMessage(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -814,7 +792,7 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Error: No employee found for your company.",
+                text: Translations.GetMessage(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -824,7 +802,7 @@ public class CompanyUpdateHandler
             userConversations[chatId] = "WaitingForCustomBreakTime";
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "⏳ Enter the custom break time in minutes (e.g., 25):",
+                text: Translations.GetMessage(language, "EnterCustomBreakTime"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -850,11 +828,13 @@ public class CompanyUpdateHandler
 
     private async Task HandleCustomBreakTime(long chatId, string message, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        
         if (!int.TryParse(message, out int breakMinutes) || breakMinutes <= 0)
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Please enter a valid break time in minutes (e.g., 25):",
+                text: Translations.GetMessage(language, "InvalidBreakTime"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -869,7 +849,7 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Error: No company found. Please start over.",
+                text: Translations.GetMessage(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -879,7 +859,7 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Error: No employee found for your company.",
+                text: Translations.GetMessage(language, "EmployeeNotFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -894,7 +874,7 @@ public class CompanyUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "✅ Working hours and break time have been updated successfully!",
+            text: Translations.GetMessage(language, "BreakTimeUpdated"),
             cancellationToken: cancellationToken);
 
         await SendMainMenu(chatId, cancellationToken);
@@ -1359,7 +1339,6 @@ public class CompanyUpdateHandler
             text: "✅ Token accepted! Use the Menu button to access all features.",
             replyMarkup: replyKeyboard,
             cancellationToken: cancellationToken);
-
         await SendMainMenu(chatId, cancellationToken);
     }
 
@@ -1411,12 +1390,12 @@ public class CompanyUpdateHandler
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
-
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         if (company == null || !company.Employees.Any())
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ No employee found. Please contact support.",
+                text: Translations.GetMessage(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -1430,10 +1409,9 @@ public class CompanyUpdateHandler
         };
 
         userConversations[chatId] = "WaitingForServiceName";
-
         await _botClient.SendMessage(
             chatId: chatId,
-            text: $"🛠 Enter the name of the new service for {employee.Name}:",
+            text: Translations.GetMessage(language, "NewService", employee.Name),
             cancellationToken: cancellationToken);
     }
 
@@ -1445,13 +1423,13 @@ public class CompanyUpdateHandler
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
-
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var employee = company?.Employees.FirstOrDefault(e => e.Id == employeeId);
         if (employee == null)
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Error: Employee not found.",
+                text:  Translations.GetMessage(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -1467,7 +1445,7 @@ public class CompanyUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: $"🛠 Enter the name of the new service for {employee.Name}:",
+            text: Translations.GetMessage(language, "NewService", employee.Name),
             cancellationToken: cancellationToken);
     }
 
@@ -1499,11 +1477,13 @@ public class CompanyUpdateHandler
 
     private async Task HandleServicePriceInput(long chatId, string priceInput, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        
         if (!decimal.TryParse(priceInput, out decimal price) || price < 0)
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Please enter a valid price.",
+                text: Translations.GetMessage(language, "InvalidPrice"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -1521,7 +1501,7 @@ public class CompanyUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "⏳ Choose a time duration for this service:",
+            text: Translations.GetMessage(language, "ChooseDuration"),
             replyMarkup: predefinedDurations,
             cancellationToken: cancellationToken);
     }
@@ -1718,3 +1698,4 @@ public class ServiceCreationData
     public decimal Price { get; set; }
     public int Duration { get; set; }
 }
+
