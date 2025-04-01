@@ -54,7 +54,12 @@ public class BotController : ControllerBase
             var messageText = update.Message.Text;
             chatId = update.Message.Chat.Id;
 
-            await _startCommandHandler.HandleStartCommandAsync(messageText, chatId.Value, cancellationToken);
+            var result = await _startCommandHandler.HandleStartCommandAsync(messageText, chatId.Value, cancellationToken);
+
+            if (result == false)
+            {
+                return Ok();
+            }
         }
         else if (update.CallbackQuery != null)
         {

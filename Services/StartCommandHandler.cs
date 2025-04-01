@@ -7,7 +7,7 @@ namespace Telegram.Bot.Services;
 
 public interface IStartCommandHandler
 {
-    Task HandleStartCommandAsync(string messageText, long chatId, CancellationToken cancellationToken);
+    Task<bool> HandleStartCommandAsync(string messageText, long chatId, CancellationToken cancellationToken);
 }
 
 public class StartCommandHandler : IStartCommandHandler
@@ -35,12 +35,12 @@ public class StartCommandHandler : IStartCommandHandler
         _logger = logger;
     }
 
-    public async Task HandleStartCommandAsync(string messageText, long chatId, CancellationToken cancellationToken)
+    public async Task<bool> HandleStartCommandAsync(string messageText, long chatId, CancellationToken cancellationToken)
     {
         // Check if the message starts with /start
         if (!messageText.StartsWith("/start"))
         {
-            return;
+            return true;
         }
 
         // Extract parameter - handle both /start=123 and /start 123 formats
@@ -60,7 +60,7 @@ public class StartCommandHandler : IStartCommandHandler
                 chatId: chatId,
                 text: "❌ Please provide a valid company token or company alias.",
                 cancellationToken: cancellationToken);
-            return;
+            return false;
         }
         
         // First try to find a token (can be any combination of characters and numbers)
@@ -74,7 +74,7 @@ public class StartCommandHandler : IStartCommandHandler
             token.Used = true;
             await _dbContext.SaveChangesAsync(cancellationToken);
             await _companyUpdateHandler.SendMainMenu(chatId, cancellationToken);
-            return;
+            return true;
         }
 
         // If no valid token found, check if parameter is a company alias (client access)
@@ -83,7 +83,7 @@ public class StartCommandHandler : IStartCommandHandler
         if (company != null)
         {
             await _clientUpdateHandler.StartClientFlow(chatId, company.Id, cancellationToken);
-            return;
+            return true;
         }
 
         // If neither token nor company alias is valid
@@ -91,5 +91,6 @@ public class StartCommandHandler : IStartCommandHandler
             chatId: chatId,
             text: "❌ Invalid parameter. Please use a valid company token or company alias.",
             cancellationToken: cancellationToken);
+        return false;
     }
 } 
