@@ -12,8 +12,8 @@ using Telegram.Bot.Examples.WebHook;
 namespace TelegramBookingBot.Migrations
 {
     [DbContext(typeof(BookingDbContext))]
-    [Migration("20250205170813_AddInitialToken")]
-    partial class AddInitialToken
+    [Migration("20250401162817_AddLanguageToToken")]
+    partial class AddLanguageToToken
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -67,22 +67,11 @@ namespace TelegramBookingBot.Migrations
                     b.Property<long>("ChatId")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("CompanyId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("TokenId")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("CompanyId");
-
-                    b.HasIndex("TokenId")
-                        .IsUnique();
 
                     b.ToTable("Clients");
                 });
@@ -94,6 +83,10 @@ namespace TelegramBookingBot.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Alias")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -140,9 +133,6 @@ namespace TelegramBookingBot.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CompanyId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
@@ -162,8 +152,6 @@ namespace TelegramBookingBot.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CompanyId");
-
                     b.HasIndex("EmployeeId");
 
                     b.ToTable("Services");
@@ -180,23 +168,13 @@ namespace TelegramBookingBot.Migrations
                     b.Property<long?>("ChatId")
                         .HasColumnType("bigint");
 
-                    b.Property<int?>("ClientId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("CompanyId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("TokenValue")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
 
                     b.Property<bool>("Used")
                         .HasColumnType("boolean");
@@ -216,6 +194,9 @@ namespace TelegramBookingBot.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<TimeSpan>("BreakTime")
+                        .HasColumnType("interval");
 
                     b.Property<int>("DayOfWeek")
                         .HasColumnType("integer");
@@ -261,25 +242,6 @@ namespace TelegramBookingBot.Migrations
                     b.Navigation("Service");
                 });
 
-            modelBuilder.Entity("Telegram.Bot.Examples.WebHook.Models.Client", b =>
-                {
-                    b.HasOne("Telegram.Bot.Examples.WebHook.Models.Company", "Company")
-                        .WithMany()
-                        .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Telegram.Bot.Examples.WebHook.Models.Token", "Token")
-                        .WithOne("Client")
-                        .HasForeignKey("Telegram.Bot.Examples.WebHook.Models.Client", "TokenId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Company");
-
-                    b.Navigation("Token");
-                });
-
             modelBuilder.Entity("Telegram.Bot.Examples.WebHook.Models.Company", b =>
                 {
                     b.HasOne("Telegram.Bot.Examples.WebHook.Models.Token", "Token")
@@ -304,10 +266,6 @@ namespace TelegramBookingBot.Migrations
 
             modelBuilder.Entity("Telegram.Bot.Examples.WebHook.Models.Service", b =>
                 {
-                    b.HasOne("Telegram.Bot.Examples.WebHook.Models.Company", null)
-                        .WithMany("Services")
-                        .HasForeignKey("CompanyId");
-
                     b.HasOne("Telegram.Bot.Examples.WebHook.Models.Employee", "Employee")
                         .WithMany("Services")
                         .HasForeignKey("EmployeeId")
@@ -336,8 +294,6 @@ namespace TelegramBookingBot.Migrations
             modelBuilder.Entity("Telegram.Bot.Examples.WebHook.Models.Company", b =>
                 {
                     b.Navigation("Employees");
-
-                    b.Navigation("Services");
                 });
 
             modelBuilder.Entity("Telegram.Bot.Examples.WebHook.Models.Employee", b =>
@@ -349,9 +305,6 @@ namespace TelegramBookingBot.Migrations
 
             modelBuilder.Entity("Telegram.Bot.Examples.WebHook.Models.Token", b =>
                 {
-                    b.Navigation("Client")
-                        .IsRequired();
-
                     b.Navigation("Company")
                         .IsRequired();
                 });

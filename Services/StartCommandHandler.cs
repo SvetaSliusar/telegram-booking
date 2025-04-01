@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Examples.WebHook;
-using Telegram.Bot.Examples.WebHook.Models;
-using Telegram.Bot.Types;
 
 namespace Telegram.Bot.Services;
 

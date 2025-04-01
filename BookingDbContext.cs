@@ -22,14 +22,6 @@ namespace Telegram.Bot.Examples.WebHook
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<Token>()
-                .Property(t => t.Type)
-                .IsRequired();
-
-            modelBuilder.Entity<Token>()
-                .Property(t => t.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-            modelBuilder.Entity<Token>()
                 .HasIndex(t => t.TokenValue)
                 .IsUnique();
             

@@ -165,20 +165,13 @@ namespace TelegramBookingBot.Migrations
                     b.Property<long?>("ChatId")
                         .HasColumnType("bigint");
 
-                    b.Property<int?>("CompanyId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("TokenValue")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
 
                     b.Property<bool>("Used")
                         .HasColumnType("boolean");

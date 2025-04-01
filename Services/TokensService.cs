@@ -5,8 +5,8 @@ namespace Telegram.Bot.Examples.WebHook.Services
 {
      public interface ITokensService
     {
-        Task<Token> GetTokenByValue(string tokenValue);
-        Task<Token> GetTokenByChatId(long chatId);
+        Task<Token?> GetTokenByValue(string tokenValue);
+        Task<Token?> GetTokenByChatId(long chatId);
         Task AssociateChatIdWithToken(long chatId, string tokenValue);
     }
     public class TokensService : ITokensService
@@ -18,37 +18,14 @@ namespace Telegram.Bot.Examples.WebHook.Services
             _dbContext = dbContext;
         }
 
-        public async Task CreateCompanyWithToken(string companyName, int numberOfEmployees)
-        {
-            var company = new Company
-            {
-                Name = companyName,
-            };
-
-            _dbContext.Companies.Add(company);
-            await _dbContext.SaveChangesAsync();
-
-            // Generate a company token
-            var companyToken = new Token
-            {
-                TokenValue = Guid.NewGuid().ToString(),
-                Type = TokenType.Company,
-                CompanyId = company.Id,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _dbContext.Tokens.Add(companyToken);
-            await _dbContext.SaveChangesAsync();
-        }
-
-        public async Task<Token> GetTokenByValue(string tokenValue)
+        public async Task<Token?> GetTokenByValue(string tokenValue)
         {
             return await _dbContext.Tokens
                 .Include(t => t.Company)
-                .FirstOrDefaultAsync(t => t.TokenValue == tokenValue);
+                .SingleOrDefaultAsync(t => t.TokenValue == tokenValue);
         }
 
-        public async Task<Token> GetTokenByChatId(long chatId)
+        public async Task<Token?> GetTokenByChatId(long chatId)
         {
             return await _dbContext.Tokens
                 .Include(t => t.Company)
