@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 namespace Telegram.Bot.Examples.WebHook.Models
 {
     public class Company
@@ -9,6 +10,7 @@ namespace Telegram.Bot.Examples.WebHook.Models
         public virtual List<Employee> Employees { get; set; }
         public int TokenId { get; set; }
         public Token Token { get; set; }
+        public ReminderSettings ReminderSettings { get; set; }
     }
 
     public class Employee

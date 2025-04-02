@@ -16,8 +16,12 @@ namespace Telegram.Bot.Examples.WebHook.Models
         public int CompanyId { get; set; }
         public Company Company { get; set; }
 
-        // Foreign key to Client (optional)
-        public long ClientId { get; set; } // Telegram ID of the client
+        // Foreign key to Client
+        public long ClientId { get; set; }
+        public Client Client { get; set; }
+
+        // Reminder tracking
+        public bool ReminderSent { get; set; }
     }
 
 }

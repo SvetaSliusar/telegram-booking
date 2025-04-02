@@ -6,6 +6,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Examples.WebHook.Services;
 using System.Collections.Concurrent;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Examples.WebHook.Services.Constants;
 
 namespace Telegram.Bot.Services;
 public class ClientUpdateHandler
@@ -13,6 +14,7 @@ public class ClientUpdateHandler
     private readonly ITelegramBotClient _botClient;
     private readonly BookingDbContext _dbContext;
     private readonly UserStateService _userStateService;
+    private readonly ConcurrentDictionary<long, string> userLanguages = new ConcurrentDictionary<long, string>();
 
     public ClientUpdateHandler(
         ITelegramBotClient botClient,
@@ -26,6 +28,7 @@ public class ClientUpdateHandler
 
     public async Task StartClientFlow(long chatId, int companyId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var company = await _dbContext.Companies
             .FirstOrDefaultAsync(c => c.Id == companyId, cancellationToken);
 
@@ -33,7 +36,7 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Company not found. Please try again.",
+                text: Translations.GetMessage(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -44,6 +47,7 @@ public class ClientUpdateHandler
 
     private async Task ShowMainMenu(long chatId, int companyId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var company = await _dbContext.Companies
             .FirstOrDefaultAsync(c => c.Id == companyId, cancellationToken);
 
@@ -51,22 +55,23 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Company not found. Please try again.",
+                text: Translations.GetMessage(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
 
         var buttons = new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("📋 Book Appointment", "book_appointment") },
-            new[] { InlineKeyboardButton.WithCallbackData("📅 My Bookings", "view_bookings") }
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BookAppointment"), "book_appointment") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "MyBookings"), "view_bookings") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") }
         };
 
         var keyboard = new InlineKeyboardMarkup(buttons);
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: $"Welcome to {company.Name}! What would you like to do?",
+            text: Translations.GetMessage(language, "WelcomeToCompany", company.Name),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
@@ -91,6 +96,7 @@ public class ClientUpdateHandler
         if (message?.Text is not { } messageText) return;
 
         var chatId = message.Chat.Id;
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         
         // Check if this is a new user or a command
         if (messageText.StartsWith("/start") || messageText.StartsWith("/menu"))
@@ -127,7 +133,7 @@ public class ClientUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "Please use the provided buttons or type /menu to see the main menu.",
+            text: Translations.GetMessage(language, "UseMenuButton"),
             cancellationToken: cancellationToken);
     }
 
@@ -136,6 +142,7 @@ public class ClientUpdateHandler
         if (callbackQuery?.Message == null) return;
         var chatId = callbackQuery.Message.Chat.Id;
         string data = callbackQuery.Data;
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
 
         switch (data)
         {
@@ -144,6 +151,23 @@ public class ClientUpdateHandler
                 break;
             case "view_bookings":
                 await HandleViewBookings(chatId, cancellationToken);
+                break;
+            case "change_language":
+                var languageKeyboard = new InlineKeyboardMarkup(new[]
+                {
+                    new[] { InlineKeyboardButton.WithCallbackData("English", "set_language:EN") },
+                    new[] { InlineKeyboardButton.WithCallbackData("Українська", "set_language:UA") }
+                });
+
+                await _botClient.SendMessage(
+                    chatId: chatId,
+                    text: Translations.GetMessage(language, "SelectLanguage"),
+                    replyMarkup: languageKeyboard,
+                    cancellationToken: cancellationToken);
+                break;
+            case var s when s.StartsWith("set_language:"):
+                var selectedLanguage = s.Split(':')[1];
+                await SetLanguage(chatId, selectedLanguage, cancellationToken);
                 break;
             case "back_to_menu":
                 // Get client's most recent booking to determine company
@@ -204,13 +228,14 @@ public class ClientUpdateHandler
 
     private async Task HandleBookAppointment(long chatId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var companies = await _dbContext.Companies.ToListAsync(cancellationToken);
 
         if (!companies.Any())
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ No companies available. Please try again later.",
+                text: Translations.GetMessage(language, "NoCompaniesAvailable"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -220,18 +245,19 @@ public class ClientUpdateHandler
 
         var keyboard = new InlineKeyboardMarkup(companyButtons.Concat(new[] 
         { 
-            new[] { InlineKeyboardButton.WithCallbackData("⬅️ Back to Menu", "back_to_menu") }
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
         }));
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "Select a company to book an appointment:",
+            text: Translations.GetMessage(language, "SelectCompany"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
 
     private async Task HandleViewBookings(long chatId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var client = await _dbContext.Clients
             .FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
 
@@ -239,7 +265,7 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ No bookings found. Please make a booking first.",
+                text: Translations.GetMessage(language, "NoBookingsFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -255,22 +281,24 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "You don't have any upcoming bookings.",
+                text: Translations.GetMessage(language, "NoUpcomingBookings"),
                 replyMarkup: new InlineKeyboardMarkup(new[] 
                 { 
-                    new[] { InlineKeyboardButton.WithCallbackData("⬅️ Back to Menu", "back_to_menu") }
+                    new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
                 }),
                 cancellationToken: cancellationToken);
             return;
         }
 
-        var message = "📅 Your upcoming bookings:\n\n";
+        var message = Translations.GetMessage(language, "UpcomingBookings") + "\n\n";
         foreach (var booking in bookings)
         {
             var localTime = booking.BookingTime.ToLocalTime();
-            message += $"• {booking.Service.Name} with {booking.Service.Employee.Name}\n";
-            message += $"  📅 {localTime:dddd, MMMM d, yyyy}\n";
-            message += $"  ⏰ {localTime:hh:mm tt}\n\n";
+            message += Translations.GetMessage(language, "BookingDetails", 
+                booking.Service.Name, 
+                booking.Service.Employee.Name,
+                localTime.ToString("dddd, MMMM d, yyyy"),
+                localTime.ToString("hh:mm tt")) + "\n\n";
         }
 
         await _botClient.SendMessage(
@@ -278,7 +306,7 @@ public class ClientUpdateHandler
             text: message,
             replyMarkup: new InlineKeyboardMarkup(new[] 
             { 
-                new[] { InlineKeyboardButton.WithCallbackData("⬅️ Back to Menu", "back_to_menu") }
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
             }),
             cancellationToken: cancellationToken);
     }
@@ -314,6 +342,7 @@ public class ClientUpdateHandler
 
     public async Task HandleCompanySelection(long chatId, int companyId, CancellationToken cancellationToken)
     {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var company = await _dbContext.Companies
             .FirstOrDefaultAsync(c => c.Id == companyId, cancellationToken);
 
@@ -321,7 +350,7 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Company not found. Please try again.",
+                text: Translations.GetMessage(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -335,7 +364,7 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: $"❌ No services available for {company.Name}.",
+                text: Translations.GetMessage(language, "NoServicesAvailable", company.Name),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -352,7 +381,7 @@ public class ClientUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: $"📋 Services offered by {company.Name}:",
+            text: Translations.GetMessage(language, "CompanyServices", company.Name),
             replyMarkup: serviceKeyboard,
             cancellationToken: cancellationToken);
     }
@@ -496,22 +525,25 @@ public class ClientUpdateHandler
         var parts = userState.Split('_');
         int serviceId = int.Parse(parts[1]);
         DateTime selectedDate = DateTime.Parse(parts[2]);
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
 
         var service = await _dbContext.Services
             .Include(s => s.Employee)
+                .ThenInclude(e => e.Company)
+                    .ThenInclude(c => c.Token)
             .FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
 
         if (service == null)
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Service not found. Please try again.",
+                text: Translations.GetMessage(language, "NoServiceFound"),
                 cancellationToken: cancellationToken);
             return;
         }
 
         // Parse the time from string and create a TimeSpan
-        TimeSpan selectedTime = TimeSpan.Parse(time); // Example: "10:00" -> 10 hours, 0 minutes
+        TimeSpan selectedTime = TimeSpan.Parse(time);
 
         // Create DateTime in UTC
         DateTime bookingTime = DateTime.SpecifyKind(selectedDate.Date + selectedTime, DateTimeKind.Utc);
@@ -522,10 +554,10 @@ public class ClientUpdateHandler
         {
             client = new Client { ChatId = chatId, Name = "Test" };
             _dbContext.Clients.Add(client);
-            await _dbContext.SaveChangesAsync(cancellationToken); // Ensure the Client ID is generated
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        var clientId = client.Id; // Now we have a valid client ID
+        var clientId = client.Id;
 
         // Save booking in database
         var booking = new Booking
@@ -544,11 +576,31 @@ public class ClientUpdateHandler
         // Convert UTC time back to local time for display
         var localBookingTime = bookingTime.ToLocalTime();
         
-        // Send confirmation message
+        // Send confirmation message to client
         await _botClient.SendMessage(
             chatId: chatId,
-            text: $"✅ Your booking for {service.Name} with {service.Employee.Name} on {localBookingTime:yyyy-MM-dd} at {localBookingTime:HH:mm} has been confirmed!",
+            text: Translations.GetMessage(language, "BookingConfirmation",
+                service.Name,
+                service.Employee.Name,
+                localBookingTime.ToString("dddd, MMMM d, yyyy"),
+                localBookingTime.ToString("hh:mm tt")),
             cancellationToken: cancellationToken);
+
+        // Send notification to company owner
+        var companyOwnerChatId = service.Employee.Company.Token.ChatId;
+        if (companyOwnerChatId.HasValue)
+        {
+            var companyOwnerLanguage = userLanguages.GetValueOrDefault<long, string>(companyOwnerChatId.Value, "EN");
+            
+            await _botClient.SendMessage(
+                chatId: companyOwnerChatId.Value,
+                text: Translations.GetMessage(companyOwnerLanguage, "NewBookingNotification",
+                    service.Name,
+                    client.Name,
+                    localBookingTime.ToString("dddd, MMMM d, yyyy"),
+                    localBookingTime.ToString("hh:mm tt")),
+                cancellationToken: cancellationToken);
+        }
 
         // Show main menu after successful booking
         var userStateObj = _userStateService.GetOrCreate(chatId, service.Employee.CompanyId);
@@ -687,5 +739,40 @@ public class ClientUpdateHandler
             text: messageText,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
+    }
+
+    private async Task SetLanguage(long chatId, string language, CancellationToken cancellationToken)
+    {
+        userLanguages[chatId] = language;
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "LanguageSet", language),
+            cancellationToken: cancellationToken);
+        
+        // Get client's most recent booking to determine company
+        var client = await _dbContext.Clients
+            .FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
+
+        if (client != null)
+        {
+            var recentBooking = await _dbContext.Bookings
+                .Where(b => b.ClientId == client.Id)
+                .OrderByDescending(b => b.BookingTime)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (recentBooking != null)
+            {
+                var userState = _userStateService.GetOrCreate(chatId, recentBooking.CompanyId);
+                await ShowMainMenu(chatId, userState.CompanyId, cancellationToken);
+            }
+            else
+            {
+                await HandleBookAppointment(chatId, cancellationToken);
+            }
+        }
+        else
+        {
+            await HandleBookAppointment(chatId, cancellationToken);
+        }
     }
 }

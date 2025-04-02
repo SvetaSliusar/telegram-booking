@@ -8,6 +8,7 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using Telegram.Bot.Examples.WebHook.Services;
 
 namespace Telegram.Bot.Services;
 
@@ -16,6 +17,7 @@ public class CompanyUpdateHandler
     private readonly ITelegramBotClient _botClient;
     private readonly ILogger<CompanyUpdateHandler> _logger;
     private readonly BookingDbContext _dbContext;
+    private readonly UserStateService _userStateService;
 
     //private static readonly string StickerId = "CAACAgIAAxkBAAONZnAGyWndlNzCY-3FkmBvV5Y_hskAAi4AAyRxYhqI6DZDakBDFDUE";
     
@@ -23,11 +25,16 @@ public class CompanyUpdateHandler
     private static ConcurrentDictionary<long, string> userConversations = new ConcurrentDictionary<long, string>();
     private static ConcurrentDictionary<long, string> userLanguages = new ConcurrentDictionary<long, string>();
 
-    public CompanyUpdateHandler(ITelegramBotClient botClient, ILogger<CompanyUpdateHandler> logger, BookingDbContext dbContext)
+    public CompanyUpdateHandler(
+        ITelegramBotClient botClient,
+        ILogger<CompanyUpdateHandler> logger,
+        BookingDbContext dbContext,
+        UserStateService userStateService)
     {
         _botClient = botClient;
         _logger = logger;
         _dbContext = dbContext;
+        _userStateService = userStateService;
     }
 
     public async Task StartCompanyFlow(long chatId, CancellationToken cancellationToken)
@@ -172,6 +179,11 @@ public class CompanyUpdateHandler
             if (data.StartsWith("select_employee:"))
             {
                 await HandleEmployeeSelectionForService(callbackQuery, cancellationToken);
+                return;
+            }
+            if (data.StartsWith("reminder_time"))
+            {
+                await HandleReminderTimeSelection(callbackQuery, cancellationToken);
                 return;
             }
 
@@ -361,6 +373,15 @@ public class CompanyUpdateHandler
                         cancellationToken: cancellationToken);
                     return;
 
+                case "view_daily_bookings":
+                    userConversations[chatId] = "WaitingForBookingDate";
+                    await ShowBookingCalendar(chatId, DateTime.UtcNow, cancellationToken);
+                    break;
+
+                case "reminder_settings":
+                    await HandleReminderSettings(chatId, cancellationToken);
+                    break;
+
                 default:
                     _logger.LogInformation("Unknown callback data: {CallbackData}", callbackQuery.Data);
                     break;
@@ -371,6 +392,20 @@ public class CompanyUpdateHandler
                 var selectedLanguage = data.Split(':')[1];
                 await SetLanguage(chatId, selectedLanguage, cancellationToken);
                 return;
+            }
+
+            if (data.StartsWith("booking_date_"))
+            {
+                var selectedDate = DateTime.Parse(data.Replace("booking_date_", ""));
+                await HandleBookingDateSelection(chatId, selectedDate, cancellationToken);
+            }
+            else if (data.StartsWith("booking_prev_") || data.StartsWith("booking_next_"))
+            {
+                var referenceDate = DateTime.Parse(data.Replace("booking_prev_", "").Replace("booking_next_", ""));
+                DateTime newMonth = data.StartsWith("booking_prev_") 
+                    ? referenceDate.AddMonths(-1) 
+                    : referenceDate.AddMonths(1);
+                await ShowBookingCalendar(chatId, newMonth, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -915,6 +950,8 @@ public class CompanyUpdateHandler
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ListServices"), "list_services") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "GetClientLink"), "get_client_link") },
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ViewDailyBookings"), "view_daily_bookings") },
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ReminderSettings"), "reminder_settings") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") }
             };
 
@@ -1661,6 +1698,269 @@ public class CompanyUpdateHandler
             text: Translations.GetMessage(language, "ClientLink", clientLink),
             parseMode: ParseMode.Markdown,
             cancellationToken: cancellationToken);
+    }
+
+    private async Task ShowBookingCalendar(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
+    {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var daysInMonth = DateTime.DaysInMonth(selectedDate.Year, selectedDate.Month);
+        var firstDayOfMonth = new DateTime(selectedDate.Year, selectedDate.Month, 1);
+        var currentDate = DateTime.UtcNow.Date;
+        var nextMonth = currentDate.AddMonths(1);
+        var isCurrentMonth = selectedDate.Year == currentDate.Year && selectedDate.Month == currentDate.Month;
+        var isNextMonth = selectedDate.Year == nextMonth.Year && selectedDate.Month == nextMonth.Month;
+        var isPastMonth = selectedDate < currentDate;
+        var isFutureMonth = selectedDate > nextMonth;
+
+        List<List<InlineKeyboardButton>> calendarButtons = new();
+
+        // Weekday headers
+        calendarButtons.Add(new List<InlineKeyboardButton>
+        {
+            InlineKeyboardButton.WithCallbackData("Mo", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Tu", "ignore"),
+            InlineKeyboardButton.WithCallbackData("We", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Th", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Fr", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Sa", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Su", "ignore"),
+        });
+
+        List<InlineKeyboardButton> weekRow = new();
+
+        // Add empty buttons before the first day of the month
+        for (int i = 1; i < (int)firstDayOfMonth.DayOfWeek; i++)
+        {
+            weekRow.Add(InlineKeyboardButton.WithCallbackData(" ", "ignore"));
+        }
+
+        // Get company ID from user state
+        var userState = _userStateService.GetOrCreate(chatId, 0);
+        var companyId = userState.CompanyId;
+
+        // Get all bookings for this company in the current month
+        var monthStart = DateTime.SpecifyKind(new DateTime(selectedDate.Year, selectedDate.Month, 1), DateTimeKind.Utc);
+        var monthEnd = DateTime.SpecifyKind(monthStart.AddMonths(1).AddDays(-1), DateTimeKind.Utc);
+        
+        var bookedDates = await _dbContext.Bookings
+            .Where(b => b.CompanyId == companyId && 
+                        b.BookingTime >= monthStart && 
+                        b.BookingTime <= monthEnd)
+            .Select(b => b.BookingTime.Date)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        // Generate day buttons
+        for (int day = 1; day <= daysInMonth; day++)
+        {
+            var date = DateTime.SpecifyKind(new DateTime(selectedDate.Year, selectedDate.Month, day), DateTimeKind.Utc);
+            var hasBookings = bookedDates.Contains(date.Date);
+            var isPastDate = date.Date < currentDate;
+            
+            if (isPastDate)
+            {
+                weekRow.Add(InlineKeyboardButton.WithCallbackData($"{day}⚫", "ignore"));
+            }
+            else
+            {
+                var buttonText = hasBookings ? $"{day}📅" : day.ToString();
+                weekRow.Add(InlineKeyboardButton.WithCallbackData(buttonText, $"booking_date_{date:yyyy-MM-dd}"));
+            }
+
+            if (weekRow.Count == 7) // New row after each week
+            {
+                calendarButtons.Add(weekRow);
+                weekRow = new List<InlineKeyboardButton>();
+            }
+        }
+
+        if (weekRow.Any()) // Add last row if not full
+            calendarButtons.Add(weekRow);
+
+        // Navigation buttons
+        var prevButton = isPastMonth || isCurrentMonth
+            ? InlineKeyboardButton.WithCallbackData("⬅️", "ignore")
+            : InlineKeyboardButton.WithCallbackData("⬅️", $"booking_prev_{selectedDate:yyyy-MM-dd}");
+
+        var nextButton = isFutureMonth || isNextMonth
+            ? InlineKeyboardButton.WithCallbackData("➡️", "ignore")
+            : InlineKeyboardButton.WithCallbackData("➡️", $"booking_next_{selectedDate:yyyy-MM-dd}");
+
+        calendarButtons.Add(new List<InlineKeyboardButton>
+        {
+            prevButton,
+            nextButton
+        });
+
+        var keyboard = new InlineKeyboardMarkup(calendarButtons);
+
+        var messageText = Translations.GetMessage(language, "SelectDateForBookings") + "\n" +
+                         $"{selectedDate:MMMM yyyy}\n" +
+                         (isPastMonth ? "⚠️ Past month\n" : "") +
+                         (isFutureMonth ? "⚠️ Future month\n" : "") +
+                         "📅 Dates with bookings\n" +
+                         "⚫ Past dates";
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: messageText,
+            replyMarkup: keyboard,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task HandleBookingDateSelection(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
+    {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var company = await _dbContext.Companies
+            .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
+        var userState = _userStateService.GetOrCreate(chatId, company.Id);
+        var companyId = userState.CompanyId;
+
+        var selectedDateUtc = DateTime.SpecifyKind(selectedDate, DateTimeKind.Utc);
+        var dayStart = selectedDateUtc.Date;
+        var dayEnd = dayStart.AddDays(1);
+
+        var bookings = await _dbContext.Bookings
+            .Include(b => b.Service)
+                .ThenInclude(s => s.Employee)
+            .Include(b => b.Client)
+            .Where(b => b.CompanyId == companyId && 
+                        b.BookingTime >= dayStart && 
+                        b.BookingTime < dayEnd)
+            .OrderBy(b => b.BookingTime)
+            .ToListAsync(cancellationToken);
+
+        if (!bookings.Any())
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "NoBookingsForDate", selectedDate.ToString("dddd, MMMM d, yyyy")),
+                replyMarkup: new InlineKeyboardMarkup(new[] 
+                { 
+                    new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+                }),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var message = Translations.GetMessage(language, "BookingsForDate", selectedDate.ToString("dddd, MMMM d, yyyy")) + "\n\n";
+        foreach (var booking in bookings)
+        {
+            var localTime = booking.BookingTime.ToLocalTime();
+            message += Translations.GetMessage(language, "BookingDetailsForCompany", 
+                booking.Service.Name,
+                booking.Client.Name,
+                localTime.ToString("hh:mm tt"),
+                booking.Client.Name ?? "N/A") + "\n\n";
+        }
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: message,
+            replyMarkup: new InlineKeyboardMarkup(new[] 
+            { 
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+            }),
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task HandleReminderSettings(long chatId, CancellationToken cancellationToken)
+    {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var company = await _dbContext.Companies
+            .Include(c => c.ReminderSettings)
+            .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
+
+        if (company == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "NoCompanyFound"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        // Create or get reminder settings
+        if (company.ReminderSettings == null)
+        {
+            company.ReminderSettings = new ReminderSettings
+            {
+                CompanyId = company.Id,
+                HoursBeforeReminder = 24
+            };
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        var keyboard = new InlineKeyboardMarkup(new[]
+        {
+            new[] { InlineKeyboardButton.WithCallbackData("1 hour", "reminder_time:1") },
+            new[] { InlineKeyboardButton.WithCallbackData("3 hours", "reminder_time:3") },
+            new[] { InlineKeyboardButton.WithCallbackData("6 hours", "reminder_time:6") },
+            new[] { InlineKeyboardButton.WithCallbackData("12 hours", "reminder_time:12") },
+            new[] { InlineKeyboardButton.WithCallbackData("24 hours", "reminder_time:24") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+        });
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "SetReminderTime"),
+            replyMarkup: keyboard,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task HandleReminderTimeSelection(CallbackQuery callbackQuery, CancellationToken cancellationToken)
+    {
+        if (callbackQuery?.Message == null) return;
+        var chatId = callbackQuery.Message.Chat.Id;
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        string data = callbackQuery.Data;
+
+        if (!data.StartsWith("reminder_time:")) return;
+
+        var hoursStr = data.Split(':')[1];
+        if (!int.TryParse(hoursStr, out int hours) || hours < 1 || hours > 24)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "InvalidReminderTime"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var company = await _dbContext.Companies
+            .Include(c => c.ReminderSettings)
+            .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
+
+        if (company == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "NoCompanyFound"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        if (company.ReminderSettings == null)
+        {
+            company.ReminderSettings = new ReminderSettings
+            {
+                CompanyId = company.Id,
+                HoursBeforeReminder = hours
+            };
+        }
+        else
+        {
+            company.ReminderSettings.HoursBeforeReminder = hours;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "ReminderTimeUpdated", hours),
+            cancellationToken: cancellationToken);
+
+        await SendMainMenu(chatId, cancellationToken);
     }
 }
 

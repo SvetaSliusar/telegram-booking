@@ -64,6 +64,7 @@ builder.Services.AddScoped<TokensService>();
 builder.Services.AddSingleton<UserStateService>();
 builder.Services.AddScoped<IStartCommandHandler, StartCommandHandler>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddHostedService<BookingReminderService>();
 
 // ✅ Hosted Service to Manage Webhook
 builder.Services.AddHostedService<ConfigureWebhook>();
