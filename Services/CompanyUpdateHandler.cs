@@ -1206,7 +1206,7 @@ public class CompanyUpdateHandler
         if (!userHoursSelections[chatId].ContainsKey(selectedDay))
         {
             userHoursSelections[chatId][selectedDay] = existingHours
-                .Select(h => h.StartTime)
+                .SelectMany(h => new[] { h.StartTime, h.EndTime })
                 .ToList();
         }
 
@@ -1733,17 +1733,16 @@ public class CompanyUpdateHandler
         {
             weekRow.Add(InlineKeyboardButton.WithCallbackData(" ", "ignore"));
         }
-
-        // Get company ID from user state
-        var userState = _userStateService.GetOrCreate(chatId, 0);
-        var companyId = userState.CompanyId;
+        
+        var company = await _dbContext.Companies
+            .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
         // Get all bookings for this company in the current month
         var monthStart = DateTime.SpecifyKind(new DateTime(selectedDate.Year, selectedDate.Month, 1), DateTimeKind.Utc);
         var monthEnd = DateTime.SpecifyKind(monthStart.AddMonths(1).AddDays(-1), DateTimeKind.Utc);
         
         var bookedDates = await _dbContext.Bookings
-            .Where(b => b.CompanyId == companyId && 
+            .Where(b => b.CompanyId == company.Id && 
                         b.BookingTime >= monthStart && 
                         b.BookingTime <= monthEnd)
             .Select(b => b.BookingTime.Date)
@@ -1813,8 +1812,6 @@ public class CompanyUpdateHandler
         var language = userLanguages.GetValueOrDefault(chatId, "EN");
         var company = await _dbContext.Companies
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
-        var userState = _userStateService.GetOrCreate(chatId, company.Id);
-        var companyId = userState.CompanyId;
 
         var selectedDateUtc = DateTime.SpecifyKind(selectedDate, DateTimeKind.Utc);
         var dayStart = selectedDateUtc.Date;
@@ -1824,7 +1821,7 @@ public class CompanyUpdateHandler
             .Include(b => b.Service)
                 .ThenInclude(s => s.Employee)
             .Include(b => b.Client)
-            .Where(b => b.CompanyId == companyId && 
+            .Where(b => b.CompanyId == company.Id && 
                         b.BookingTime >= dayStart && 
                         b.BookingTime < dayEnd)
             .OrderBy(b => b.BookingTime)

@@ -81,7 +81,7 @@ public class StartCommandHandler : IStartCommandHandler
         if (company != null)
         {
             await _clientUpdateHandler.StartClientFlow(chatId, company.Id, cancellationToken);
-            return true;
+            return false;
         }
 
         // If neither token nor company alias is valid

@@ -56,7 +56,7 @@ public class BotController : ControllerBase
 
             var result = await _startCommandHandler.HandleStartCommandAsync(messageText, chatId.Value, cancellationToken);
 
-            if (result == false)
+            if (!result)
             {
                 return Ok();
             }
