@@ -1,15 +1,14 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
-using Telegram.Bot.Examples.WebHook;
-using Telegram.Bot.Examples.WebHook.Models;
-using Telegram.Bot.Examples.WebHook.Services.Constants;
+using Telegram.Bot.Models;
+using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using Telegram.Bot.Examples.WebHook.Services;
 using System.Text;
+using Telegram.Bot.Commands;
 
 namespace Telegram.Bot.Services;
 
@@ -18,8 +17,8 @@ public class CompanyUpdateHandler
     private readonly ITelegramBotClient _botClient;
     private readonly ILogger<CompanyUpdateHandler> _logger;
     private readonly BookingDbContext _dbContext;
-    private readonly UserStateService _userStateService;
-
+    private readonly ICallbackCommandFactory _commandFactory;
+    private readonly IUserStateService _userStateService;
     //private static readonly string StickerId = "CAACAgIAAxkBAAONZnAGyWndlNzCY-3FkmBvV5Y_hskAAi4AAyRxYhqI6DZDakBDFDUE";
     
     // Thread-safe dictionary for conversation states
@@ -30,11 +29,13 @@ public class CompanyUpdateHandler
         ITelegramBotClient botClient,
         ILogger<CompanyUpdateHandler> logger,
         BookingDbContext dbContext,
-        UserStateService userStateService)
+        ICallbackCommandFactory callbackCommandFactory,
+        IUserStateService userStateService)
     {
         _botClient = botClient;
         _logger = logger;
         _dbContext = dbContext;
+        _commandFactory = callbackCommandFactory;
         _userStateService = userStateService;
     }
 
@@ -128,8 +129,8 @@ public class CompanyUpdateHandler
             await ShowMainMenu(chatId, cancellationToken);
             return;
         }
-
-        if (userConversations.TryGetValue(chatId, out var state))
+        var state = _userStateService.GetConversation(chatId);
+        if (!string.IsNullOrEmpty(state))
         {
             if (state.StartsWith("WaitingForBreakStart_"))
             {
@@ -148,10 +149,10 @@ public class CompanyUpdateHandler
                 var startTime = TimeSpan.Parse(parts[3]);
                 await HandleBreakEndTimeInput(chatId, employeeId, day, startTime, userMessage, cancellationToken);
                 return;
-            }
+        }
 
-            await HandleCompanyCreationInput(chatId, userMessage, cancellationToken);
-            return;
+        await HandleCompanyCreationInput(chatId, userMessage, cancellationToken);
+        return;
         }
 
         // Handle default message
@@ -197,16 +198,14 @@ public class CompanyUpdateHandler
                 cancellationToken: cancellationToken);
             return;
         }
-
-        // Set state to wait for end time
-        userConversations[chatId] = $"WaitingForBreakEnd_{employeeId}_{(int)day}_{startTime}";
+        _userStateService.SetConversation(chatId, $"WaitingForBreakEnd_{employeeId}_{(int)day}_{startTime}");
 
         await _botClient.SendMessage(
             chatId: chatId,
             text: Translations.GetMessage(language, "BreakEndTime"),
             replyMarkup: new InlineKeyboardMarkup(new[]
             {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), $"waiting_for_break_start_{employeeId}_{(int)day}") }
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), $"waiting_for_break_start:{employeeId}_{(int)day}") }
             }),
             cancellationToken: cancellationToken);
     }
@@ -271,7 +270,7 @@ public class CompanyUpdateHandler
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         // Clear the conversation state
-        userConversations.TryRemove(chatId, out _);
+        _userStateService.RemoveConversation(chatId);
 
         await _botClient.SendMessage(
             chatId: chatId,
@@ -284,85 +283,23 @@ public class CompanyUpdateHandler
 
     private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery, CancellationToken cancellationToken)
     {
-        if (callbackQuery?.Message == null) return;
+        if (callbackQuery?.Message == null || string.IsNullOrEmpty(callbackQuery.Data))
+            return;
+
+        // First, try new factory-based commands
+        var command = _commandFactory.CreateCommand(callbackQuery);
+        if (command != null)
+        {
+            await command.ExecuteAsync(callbackQuery, cancellationToken);
+            return;
+        }
+
         var chatId = callbackQuery.Message.Chat.Id;
         string data = callbackQuery.Data;
 
         try
         {
             var language = userLanguages.GetValueOrDefault(chatId, "EN");
-
-            // Handle break management callbacks
-            if (data.StartsWith("waiting_for_break_start:"))
-            {
-                var breakParts = data.Split(':')[1].Split('_');
-                var breakEmployeeId = int.Parse(breakParts[0]);
-                var breakDay = (DayOfWeek)int.Parse(breakParts[1]);
-                await HandleBreakStartTime(chatId, breakEmployeeId, breakDay, cancellationToken);
-                return;
-            }
-
-            if (data.StartsWith("waiting_for_break_end:"))
-            {
-                var breakParts = data.Split(':')[1].Split('_');
-                var breakEmployeeId = int.Parse(breakParts[0]);
-                var breakDay = (DayOfWeek)int.Parse(breakParts[1]);
-                var startTime = TimeSpan.Parse(breakParts[2]);
-                await HandleBreakEndTime(chatId, breakEmployeeId, breakDay, startTime, cancellationToken);
-                return;
-            }
-
-            if (data.StartsWith("remove_break:"))
-            {
-                var parts = data.Split(':')[1].Split('_');
-                var day = Enum.Parse<DayOfWeek>(parts[1]);
-                await HandleRemoveBreak(chatId, day, cancellationToken);
-                return;
-            }
-
-            if (data.StartsWith("select_break_start:"))
-            {
-                var parts = data.Split(':');
-                var day = Enum.Parse<DayOfWeek>(parts[1]);
-                var startTime = TimeSpan.Parse(parts[2]);
-                await HandleBreakStartSelection(chatId, day, startTime, cancellationToken);
-                return;
-            }
-
-            if (data.StartsWith("select_break_end:"))
-            {
-                var parts = data.Split(':');
-                var day = Enum.Parse<DayOfWeek>(parts[1]);
-                var startTime = TimeSpan.Parse(parts[2]);
-                var endTime = TimeSpan.Parse(parts[3]);
-                await HandleBreakEndSelection(chatId, day, startTime, endTime, cancellationToken);
-                return;
-            }
-
-            if (data.StartsWith("remove_break_confirmation:"))
-            {
-                var parts = data.Split(':');
-                var day = Enum.Parse<DayOfWeek>(parts[1]);
-                var breakId = int.Parse(parts[2]);
-                await HandleBreakRemovalConfirmation(chatId, day, breakId, cancellationToken);
-                return;
-            }
-
-            if (data.StartsWith("back_to_breaks:"))
-            {
-                var day = Enum.Parse<DayOfWeek>(data.Split(':')[1]);
-                var workingHours = await _dbContext.WorkingHours
-                    .Include(wh => wh.Breaks)
-                    .FirstOrDefaultAsync(wh => wh.DayOfWeek == day && 
-                                             wh.Employee.Company.Token.ChatId == chatId, 
-                                      cancellationToken);
-
-                if (workingHours != null)
-                {
-                    await HandleWorkingHoursSelection(chatId, day, workingHours.StartTime, workingHours.EndTime, cancellationToken);
-                }
-                return;
-            }
 
             if (data.StartsWith("copy_hours:"))
             {
@@ -587,11 +524,6 @@ public class CompanyUpdateHandler
 
                 case "reminder_settings":
                     await HandleReminderSettings(chatId, cancellationToken);
-                    break;
-
-                case "manage_breaks":
-                case "back_to_days":
-                    await HandleManageBreaks(chatId, cancellationToken);
                     break;
 
                 default:
@@ -1101,22 +1033,6 @@ public class CompanyUpdateHandler
             cancellationToken: cancellationToken);
 
         await ShowMainMenu(chatId, cancellationToken);
-    }
-
-    // ✅ Helper function to convert string to DayOfWeek enum
-    private static DayOfWeek GetDayOfWeek(string day)
-    {
-        return day.ToLower() switch
-        {
-            "monday" => DayOfWeek.Monday,
-            "tuesday" => DayOfWeek.Tuesday,
-            "wednesday" => DayOfWeek.Wednesday,
-            "thursday" => DayOfWeek.Thursday,
-            "friday" => DayOfWeek.Friday,
-            "saturday" => DayOfWeek.Saturday,
-            "sunday" => DayOfWeek.Sunday,
-            _ => throw new ArgumentException($"Invalid day: {day}")
-        };
     }
 
     public static string GenerateClientToken(int length = 32)
@@ -2086,249 +2002,6 @@ public class CompanyUpdateHandler
             cancellationToken: cancellationToken);
     }
 
-    private async Task HandleAddBreak(long chatId, DayOfWeek day, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        
-        // Get working hours for this day
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.DayOfWeek == day && 
-                                     wh.Employee.Company.Token.ChatId == chatId, 
-                              cancellationToken);
-
-        if (workingHours == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHoursSet"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Create time selection keyboard
-        var keyboard = new List<InlineKeyboardButton[]>();
-        var currentTime = workingHours.StartTime;
-
-        while (currentTime < workingHours.EndTime)
-        {
-            var row = new List<InlineKeyboardButton>();
-            for (int i = 0; i < 4 && currentTime < workingHours.EndTime; i++)
-            {
-                row.Add(InlineKeyboardButton.WithCallbackData(
-                    currentTime.ToString(@"hh\:mm"),
-                    $"select_break_start:{day}:{currentTime}"));
-                currentTime = currentTime.Add(TimeSpan.FromMinutes(30));
-            }
-            keyboard.Add(row.ToArray());
-        }
-
-        keyboard.Add(new[]
-        {
-            InlineKeyboardButton.WithCallbackData(
-                Translations.GetMessage(language, "Back"),
-                $"back_to_breaks:{day}")
-        });
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "SelectBreakTime"),
-            replyMarkup: new InlineKeyboardMarkup(keyboard),
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleBreakStartSelection(long chatId, DayOfWeek day, TimeSpan startTime, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        
-        // Get working hours for this day
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.DayOfWeek == day && 
-                                     wh.Employee.Company.Token.ChatId == chatId, 
-                              cancellationToken);
-
-        if (workingHours == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHoursSet"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Create time selection keyboard for end time
-        var keyboard = new List<InlineKeyboardButton[]>();
-        var currentTime = startTime.Add(TimeSpan.FromMinutes(30));
-
-        while (currentTime <= workingHours.EndTime)
-        {
-            var row = new List<InlineKeyboardButton>();
-            for (int i = 0; i < 4 && currentTime <= workingHours.EndTime; i++)
-            {
-                row.Add(InlineKeyboardButton.WithCallbackData(
-                    currentTime.ToString(@"hh\:mm"),
-                    $"select_break_end:{day}:{startTime}:{currentTime}"));
-                currentTime = currentTime.Add(TimeSpan.FromMinutes(30));
-            }
-            keyboard.Add(row.ToArray());
-        }
-
-        keyboard.Add(new[]
-        {
-            InlineKeyboardButton.WithCallbackData(
-                Translations.GetMessage(language, "Back"),
-                $"back_to_breaks:{day}")
-        });
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "SelectBreakEndTime"),
-            replyMarkup: new InlineKeyboardMarkup(keyboard),
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleBreakEndSelection(long chatId, DayOfWeek day, TimeSpan startTime, TimeSpan endTime, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        
-        // Get working hours for this day
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.DayOfWeek == day && 
-                                     wh.Employee.Company.Token.ChatId == chatId, 
-                              cancellationToken);
-
-        if (workingHours == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHoursSet"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Check if the break overlaps with any existing breaks
-        if (workingHours.Breaks.Any(b => 
-            (startTime >= b.StartTime && startTime < b.EndTime) ||
-            (endTime > b.StartTime && endTime <= b.EndTime) ||
-            (startTime <= b.StartTime && endTime >= b.EndTime)))
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "BreakOverlap"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Add the break
-        workingHours.Breaks.Add(new Break
-        {
-            StartTime = startTime,
-            EndTime = endTime
-        });
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "BreakAdded", 
-                startTime.ToString(@"hh\:mm"), 
-                endTime.ToString(@"hh\:mm")),
-            cancellationToken: cancellationToken);
-
-        // Show updated breaks list
-        await HandleWorkingHoursSelection(chatId, day, workingHours.StartTime, workingHours.EndTime, cancellationToken);
-    }
-
-    private async Task HandleRemoveBreak(long chatId, DayOfWeek day, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        
-        // Get working hours for this day
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.DayOfWeek == day && 
-                                     wh.Employee.Company.Token.ChatId == chatId, 
-                              cancellationToken);
-
-        if (workingHours == null || !workingHours.Breaks.Any())
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoBreaks"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Create keyboard with break options
-        var keyboard = new List<InlineKeyboardButton[]>();
-        foreach (var breakTime in workingHours.Breaks.OrderBy(b => b.StartTime))
-        {
-            keyboard.Add(new[]
-            {
-                InlineKeyboardButton.WithCallbackData(
-                    $"{breakTime.StartTime:hh\\:mm} - {breakTime.EndTime:hh\\:mm}",
-                    $"remove_break_confirmation:{day}:{breakTime.Id}")
-            });
-        }
-
-        keyboard.Add(new[]
-        {
-            InlineKeyboardButton.WithCallbackData(
-                Translations.GetMessage(language, "Back"),
-                $"back_to_breaks:{day}")
-        });
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "SelectBreakToRemove"),
-            replyMarkup: new InlineKeyboardMarkup(keyboard),
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleBreakRemovalConfirmation(long chatId, DayOfWeek day, int breakId, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        
-        // Get working hours for this day
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.DayOfWeek == day && 
-                                     wh.Employee.Company.Token.ChatId == chatId, 
-                              cancellationToken);
-
-        if (workingHours == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHoursSet"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var breakToRemove = workingHours.Breaks.FirstOrDefault(b => b.Id == breakId);
-        if (breakToRemove == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "BreakNotFound"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        workingHours.Breaks.Remove(breakToRemove);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "BreakRemoved"),
-            cancellationToken: cancellationToken);
-
-        // Show updated breaks list
-        await HandleWorkingHoursSelection(chatId, day, workingHours.StartTime, workingHours.EndTime, cancellationToken);
-    }
-
     private async Task HandleTimeSelection(long chatId, int serviceId, DateTime selectedDate, TimeSpan selectedTime, CancellationToken cancellationToken)
     {
         var language = userLanguages.GetValueOrDefault(chatId, "EN");
@@ -2428,60 +2101,6 @@ public class CompanyUpdateHandler
         await ShowMainMenu(chatId, cancellationToken);
     }
 
-    private async Task HandleManageBreaks(long chatId, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        var company = await _dbContext.Companies
-            .Include(c => c.Employees)
-                .ThenInclude(e => e.WorkingHours)
-                .ThenInclude(wh => wh.Breaks)
-        .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
-
-        if (company == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var employee = company.Employees.FirstOrDefault();
-        if (employee == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoEmployeeFound"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Show day selection
-        var dayButtons = new List<InlineKeyboardButton[]>();
-        foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
-        {
-            var workingHours = employee.WorkingHours.FirstOrDefault(wh => wh.DayOfWeek == day);
-            if (workingHours != null)
-            {
-                var dayName = Translations.GetMessage(language, day.ToString());
-                dayButtons.Add(new[]
-                {
-                    InlineKeyboardButton.WithCallbackData(
-                        $"{dayName} ({workingHours.StartTime.ToString(@"hh\:mm")} - {workingHours.EndTime.ToString(@"hh\:mm")})",
-                        $"select_day_for_breaks:{employee.Id}_{(int)day}")
-                });
-            }
-        }
-
-        dayButtons.Add(new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), "back_to_menu") });
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "SelectDay"),
-            replyMarkup: new InlineKeyboardMarkup(dayButtons),
-            cancellationToken: cancellationToken);
-    }
-
     private async Task HandleDayBreaksSelection(long chatId, int employeeId, DayOfWeek day, CancellationToken cancellationToken)
     {
         var language = userLanguages.GetValueOrDefault(chatId, "EN");
@@ -2534,7 +2153,7 @@ public class CompanyUpdateHandler
             {
                 InlineKeyboardButton.WithCallbackData(
                     Translations.GetMessage(language, "AddBreak"),
-                    $"waiting_for_break_start:{employeeId}_{(int)day}")
+                    $"add_break:{employeeId}_{(int)day}")
             }
         };
 
@@ -2557,124 +2176,6 @@ public class CompanyUpdateHandler
             cancellationToken: cancellationToken);
     }
 
-    private async Task HandleAddBreak(long chatId, int employeeId, DayOfWeek day, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        var workingHours = await _dbContext.WorkingHours
-            .FirstOrDefaultAsync(wh => wh.EmployeeId == employeeId && wh.DayOfWeek == day, cancellationToken);
-
-        if (workingHours == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHours"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        userConversations[chatId] = $"waiting_for_break_start:{employeeId}_{(int)day}";
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "BreakStartTime"),
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleBreakStartTime(long chatId, int employeeId, DayOfWeek day, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        
-        // Set state to wait for break start time
-        userConversations[chatId] = $"WaitingForBreakStart_{employeeId}_{(int)day}";
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "BreakStartTime"),
-            replyMarkup: new InlineKeyboardMarkup(new[]
-            {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), $"select_day_for_breaks:{employeeId}_{(int)day}") }
-            }),
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleBreakEndTime(long chatId, int employeeId, DayOfWeek day, TimeSpan startTime, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        
-        // Set state to wait for break end time
-        userConversations[chatId] = $"WaitingForBreakEnd_{employeeId}_{(int)day}_{startTime}";
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "BreakEndTime"),
-            replyMarkup: new InlineKeyboardMarkup(new[]
-            {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), $"waiting_for_break_start:{employeeId}_{(int)day}") }
-            }),
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleRemoveBreak(long chatId, int employeeId, DayOfWeek day, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.EmployeeId == employeeId && wh.DayOfWeek == day, cancellationToken);
-
-        if (workingHours == null || !workingHours.Breaks.Any())
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoBreaks"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var breakButtons = workingHours.Breaks
-            .Select((b, index) => new[]
-            {
-                InlineKeyboardButton.WithCallbackData(
-                    $"{b.StartTime:HH:mm} - {b.EndTime:HH:mm}",
-                    $"remove_break_{employeeId}_{(int)day}_{index}")
-            })
-            .ToList();
-
-        breakButtons.Add(new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), $"select_day_for_breaks:{employeeId}_{(int)day}") });
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "SelectBreakToRemove"),
-            replyMarkup: new InlineKeyboardMarkup(breakButtons),
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleBreakRemoval(long chatId, int employeeId, DayOfWeek day, int breakIndex, CancellationToken cancellationToken)
-    {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.EmployeeId == employeeId && wh.DayOfWeek == day, cancellationToken);
-
-        if (workingHours == null || breakIndex >= workingHours.Breaks.Count)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoBreaks"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var breakToRemove = workingHours.Breaks.ElementAt(breakIndex);
-        workingHours.Breaks.Remove(breakToRemove);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "BreakRemoved"),
-            cancellationToken: cancellationToken);
-
-        await HandleDayBreaksSelection(chatId, employeeId, day, cancellationToken);
-    }
 }
 
 public class CompanyCreationData

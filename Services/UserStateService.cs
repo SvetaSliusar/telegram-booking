@@ -1,9 +1,12 @@
-using Telegram.Bot.Examples.WebHook.Models;
+using System.Collections.Concurrent;
+using Telegram.Bot.Models;
 
-namespace Telegram.Bot.Examples.WebHook.Services;
+namespace Telegram.Bot.Services;
 
-public class UserStateService
+public class UserStateService : IUserStateService
 {
+    private readonly ConcurrentDictionary<long, string> _userConversations = new();
+    private readonly ConcurrentDictionary<long, string> _userLanguages = new();
     private readonly Dictionary<long, ClientConversationState> _userStates = new();
 
     public ClientConversationState GetOrCreate(long chatId, int companyId)
@@ -32,5 +35,32 @@ public class UserStateService
     public void RemoveState(long chatId)
     {
         _userStates.Remove(chatId);
+    }
+
+    public string GetLanguage(long chatId)
+    {
+        _userLanguages.TryGetValue(chatId, out var language);
+        return language ?? "EN";
+    }
+
+    public void SetLanguage(long chatId, string language)
+    {
+        _userLanguages[chatId] = language;
+    }
+
+    public string GetConversation(long chatId)
+    {
+        _userConversations.TryGetValue(chatId, out var conversation);
+        return conversation;
+    }
+
+    public void SetConversation(long chatId, string conversation)
+    {
+        _userConversations[chatId] = conversation;
+    }
+
+    public void RemoveConversation(long chatId)
+    {
+        _userConversations.TryRemove(chatId, out _);
     }
 } 

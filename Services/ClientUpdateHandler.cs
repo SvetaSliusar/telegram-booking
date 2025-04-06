@@ -1,25 +1,22 @@
 using Microsoft.EntityFrameworkCore;
-using Telegram.Bot.Examples.WebHook;
-using Telegram.Bot.Examples.WebHook.Models;
+using Telegram.Bot.Models;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
-using Telegram.Bot.Examples.WebHook.Services;
 using System.Collections.Concurrent;
-using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Examples.WebHook.Services.Constants;
+using Telegram.Bot.Services.Constants;
 
 namespace Telegram.Bot.Services;
 public class ClientUpdateHandler
 {
     private readonly ITelegramBotClient _botClient;
     private readonly BookingDbContext _dbContext;
-    private readonly UserStateService _userStateService;
+    private readonly IUserStateService _userStateService;
     private readonly ConcurrentDictionary<long, string> userLanguages = new ConcurrentDictionary<long, string>();
 
     public ClientUpdateHandler(
         ITelegramBotClient botClient,
         BookingDbContext dbContext,
-        UserStateService userStateService)
+        IUserStateService userStateService)
     {
         _botClient = botClient;
         _dbContext = dbContext;

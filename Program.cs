@@ -1,14 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Azure.Identity;
 using Telegram.Bot;
-using Telegram.Bot.Examples.WebHook;
-using Telegram.Bot.Examples.WebHook.Infrastructure.Configs;
-using Telegram.Bot.Examples.WebHook.Services;
+using Telegram.Bot.Infrastructure.Configs;
 using Telegram.Bot.Services;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging.AzureAppServices;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using System.Text.Json;
+using Telegram.Bot.Commands;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,10 +59,29 @@ builder.Services.AddDbContext<BookingDbContext>(options =>
 builder.Services.AddScoped<ClientUpdateHandler>();
 builder.Services.AddScoped<CompanyUpdateHandler>();
 builder.Services.AddScoped<TokensService>();
-builder.Services.AddSingleton<UserStateService>();
+builder.Services.AddSingleton<IUserStateService, UserStateService>();
 builder.Services.AddScoped<IStartCommandHandler, StartCommandHandler>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddHostedService<BookingReminderService>();
+builder.Services.AddTransient<BreakCommandHandler>();
+
+builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
+{
+    var factory = new CallbackCommandFactory(serviceProvider);
+
+    factory.RegisterCommand<BreakCommandHandler>(
+        "manage_breaks",
+        "add_break",
+        "remove_break",
+        "select_day_for_breaks",
+        "remove_break_confirmation",
+        "back_to_breaks"
+    );
+
+    return factory;
+});
+
+
 
 // ✅ Hosted Service to Manage Webhook
 builder.Services.AddHostedService<ConfigureWebhook>();
