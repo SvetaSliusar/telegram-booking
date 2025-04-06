@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using Telegram.Bot.Examples.WebHook.Infrastructure.Configs;
+using Telegram.Bot.Infrastructure.Configs;
 using Telegram.Bot.Types.Enums;
 
 namespace Telegram.Bot.Services;

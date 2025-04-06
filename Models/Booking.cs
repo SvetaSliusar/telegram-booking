@@ -1,5 +1,5 @@
 using System;
-namespace Telegram.Bot.Examples.WebHook.Models
+namespace Telegram.Bot.Models
 {
     public class Booking
     {

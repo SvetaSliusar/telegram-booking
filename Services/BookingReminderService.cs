@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
-using Telegram.Bot.Examples.WebHook.Models;
-using Telegram.Bot.Examples.WebHook.Services.Constants;
+using Telegram.Bot.Models;
+using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
 
-namespace Telegram.Bot.Examples.WebHook.Services;
+namespace Telegram.Bot.Services;
 
 public class BookingReminderService : BackgroundService
 {

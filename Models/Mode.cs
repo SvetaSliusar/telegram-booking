@@ -1,5 +1,8 @@
-public enum Mode
+namespace Telegram.Bot.Models
 {
-    Company,
-    Client
+    public enum Mode
+    {
+        Company,
+        Client
+    }
 }

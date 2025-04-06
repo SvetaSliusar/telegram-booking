@@ -1,5 +1,5 @@
 
-namespace Telegram.Bot.Examples.WebHook.Enums
+namespace Telegram.Bot.Enums
 {
     public static class CallbackResponses
     {

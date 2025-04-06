@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Telegram.Bot.Examples.WebHook.Models;
+using Telegram.Bot.Models;
 
-namespace Telegram.Bot.Examples.WebHook
+namespace Telegram.Bot
 {
     public class BookingDbContext : DbContext
     {

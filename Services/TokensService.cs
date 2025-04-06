@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Telegram.Bot.Examples.WebHook.Models;
+using Telegram.Bot.Models;
 
-namespace Telegram.Bot.Examples.WebHook.Services
+namespace Telegram.Bot.Services
 {
      public interface ITokensService
     {

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-namespace Telegram.Bot.Examples.WebHook.Models
+namespace Telegram.Bot.Models
 {
     public class Company
     {

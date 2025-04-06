@@ -1,4 +1,4 @@
-namespace Telegram.Bot.Examples.WebHook.Infrastructure.Configs
+namespace Telegram.Bot.Infrastructure.Configs
 {
     public class BotConfiguration
     {

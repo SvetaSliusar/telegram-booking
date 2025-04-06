@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Options;
-using Telegram.Bot.Examples.WebHook.Infrastructure.Configs;
+using Telegram.Bot.Infrastructure.Configs;
 
 namespace Telegram.Bot.Filters;
 

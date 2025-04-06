@@ -1,6 +1,4 @@
-using System.Collections.Generic;
-
-namespace Telegram.Bot.Examples.WebHook.Services.Constants;
+namespace Telegram.Bot.Services.Constants;
 
 public static class Translations
 {
