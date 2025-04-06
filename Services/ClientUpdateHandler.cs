@@ -409,18 +409,20 @@ public class ClientUpdateHandler
             return;
 
         var serviceId = int.Parse(userConversations[chatId].Split('_')[1]);
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
         
         // Get service with employee and working hours details
         var service = await _dbContext.Services
             .Include(s => s.Employee)
                 .ThenInclude(e => e.WorkingHours)
+                    .ThenInclude(wh => wh.Breaks)
             .FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
 
         if (service == null || service.Employee == null)
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Service or employee not found. Please try again.",
+                text: Translations.GetMessage(language, "NoServiceFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -437,7 +439,7 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: $"❌ {employee.Name} is not working on {selectedDate:dddd}. Please select another date.",
+                text: Translations.GetMessage(language, "NotWorkingOnDay"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -457,59 +459,81 @@ public class ClientUpdateHandler
             .ToListAsync(cancellationToken);
 
         // Generate available time slots based on employee working hours
-        var timeSlots = new List<InlineKeyboardButton[]>();
-        var currentTime = DateTime.UtcNow;
+                var timeSlots = new List<InlineKeyboardButton[]>();
+        var currentTime = workingHours.StartTime;
+        var currentHourGroup = new List<InlineKeyboardButton>();
 
-        // Use employee's working hours
-        var startHour = workingHours.StartTime;
-        var endHour = workingHours.EndTime;
-        var breakTime = workingHours.BreakTime;
-
-        // Generate time slots every hour
-        for (var hour = startHour.Hours; hour < endHour.Hours; hour++)
+        while (currentTime < workingHours.EndTime)
         {
-            var timeSlot = new TimeSpan(hour, 0, 0);
-            var slotDateTime = DateTime.SpecifyKind(selectedDate.Date + timeSlot, DateTimeKind.Utc);
+            var slotEnd = currentTime + service.Duration;
+            
+            // Check if the slot is within working hours
+            if (slotEnd > workingHours.EndTime)
+                break;
 
-            // Skip if the time slot is in the past
-            if (slotDateTime <= currentTime)
-                continue;
+            // Check if the slot overlaps with any breaks
+            var isDuringBreak = workingHours.Breaks.Any(b => 
+                (currentTime >= b.StartTime && currentTime < b.EndTime) ||
+                (slotEnd > b.StartTime && slotEnd <= b.EndTime) ||
+                (currentTime <= b.StartTime && slotEnd >= b.EndTime));
 
-            // Skip if the time slot is already booked
-            if (bookedTimes.Any(bt => bt.Hour == hour))
-                continue;
+            if (!isDuringBreak)
+            {
+                // Check if the slot is already booked
+                var isBooked = bookedTimes.Any(bookedTime => 
+                    (currentTime <= bookedTime.TimeOfDay && bookedTime.TimeOfDay < slotEnd) ||
+                    (bookedTime.TimeOfDay <= currentTime && currentTime < bookedTime.TimeOfDay + service.Duration));
+                var bookingTime = selectedDate.Date.Add(currentTime);
+                var isPastTime = bookingTime <= DateTime.UtcNow;
 
-            // Check if there's enough time for the service and break
-            var serviceEndTime = slotDateTime.Add(service.Duration);
-            var nextAvailableTime = serviceEndTime.Add(breakTime);
+                if (!isBooked && !isPastTime)
+                {
+                    // Add time slot to current hour group
+                    currentHourGroup.Add(InlineKeyboardButton.WithCallbackData(
+                        currentTime.ToString(@"hh\:mm"),
+                        $"time_{currentTime}"));
 
-            // Skip if the service would end after working hours
-            if (serviceEndTime.TimeOfDay > endHour)
-                continue;
+                    // If we have 4 slots in the current hour group or it's the last slot, add the group
+                    if (currentHourGroup.Count == 4 || currentTime + TimeSpan.FromMinutes(30) >= workingHours.EndTime)
+                    {
+                        timeSlots.Add(currentHourGroup.ToArray());
+                        currentHourGroup = new List<InlineKeyboardButton>();
+                    }
+                }
+            }
 
-            // Format time for display (convert to local time)
-            var localTime = slotDateTime.ToLocalTime();
-            var timeDisplay = localTime.ToString("h:mm tt");
-            var timeValue = timeSlot.ToString(@"hh\:mm");
+            currentTime = currentTime + TimeSpan.FromMinutes(30);
+        }
 
-            timeSlots.Add(new[] { InlineKeyboardButton.WithCallbackData(timeDisplay, $"time_{timeValue}") });
+        // Add any remaining slots in the last group
+        if (currentHourGroup.Any())
+        {
+            timeSlots.Add(currentHourGroup.ToArray());
         }
 
         if (!timeSlots.Any())
         {
+            userConversations[chatId] = $"WaitingForDate_{serviceId}";
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: $"❌ No available time slots for {selectedDate:yyyy-MM-dd}. Please select another date.",
+                text: Translations.GetMessage(language, "NoAvailableTimes"),
                 cancellationToken: cancellationToken);
+            
             return;
         }
 
-        var keyboard = new InlineKeyboardMarkup(timeSlots);
+        // Add navigation buttons
+        timeSlots.Add(new[]
+        {
+            InlineKeyboardButton.WithCallbackData(
+                Translations.GetMessage(language, "Back"),
+                "back_to_services")
+        });
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: $"⏰ Select a time slot for {selectedDate:yyyy-MM-dd} with {employee.Name}:",
-            replyMarkup: keyboard,
+            text: Translations.GetMessage(language, "SelectTime"),
+            replyMarkup: new InlineKeyboardMarkup(timeSlots),
             cancellationToken: cancellationToken);
     }
 
@@ -654,6 +678,7 @@ public class ClientUpdateHandler
         var service = await _dbContext.Services
             .Include(s => s.Employee)
                 .ThenInclude(e => e.WorkingHours)
+                    .ThenInclude(wh => wh.Breaks)
             .FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
 
         if (service == null || service.Employee == null)
@@ -669,36 +694,93 @@ public class ClientUpdateHandler
         var monthStart = DateTime.SpecifyKind(new DateTime(selectedDate.Year, selectedDate.Month, 1), DateTimeKind.Utc);
         var monthEnd = DateTime.SpecifyKind(monthStart.AddMonths(1).AddDays(-1), DateTimeKind.Utc);
         
-        var bookedDates = await _dbContext.Bookings
+        var bookedTimes = await _dbContext.Bookings
             .Where(b => b.ServiceId == serviceId && 
                         b.BookingTime >= monthStart && 
                         b.BookingTime <= monthEnd)
-            .Select(b => b.BookingTime.Date)
-            .Distinct()
+            .Select(b => b.BookingTime)
             .ToListAsync(cancellationToken);
 
         // Generate day buttons
         for (int day = 1; day <= daysInMonth; day++)
         {
             var date = DateTime.SpecifyKind(new DateTime(selectedDate.Year, selectedDate.Month, day), DateTimeKind.Utc);
-            var isBooked = bookedDates.Contains(date.Date);
-            var isPastDate = date.Date < currentDate;
             var dayOfWeek = date.DayOfWeek;
             
             // Check if employee works on this day
             var workingHours = service.Employee.WorkingHours
                 .FirstOrDefault(wh => wh.DayOfWeek == dayOfWeek);
-            var isWorkingDay = workingHours != null;
             
-            if (isBooked || isPastDate || isFutureMonth || !isWorkingDay)
+            if (workingHours == null)
             {
-                // Add disabled button with small dot for unavailable dates
+                // Employee doesn't work on this day
                 weekRow.Add(InlineKeyboardButton.WithCallbackData($"{day}⚫", "ignore"));
             }
             else
             {
-                // Add enabled button with just the number
-                weekRow.Add(InlineKeyboardButton.WithCallbackData(day.ToString(), $"date_{date:yyyy-MM-dd}"));
+                var isPastDate = date.Date < currentDate;
+                var isTooFarInFuture = date.Date > nextMonth;
+                
+                if (isPastDate || isTooFarInFuture)
+                {
+                    // Date is in the past or too far in the future
+                    weekRow.Add(InlineKeyboardButton.WithCallbackData($"{day}⚫", "ignore"));
+                }
+                else
+                {
+                    // Check if there are any available time slots for this day
+                    var dayStart = date.Date;
+                    var dayEnd = dayStart.AddDays(1);
+                    
+                    var dayBookings = bookedTimes
+                        .Where(b => b.Date == date.Date)
+                        .Select(b => b.TimeOfDay)
+                        .ToList();
+
+                    var hasAvailableSlots = false;
+                    var currentTime = workingHours.StartTime;
+                    var serviceDuration = service.Duration;
+
+                    while (currentTime < workingHours.EndTime)
+                    {
+                        var slotEnd = currentTime.Add(serviceDuration);
+                        
+                        // Check if the slot is within working hours
+                        if (slotEnd > workingHours.EndTime)
+                            break;
+
+                        // Check if the slot overlaps with any breaks
+                        var isDuringBreak = workingHours.Breaks.Any(b => 
+                            (currentTime >= b.StartTime && currentTime < b.EndTime) ||
+                            (slotEnd > b.StartTime && slotEnd <= b.EndTime) ||
+                            (currentTime <= b.StartTime && slotEnd >= b.EndTime));
+
+                        if (!isDuringBreak)
+                        {
+                            // Check if the slot is already booked
+                            var isBooked = dayBookings.Any(bookedTime => 
+                                (currentTime <= bookedTime && bookedTime < slotEnd) ||
+                                (bookedTime <= currentTime && currentTime < bookedTime.Add(serviceDuration)));
+
+                            if (!isBooked)
+                            {
+                                hasAvailableSlots = true;
+                                break;
+                            }
+                        }
+
+                        currentTime = currentTime.Add(serviceDuration);
+                    }
+
+                    if (hasAvailableSlots)
+                    {
+                        weekRow.Add(InlineKeyboardButton.WithCallbackData(day.ToString(), $"date_{date:yyyy-MM-dd}"));
+                    }
+                    else
+                    {
+                        weekRow.Add(InlineKeyboardButton.WithCallbackData($"{day}⚫", "ignore"));
+                    }
+                }
             }
 
             if (weekRow.Count == 7) // New row after each week
@@ -732,7 +814,7 @@ public class ClientUpdateHandler
                          (isPastMonth ? "⚠️ Past month\n" : "") +
                          (isFutureMonth ? "⚠️ Future month\n" : "") +
                          "Available dates are clickable\n" +
-                         "⚫ Unavailable dates (booked, past, or non-working days)";
+                         "⚫ Unavailable dates (no working hours, fully booked, or non-working days)";
 
         await _botClient.SendMessage(
             chatId: chatId,
@@ -774,5 +856,124 @@ public class ClientUpdateHandler
         {
             await HandleBookAppointment(chatId, cancellationToken);
         }
+    }
+
+    private async Task GenerateTimeSlots(long chatId, int serviceId, DateTime selectedDate, CancellationToken cancellationToken)
+    {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        
+        // Get the service and employee
+        var service = await _dbContext.Services
+            .Include(s => s.Employee)
+                .ThenInclude(e => e.WorkingHours)
+                    .ThenInclude(wh => wh.Breaks)
+            .FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
+
+        if (service == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "ServiceNotFound"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        // Get working hours for this day
+        var workingHours = service.Employee.WorkingHours
+            .FirstOrDefault(wh => wh.DayOfWeek == selectedDate.DayOfWeek);
+
+        if (workingHours == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "NotWorkingOnDay"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        // Get all bookings for this service on the selected date
+        var dayStart = selectedDate.Date;
+        var dayEnd = dayStart.AddDays(1);
+
+        var bookedTimes = await _dbContext.Bookings
+            .Where(b => b.ServiceId == serviceId && 
+                        b.BookingTime >= dayStart && 
+                        b.BookingTime < dayEnd)
+            .Select(b => b.BookingTime)
+            .ToListAsync(cancellationToken);
+
+        // Generate available time slots
+        var timeSlots = new List<InlineKeyboardButton[]>();
+        var currentTime = workingHours.StartTime;
+        var currentHourGroup = new List<InlineKeyboardButton>();
+
+        while (currentTime < workingHours.EndTime)
+        {
+            var slotEnd = currentTime + service.Duration;
+            
+            // Check if the slot is within working hours
+            if (slotEnd > workingHours.EndTime)
+                break;
+
+            // Check if the slot overlaps with any breaks
+            var isDuringBreak = workingHours.Breaks.Any(b => 
+                (currentTime >= b.StartTime && currentTime < b.EndTime) ||
+                (slotEnd > b.StartTime && slotEnd <= b.EndTime) ||
+                (currentTime <= b.StartTime && slotEnd >= b.EndTime));
+
+            if (!isDuringBreak)
+            {
+                // Check if the slot is already booked
+                var isBooked = bookedTimes.Any(bookedTime => 
+                    (currentTime <= bookedTime.TimeOfDay && bookedTime.TimeOfDay < slotEnd) ||
+                    (bookedTime.TimeOfDay <= currentTime && currentTime < bookedTime.TimeOfDay + service.Duration));
+
+                if (!isBooked)
+                {
+                    // Add time slot to current hour group
+                    currentHourGroup.Add(InlineKeyboardButton.WithCallbackData(
+                        currentTime.ToString(@"hh\:mm"),
+                        $"time_{currentTime}"));
+
+                    // If we have 4 slots in the current hour group or it's the last slot, add the group
+                    if (currentHourGroup.Count == 4 || currentTime + TimeSpan.FromMinutes(30) >= workingHours.EndTime)
+                    {
+                        timeSlots.Add(currentHourGroup.ToArray());
+                        currentHourGroup = new List<InlineKeyboardButton>();
+                    }
+                }
+            }
+
+            currentTime = currentTime + TimeSpan.FromMinutes(30);
+        }
+
+        // Add any remaining slots in the last group
+        if (currentHourGroup.Any())
+        {
+            timeSlots.Add(currentHourGroup.ToArray());
+        }
+
+        if (!timeSlots.Any())
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "NoAvailableTimes"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        // Add navigation buttons
+        timeSlots.Add(new[]
+        {
+            InlineKeyboardButton.WithCallbackData(
+                Translations.GetMessage(language, "Back"),
+                "back_to_services")
+        });
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "SelectTime"),
+            replyMarkup: new InlineKeyboardMarkup(timeSlots),
+            cancellationToken: cancellationToken);
     }
 }

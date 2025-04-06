@@ -71,7 +71,7 @@ public class StartCommandHandler : IStartCommandHandler
             token.ChatId = chatId;
             token.Used = true;
             await _dbContext.SaveChangesAsync(cancellationToken);
-            await _companyUpdateHandler.SendMainMenu(chatId, cancellationToken);
+            await _companyUpdateHandler.ShowMainMenu(chatId, cancellationToken);
             return true;
         }
 
