@@ -89,6 +89,10 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "add_service",
         "service_duration"
     );
+    factory.RegisterCommand<ChangeLanguageCommandHandler>(
+        "change_language",
+        "set_language"
+    );
 
     return factory;
 });

@@ -502,20 +502,6 @@ public class CompanyUpdateHandler
                     await SendDaySelectionForHours(chatId, cancellationToken); // Ask for day before hours
                     break;
 
-                case "change_language":
-                    var languageKeyboard = new InlineKeyboardMarkup(new[]
-                    {
-                        new[] { InlineKeyboardButton.WithCallbackData("English", "set_language:EN") },
-                        new[] { InlineKeyboardButton.WithCallbackData("Українська", "set_language:UA") }
-                    });
-
-                    await _botClient.SendMessage(
-                        chatId: chatId,
-                        text: "🌐 Select your language / Оберіть мову:",
-                        replyMarkup: languageKeyboard,
-                        cancellationToken: cancellationToken);
-                    return;
-
                 case "view_daily_bookings":
                     userConversations[chatId] = "WaitingForBookingDate";
                     await ShowBookingCalendar(chatId, DateTime.UtcNow, cancellationToken);
@@ -535,13 +521,6 @@ public class CompanyUpdateHandler
                 var employeeId = int.Parse(parts[0]);
                 var day = (DayOfWeek)int.Parse(parts[1]);
                 await HandleDayBreaksSelection(chatId, employeeId, day, cancellationToken);
-                return;
-            }
-
-            if (data.StartsWith("set_language:"))
-            {
-                var selectedLanguage = data.Split(':')[1];
-                await SetLanguage(chatId, selectedLanguage, cancellationToken);
                 return;
             }
 
@@ -917,17 +896,6 @@ public class CompanyUpdateHandler
             text: Translations.GetMessage(language, "MainMenu"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
-    }
-
-    private async Task SetLanguage(long chatId, string language, CancellationToken cancellationToken)
-    {
-        userLanguages[chatId] = language;
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "LanguageSet", language),
-            cancellationToken: cancellationToken);
-        
-        await ShowMainMenu(chatId, cancellationToken);
     }
 
     private async Task SaveWorkingDays(long chatId, CancellationToken cancellationToken)
