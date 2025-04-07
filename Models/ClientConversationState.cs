@@ -1,20 +1,27 @@
+using Telegram.Bot.Services;
+
 namespace Telegram.Bot.Models;
 
 public class ClientConversationState
 {
-    public const string EnglishLanguage = "English";
-    public const string UkrainianLanguage = "Українська";
+    public object Lock { get; } = new object();
 
     public int CompanyId { get; set; }
-    public string Language { get; set; }
-    public int SelectedServiceId { get; set; }
-    public DateTime SelectedMonth { get; set; }
-    public DateTime SelectedDay { get; set; }
-    public ConversationStep CurrentStep { get; set; } = ConversationStep.AwaitingLanguage;
+
+    public string CurrentConversation { get; set; }
+
+    public CompanyCreationData CompanyCreationData { get; set; } = new CompanyCreationData();
+
+    public ServiceCreationData ServiceCreationData { get; set; } = new ServiceCreationData();
+
+    public ConversationStep CurrentStep { get; set; } = ConversationStep.None;
 }
 
 public enum ConversationStep
 {
+    None,
+    CompanyCreation,
+    ServiceCreation,
     AwaitingLanguage,
     SelectingService,
     SelectingMonth,

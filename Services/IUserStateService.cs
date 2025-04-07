@@ -4,10 +4,11 @@ namespace Telegram.Bot.Services;
 
 public interface IUserStateService
 {
-   string GetConversation(long chatId);
+    string GetConversation(long chatId);
     void SetConversation(long chatId, string conversation);
-   string GetLanguage(long chatId);
-   void SetLanguage(long chatId, string language);
-   ClientConversationState GetOrCreate(long chatId, int companyId);
-   void RemoveConversation(long chatId);
+    void RemoveConversation(long chatId);
+
+    string GetLanguage(long chatId);
+    void SetLanguage(long chatId, string language);
+    ClientConversationState GetOrCreate(long chatId, int companyId);
 }

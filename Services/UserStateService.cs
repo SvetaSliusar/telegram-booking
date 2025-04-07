@@ -5,42 +5,37 @@ namespace Telegram.Bot.Services;
 
 public class UserStateService : IUserStateService
 {
-    private readonly ConcurrentDictionary<long, string> _userConversations = new();
+    private readonly ConcurrentDictionary<long, ClientConversationState> _userStates = new();
     private readonly ConcurrentDictionary<long, string> _userLanguages = new();
-    private readonly Dictionary<long, ClientConversationState> _userStates = new();
+    private readonly ConcurrentDictionary<long, string> _userConversations = new();
 
     public ClientConversationState GetOrCreate(long chatId, int companyId)
     {
-        if (!_userStates.ContainsKey(chatId))
+        var state = _userStates.GetOrAdd(chatId, _ => new ClientConversationState
         {
-            _userStates[chatId] = new ClientConversationState 
-            { 
-                CompanyId = companyId,
-                CurrentStep = ConversationStep.AwaitingLanguage 
-            };
+            CompanyId = companyId,
+            CurrentStep = ConversationStep.AwaitingLanguage
+        });
+
+        lock (state.Lock)
+        {
+            if (state.CompanyId != companyId)
+            {
+                // Reset full state if company changes
+                state.CompanyId = companyId;
+                state.CurrentStep = ConversationStep.AwaitingLanguage;
+                state.CompanyCreationData = new CompanyCreationData();
+                state.ServiceCreationData = new ServiceCreationData();
+                state.CurrentStep = ConversationStep.None;
+            }
+
+            return state;
         }
-        return _userStates[chatId];
-    }
-
-    public bool TryGetState(long chatId, out ClientConversationState state)
-    {
-        return _userStates.TryGetValue(chatId, out state);
-    }
-
-    public void SetState(long chatId, ClientConversationState state)
-    {
-        _userStates[chatId] = state;
-    }
-
-    public void RemoveState(long chatId)
-    {
-        _userStates.Remove(chatId);
     }
 
     public string GetLanguage(long chatId)
     {
-        _userLanguages.TryGetValue(chatId, out var language);
-        return language ?? "EN";
+        return _userLanguages.TryGetValue(chatId, out var language) ? language : "EN";
     }
 
     public void SetLanguage(long chatId, string language)
@@ -50,8 +45,7 @@ public class UserStateService : IUserStateService
 
     public string GetConversation(long chatId)
     {
-        _userConversations.TryGetValue(chatId, out var conversation);
-        return conversation;
+        return _userConversations.TryGetValue(chatId, out var conversation) ? conversation : string.Empty;
     }
 
     public void SetConversation(long chatId, string conversation)
@@ -63,4 +57,4 @@ public class UserStateService : IUserStateService
     {
         _userConversations.TryRemove(chatId, out _);
     }
-} 
+}

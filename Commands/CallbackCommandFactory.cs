@@ -24,17 +24,30 @@ public class CallbackCommandFactory : ICallbackCommandFactory
         }
     }
 
+    public ICallbackCommand? CreateCommand(string commandName)
+    {
+        if (_commandMap.TryGetValue(commandName, out var commandType))
+        {
+            return _serviceProvider.GetService(commandType) as ICallbackCommand;
+        }
+
+        return default;
+    }
+
     public ICallbackCommand? CreateCommand(CallbackQuery callbackQuery)
     {
-        var data = callbackQuery.Data;
-        if (string.IsNullOrEmpty(data))
-            return null;
+        if (callbackQuery?.Data == null)
+            return default;
 
-        var commandKey = ExtractCommandKey(data);
+        var commandName = callbackQuery.Data.Split(':')[0];
+        return CreateCommand(commandName);
+    }
 
-        if (_commandMap.TryGetValue(commandKey, out var commandType))
+    public ICallbackCommand? GetCommand(string commandName)
+    {
+        if (_commandMap.TryGetValue(commandName, out var commandType))
         {
-            return (ICallbackCommand)_serviceProvider.GetRequiredService(commandType);
+            return _serviceProvider.GetService(commandType) as ICallbackCommand;
         }
 
         return default;
@@ -51,5 +64,7 @@ public class CallbackCommandFactory : ICallbackCommandFactory
 public interface ICallbackCommandFactory
 {
     void RegisterCommand<TCommand>(params string[] commandNames) where TCommand : ICallbackCommand;
+    ICallbackCommand? CreateCommand(string commandName);
     ICallbackCommand? CreateCommand(CallbackQuery callbackQuery);
+    ICallbackCommand? GetCommand(string commandName);
 }

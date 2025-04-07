@@ -60,10 +60,14 @@ builder.Services.AddScoped<ClientUpdateHandler>();
 builder.Services.AddScoped<CompanyUpdateHandler>();
 builder.Services.AddScoped<TokensService>();
 builder.Services.AddSingleton<IUserStateService, UserStateService>();
+builder.Services.AddSingleton<ICompanyCreationStateService, CompanyCreationStateService>();
 builder.Services.AddScoped<IStartCommandHandler, StartCommandHandler>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddHostedService<BookingReminderService>();
+#region Command Handlers
 builder.Services.AddTransient<BreakCommandHandler>();
+builder.Services.AddTransient<GenerateClientLinkHandler>();
+builder.Services.AddTransient<ServiceCommandHandler>();
 
 builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
 {
@@ -77,10 +81,19 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "remove_break_confirmation",
         "back_to_breaks"
     );
+    factory.RegisterCommand<GenerateClientLinkHandler>(
+        "get_client_link"
+    );
+    factory.RegisterCommand<ServiceCommandHandler>(
+        "list_services",
+        "add_service",
+        "service_duration"
+    );
 
     return factory;
 });
 
+#endregion
 
 
 // ✅ Hosted Service to Manage Webhook
