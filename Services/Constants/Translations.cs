@@ -152,7 +152,13 @@ public static class Translations
             ["SelectTimezone"] = "🌍 Select your timezone:",
             ["TimezoneSet"] = "✅ Timezone set to: {0}",
             ["InvalidTimezone"] = "❌ Invalid timezone. Please try again.",
-            ["NoClientFound"] = "❌ Client not found. Please try again."
+            ["NoClientFound"] = "❌ Client not found. Please try again.",
+            ["BookingPendingConfirmation"] = "Your booking request has been sent to the company for confirmation:\nService: {0}\nEmployee: {1}\nDate: {2}\nTime: {3}\n\nYou will be notified once the company confirms your booking.",
+            ["BookingConfirmed"] = "Booking has been confirmed.",
+            ["BookingRejected"] = "Booking has been rejected.",
+            ["BookingConfirmedByCompany"] = "Your booking has been confirmed by the company:\nService: {0}\nEmployee: {1}\nDate: {2}\nTime: {3}",
+            ["BookingRejectedByCompany"] = "Your booking has been rejected by the company:\nService: {0}\nEmployee: {1}\nDate: {2}\nTime: {3}",
+            ["Reject"] = "❌ Reject"
         },
         ["UA"] = new Dictionary<string, string>
         {
@@ -302,7 +308,13 @@ public static class Translations
             ["SelectTimezone"] = "🌍 Оберіть ваш часовий пояс:",
             ["TimezoneSet"] = "✅ Часовий пояс встановлено: {0}",
             ["InvalidTimezone"] = "❌ Невірний часовий пояс. Будь ласка, спробуйте ще раз.",
-            ["NoClientFound"] = "❌ Клієнта не знайдено. Будь ласка, спробуйте ще раз."
+            ["NoClientFound"] = "❌ Клієнта не знайдено. Будь ласка, спробуйте ще раз.",
+            ["BookingPendingConfirmation"] = "Ваш запит на бронювання надіслано компанії для підтвердження:\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас: {3}\n\nВи отримаєте сповіщення після підтвердження бронювання компанією.",
+            ["BookingConfirmed"] = "Бронювання підтверджено.",
+            ["BookingRejected"] = "Бронювання відхилено.",
+            ["BookingConfirmedByCompany"] = "Ваше бронювання підтверджено компанією:\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас: {3}",
+            ["BookingRejectedByCompany"] = "Ваше бронювання відхилено компанією:\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас: {3}",
+            ["Reject"] = "❌ Відхилити"
         }
     };
 
