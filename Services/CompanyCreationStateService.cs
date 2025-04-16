@@ -119,6 +119,7 @@ public class CompanyCreationStateService : ICompanyCreationStateService
                 if (existingState.Employees == null)
                 {
                     existingState.Employees = new List<EmployeeCreationData>();
+                    existingState.Services = new List<ServiceCreationData>();
                 }
                 updateAction(existingState);
                 return existingState;

@@ -115,7 +115,7 @@ public static class Translations
             ["InvalidReminderTime"] = "❌ Please enter a valid number between 1 and 24 hours.",
             ["SetWorkingHours"] = "Set working hours for {0}",
             ["WorkingHoursSet"] = "Working hours set from {0} to {1}",
-            ["ManageBreaks"] = "🕒 Manage Breaks",
+            ["ManageBreaks"] = "⏳ Manage Breaks",
             ["AddBreak"] = "➕ Add Break",
             ["RemoveBreak"] = "➖ Remove Break",
             ["BreakStartTime"] = "Enter break start time (HH:mm):",
@@ -158,7 +158,8 @@ public static class Translations
             ["BookingRejected"] = "Booking has been rejected.",
             ["BookingConfirmedByCompany"] = "Your booking has been confirmed by the company:\nService: {0}\nEmployee: {1}\nDate: {2}\nTime: {3}",
             ["BookingRejectedByCompany"] = "Your booking has been rejected by the company:\nService: {0}\nEmployee: {1}\nDate: {2}\nTime: {3}",
-            ["Reject"] = "❌ Reject"
+            ["Reject"] = "❌ Reject",
+            ["SetupWorkTime"] = "🕒 Setup Work Time"
         },
         ["UA"] = new Dictionary<string, string>
         {
@@ -275,7 +276,6 @@ public static class Translations
             ["InvalidReminderTime"] = "❌ Будь ласка, введіть коректне число від 1 до 24 годин.",
             ["SetWorkingHours"] = "Встановити робочий час для {0}",
             ["WorkingHoursSet"] = "Робочий час встановлено з {0} до {1}",
-            ["ManageBreaks"] = "🕒 Керування перервами",
             ["AddBreak"] = "➕ Додати перерву",
             ["RemoveBreak"] = "➖ Видалити перерву",
             ["BreakStartTime"] = "Введіть час початку перерви (ГГ:хх):",
@@ -314,7 +314,8 @@ public static class Translations
             ["BookingRejected"] = "Бронювання відхилено.",
             ["BookingConfirmedByCompany"] = "Ваше бронювання підтверджено компанією:\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас: {3}",
             ["BookingRejectedByCompany"] = "Ваше бронювання відхилено компанією:\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас: {3}",
-            ["Reject"] = "❌ Відхилити"
+            ["Reject"] = "❌ Відхилити",
+            ["ManageBreaks"] = "⏳ Керування Перервами"
         }
     };
 
