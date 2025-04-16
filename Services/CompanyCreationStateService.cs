@@ -7,7 +7,6 @@ public class CompanyCreationStateService : ICompanyCreationStateService
 {
     private readonly ConcurrentDictionary<long, CompanyCreationData> _state = new();
     private int _nextServiceId = 1;
-    private int _nextEmployeeId = 1;
 
     public CompanyCreationData GetState(long chatId)
     {
