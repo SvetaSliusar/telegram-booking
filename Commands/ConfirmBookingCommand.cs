@@ -3,6 +3,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Services;
+using Telegram.Bot.Enums;
 
 namespace Telegram.Bot.Commands
 {
@@ -21,8 +22,6 @@ namespace Telegram.Bot.Commands
             _botClient = botClient;
             _userStateService = userStateService;
         }
-
-        public string CommandName => CallbackResponses.ConfirmBooking;
 
         public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
         {

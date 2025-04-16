@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Types;
-using System.Collections.Concurrent;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
@@ -69,7 +68,5 @@ namespace Telegram.Bot.Commands
                     localBookingTime.ToString("hh:mm tt")),
                 cancellationToken: cancellationToken);
         }
-
-        public string CommandName => CallbackResponses.RejectBooking;
     }
 } 
