@@ -61,7 +61,8 @@ public class ClientUpdateHandler
         {
             new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BookAppointment"), "book_appointment") },
             new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "MyBookings"), "view_bookings") },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") }
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeTimezone"), "change_timezone") }
         };
 
         var keyboard = new InlineKeyboardMarkup(buttons);
@@ -162,6 +163,9 @@ public class ClientUpdateHandler
                     replyMarkup: languageKeyboard,
                     cancellationToken: cancellationToken);
                 break;
+            case "change_timezone":
+                await HandleTimezoneSelection(chatId, cancellationToken);
+                break;
             case var s when s.StartsWith("set_language:"):
                 var selectedLanguage = s.Split(':')[1];
                 await SetLanguage(chatId, selectedLanguage, cancellationToken);
@@ -219,6 +223,10 @@ public class ClientUpdateHandler
             case var s when s.StartsWith("time_"):
                 var time = data.Replace("time_", "");
                 await HandleTimeSelection(chatId, time, cancellationToken);
+                break;
+            case var s when s.StartsWith("set_timezone:"):
+                var selectedTimezone = s.Split(':')[1];
+                await SetTimezone(chatId, selectedTimezone, cancellationToken);
                 break;
         }
     }
@@ -288,9 +296,11 @@ public class ClientUpdateHandler
         }
 
         var message = Translations.GetMessage(language, "UpcomingBookings") + "\n\n";
+        var clientTimeZone = TimeZoneInfo.FindSystemTimeZoneById(client.TimeZoneId);
+
         foreach (var booking in bookings)
         {
-            var localTime = booking.BookingTime.ToLocalTime();
+            var localTime = TimeZoneInfo.ConvertTimeFromUtc(booking.BookingTime, clientTimeZone);
             message += Translations.GetMessage(language, "BookingDetails", 
                 booking.Service.Name, 
                 booking.Service.Employee.Name,
@@ -569,7 +579,7 @@ public class ClientUpdateHandler
         // Create DateTime in UTC
         DateTime bookingTime = DateTime.SpecifyKind(selectedDate.Date + selectedTime, DateTimeKind.Utc);
 
-        var client = _dbContext.Clients.FirstOrDefault(c => c.ChatId == chatId);
+        var client = await _dbContext.Clients.FirstOrDefaultAsync(c => c.ChatId == chatId);
 
         if (client == null)
         {
@@ -594,8 +604,9 @@ public class ClientUpdateHandler
 
         userConversations.TryRemove(chatId, out _);
 
-        // Convert UTC time back to local time for display
-        var localBookingTime = bookingTime.ToLocalTime();
+        // Convert UTC time to client's timezone for display
+        var clientTimeZone = TimeZoneInfo.FindSystemTimeZoneById(client.TimeZoneId);
+        var localBookingTime = TimeZoneInfo.ConvertTimeFromUtc(bookingTime, clientTimeZone);
         
         // Send confirmation message to client
         await _botClient.SendMessage(
@@ -972,5 +983,87 @@ public class ClientUpdateHandler
             text: Translations.GetMessage(language, "SelectTime"),
             replyMarkup: new InlineKeyboardMarkup(timeSlots),
             cancellationToken: cancellationToken);
+    }
+
+    private async Task HandleTimezoneSelection(long chatId, CancellationToken cancellationToken)
+    {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var commonTimezones = new[]
+        {
+            "Europe/Kiev",
+            "Europe/London",
+            "Europe/Paris",
+            "Europe/Berlin",
+            "America/New_York",
+            "America/Los_Angeles",
+            "Asia/Dubai",
+            "Asia/Tokyo"
+        };
+
+        var timezoneButtons = commonTimezones.Select(tz =>
+            new[] { InlineKeyboardButton.WithCallbackData(tz, $"set_timezone:{tz}") }).ToArray();
+
+        var keyboard = new InlineKeyboardMarkup(timezoneButtons.Concat(new[] 
+        { 
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+        }));
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "SelectTimezone"),
+            replyMarkup: keyboard,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task SetTimezone(long chatId, string timezone, CancellationToken cancellationToken)
+    {
+        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var client = await _dbContext.Clients.FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
+
+        if (client == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "NoClientFound"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        try
+        {
+            // Validate timezone
+            TimeZoneInfo.FindSystemTimeZoneById(timezone);
+            
+            client.TimeZoneId = timezone;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "TimezoneSet", timezone),
+                cancellationToken: cancellationToken);
+
+            // Get client's most recent booking to determine company
+            var recentBooking = await _dbContext.Bookings
+                .Where(b => b.ClientId == client.Id)
+                .OrderByDescending(b => b.BookingTime)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (recentBooking != null)
+            {
+                var userState = _userStateService.GetOrCreate(chatId, recentBooking.CompanyId);
+                await ShowMainMenu(chatId, userState.CompanyId, cancellationToken);
+            }
+            else
+            {
+                await HandleBookAppointment(chatId, cancellationToken);
+            }
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "InvalidTimezone"),
+                cancellationToken: cancellationToken);
+        }
     }
 }

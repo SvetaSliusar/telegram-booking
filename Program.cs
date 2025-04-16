@@ -68,6 +68,8 @@ builder.Services.AddHostedService<BookingReminderService>();
 builder.Services.AddTransient<BreakCommandHandler>();
 builder.Services.AddTransient<GenerateClientLinkHandler>();
 builder.Services.AddTransient<ServiceCommandHandler>();
+builder.Services.AddTransient<WorkDayCommandHandler>();
+builder.Services.AddTransient<WorkTimeCommandHandler>();
 
 builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
 {
@@ -92,6 +94,22 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
     factory.RegisterCommand<ChangeLanguageCommandHandler>(
         "change_language",
         "set_language"
+    );
+    factory.RegisterCommand<WorkDayCommandHandler>(
+        "setup_work_days",
+        "workingdays",
+        "workingdays_confirm",
+        "workingdays_clearSelection"
+    );
+
+    factory.RegisterCommand<WorkTimeCommandHandler>(
+        "init_work_time",
+        "setup_work_time_start",
+        "setup_work_time_end",
+        "confirm_working_hours",
+        "clear_working_hours",
+        "change_work_time",
+        "select_day_for_work_time_start"
     );
 
     return factory;
