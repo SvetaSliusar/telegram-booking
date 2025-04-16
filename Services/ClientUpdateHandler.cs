@@ -4,6 +4,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using System.Collections.Concurrent;
 using Telegram.Bot.Services.Constants;
+using Telegram.Bot.Enums;
 
 namespace Telegram.Bot.Services;
 public class ClientUpdateHandler
@@ -61,7 +62,7 @@ public class ClientUpdateHandler
         {
             new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BookAppointment"), "book_appointment") },
             new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "MyBookings"), "view_bookings") },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
             new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeTimezone"), "change_timezone") }
         };
 
@@ -150,7 +151,7 @@ public class ClientUpdateHandler
             case "view_bookings":
                 await HandleViewBookings(chatId, cancellationToken);
                 break;
-            case "change_language":
+            case CallbackResponses.ChangeLanguage:
                 var languageKeyboard = new InlineKeyboardMarkup(new[]
                 {
                     new[] { InlineKeyboardButton.WithCallbackData("English", "set_language:EN") },
@@ -597,6 +598,7 @@ public class ClientUpdateHandler
             ServiceId = serviceId,
             CompanyId = service.Employee.CompanyId,
             BookingTime = bookingTime,
+            Status = BookingStatus.Pending
         };
 
         _dbContext.Bookings.Add(booking);
@@ -608,22 +610,35 @@ public class ClientUpdateHandler
         var clientTimeZone = TimeZoneInfo.FindSystemTimeZoneById(client.TimeZoneId);
         var localBookingTime = TimeZoneInfo.ConvertTimeFromUtc(bookingTime, clientTimeZone);
         
-        // Send confirmation message to client
+        // Send pending confirmation message to client
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "BookingConfirmation",
+            text: Translations.GetMessage(language, "BookingPendingConfirmation",
                 service.Name,
                 service.Employee.Name,
                 localBookingTime.ToString("dddd, MMMM d, yyyy"),
                 localBookingTime.ToString("hh:mm tt")),
             cancellationToken: cancellationToken);
 
-        // Send notification to company owner
+        // Send notification to company owner with confirmation buttons
         var companyOwnerChatId = service.Employee.Company.Token.ChatId;
         if (companyOwnerChatId.HasValue)
         {
             var companyOwnerLanguage = userLanguages.GetValueOrDefault<long, string>(companyOwnerChatId.Value, "EN");
             
+            var keyboard = new InlineKeyboardMarkup(new[]
+            {
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        Translations.GetMessage(companyOwnerLanguage, "Confirm"),
+                        $"{CallbackResponses.ConfirmBooking}:{booking.Id}"),
+                    InlineKeyboardButton.WithCallbackData(
+                        Translations.GetMessage(companyOwnerLanguage, "Reject"),
+                        $"{CallbackResponses.RejectBooking}:{booking.Id}")
+                }
+            });
+
             await _botClient.SendMessage(
                 chatId: companyOwnerChatId.Value,
                 text: Translations.GetMessage(companyOwnerLanguage, "NewBookingNotification",
@@ -631,6 +646,7 @@ public class ClientUpdateHandler
                     client.Name,
                     localBookingTime.ToString("dddd, MMMM d, yyyy"),
                     localBookingTime.ToString("hh:mm tt")),
+                replyMarkup: keyboard,
                 cancellationToken: cancellationToken);
         }
 

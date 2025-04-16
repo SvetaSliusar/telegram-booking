@@ -7,6 +7,8 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using System.Text;
 using Telegram.Bot.Commands;
+using System.Globalization;
+using Telegram.Bot.Enums;
 
 namespace Telegram.Bot.Services;
 
@@ -17,11 +19,7 @@ public class CompanyUpdateHandler
     private readonly BookingDbContext _dbContext;
     private readonly ICallbackCommandFactory _commandFactory;
     private readonly IUserStateService _userStateService;
-    //private static readonly string StickerId = "CAACAgIAAxkBAAONZnAGyWndlNzCY-3FkmBvV5Y_hskAAi4AAyRxYhqI6DZDakBDFDUE";
-    
-    // Thread-safe dictionary for conversation states
-    private static ConcurrentDictionary<long, string> userConversations = new ConcurrentDictionary<long, string>();
-    private static ConcurrentDictionary<long, string> userLanguages = new ConcurrentDictionary<long, string>();
+
     private readonly ICompanyCreationStateService _companyCreationStateService;
 
     public CompanyUpdateHandler(
@@ -42,7 +40,7 @@ public class CompanyUpdateHandler
 
     public async Task StartCompanyFlow(long chatId, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         
         // Add persistent menu button
         var replyKeyboard = new ReplyKeyboardMarkup(new[]
@@ -63,8 +61,7 @@ public class CompanyUpdateHandler
                 text: Translations.GetMessage(language, "EnterToken"),
                 replyMarkup: new ForceReplyMarkup { Selective = true },
                 cancellationToken: cancellationToken);
-
-            userConversations[chatId] = "WaitingForToken";
+            _userStateService.SetConversation(chatId, "WaitingForToken");
             return;
         }
 
@@ -79,7 +76,8 @@ public class CompanyUpdateHandler
 
     public Mode GetMode(long chatId)
     {
-        return _dbContext.Tokens.Any(t => t.ChatId == chatId) || (userConversations.ContainsKey(chatId) && userConversations[chatId] == "WaitingForToken") ? Mode.Company : Mode.Client;
+        return _dbContext.Tokens.Any(t => t.ChatId == chatId) || 
+            (_userStateService.GetConversation(chatId) == "WaitingForToken") ? Mode.Company : Mode.Client;
     }
 
     public async Task HandleUpdateAsync(Update update, CancellationToken cancellationToken)
@@ -101,7 +99,7 @@ public class CompanyUpdateHandler
     {
         if (message?.Text is not { } userMessage) return;
         var chatId = message.Chat.Id;
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
 
         // Handle Menu button click
         if (userMessage == "/menu")
@@ -118,8 +116,8 @@ public class CompanyUpdateHandler
                 var employeeId = int.Parse(parts[1]);
                 var day = (DayOfWeek)int.Parse(parts[2]);
                 await HandleBreakStartTimeInput(chatId, employeeId, day, userMessage, cancellationToken);
-                return;
-            }
+            return;
+        }
 
             if (state.StartsWith("WaitingForBreakEnd_"))
             {
@@ -155,17 +153,17 @@ public class CompanyUpdateHandler
         }
 
         // Handle default message
-        await _botClient.SendMessage(
-            chatId: chatId,
+            await _botClient.SendMessage(
+                chatId: chatId,
             text: Translations.GetMessage(language, "UseMenuButton"),
-            cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken);
     }
 
     private async Task HandleBreakStartTimeInput(long chatId, int employeeId, DayOfWeek day, string timeInput, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         
-        if (!TimeSpan.TryParse(timeInput, out TimeSpan startTime))
+        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan startTime))
         {
             await _botClient.SendMessage(
                 chatId: chatId,
@@ -211,14 +209,14 @@ public class CompanyUpdateHandler
 
     private async Task HandleStartWorkTimeInput(long chatId, int employeeId, DayOfWeek day, string timeInput, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         
-        if (!TimeSpan.TryParse(timeInput, out TimeSpan startTime))
+        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan startTime))
         {
-            await _botClient.SendMessage(
-                chatId: chatId,
+                await _botClient.SendMessage(
+                    chatId: chatId,
                 text: Translations.GetMessage(language, "InvalidTimeFormat"),
-                cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken);
             return;
         }
 
@@ -247,16 +245,16 @@ public class CompanyUpdateHandler
 
     private async Task HandleEndWorkTimeInput(long chatId, int employeeId, DayOfWeek day, TimeSpan startTime, string timeInput, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         
-        if (!TimeSpan.TryParse(timeInput, out TimeSpan endTime))
+        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan endTime))
         {
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: Translations.GetMessage(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
-            return;
-        }
+                return;
+            }
 
         // Get working hours for validation
         var workingHours = await _dbContext.WorkingHours
@@ -296,9 +294,9 @@ public class CompanyUpdateHandler
 
     private async Task HandleBreakEndTimeInput(long chatId, int employeeId, DayOfWeek day, TimeSpan startTime, string timeInput, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         
-        if (!TimeSpan.TryParse(timeInput, out TimeSpan endTime))
+        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan endTime))
         {
             await _botClient.SendMessage(
                 chatId: chatId,
@@ -318,8 +316,8 @@ public class CompanyUpdateHandler
                 chatId: chatId,
                 text: Translations.GetMessage(language, "NoWorkingHours"),
                 cancellationToken: cancellationToken);
-            return;
-        }
+        return;
+    }
 
         // Validate that end time is within working hours and after start time
         if (endTime <= startTime || endTime > workingHours.EndTime)
@@ -328,8 +326,8 @@ public class CompanyUpdateHandler
                 chatId: chatId,
                 text: Translations.GetMessage(language, "InvalidBreakTime"),
                 cancellationToken: cancellationToken);
-            return;
-        }
+        return;
+    }
 
         // Check for overlapping breaks
         if (workingHours.Breaks.Any(b => 
@@ -341,8 +339,8 @@ public class CompanyUpdateHandler
                 chatId: chatId,
                 text: Translations.GetMessage(language, "BreakOverlap"),
                 cancellationToken: cancellationToken);
-            return;
-        }
+        return;
+    }
 
         // Add the break
         workingHours.Breaks.Add(new Break
@@ -368,7 +366,7 @@ public class CompanyUpdateHandler
     private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery, CancellationToken cancellationToken)
     {
         if (callbackQuery?.Message == null || string.IsNullOrEmpty(callbackQuery.Data))
-            return;
+                    return;
 
         // First, try new factory-based commands
         var command = _commandFactory.CreateCommand(callbackQuery);
@@ -379,16 +377,14 @@ public class CompanyUpdateHandler
         }
 
         var chatId = callbackQuery.Message.Chat.Id;
-        string data = callbackQuery.Data;
+        string data = callbackQuery.Data ?? string.Empty;
 
         try
         {
-            var language = userLanguages.GetValueOrDefault(chatId, "EN");
-
             // Add new handlers for service management
             switch (data)
             {
-                case "back_to_menu":
+                case CallbackResponses.BackToMenu:
                     await ShowMainMenu(chatId, cancellationToken);
                     return;
             }
@@ -401,49 +397,49 @@ public class CompanyUpdateHandler
             if (data.StartsWith("reminder_time"))
             {
                 await HandleReminderTimeSelection(callbackQuery, cancellationToken);
-                return;
-            }
+            return;
+        }
 
             // ✅ Ensure data is in the expected format
             if (string.IsNullOrEmpty(data)) return;
 
-            // ✅ Handle other actions
-            switch (data)
-            {
-                case "create_company":
-                    await StartCompanyCreation(chatId, cancellationToken);
-                    break;
+        // ✅ Handle other actions
+        switch (data)
+        {
+            case "create_company":
+                await StartCompanyCreation(chatId, cancellationToken);
+                break;
 
                 case "view_daily_bookings":
-                    userConversations[chatId] = "WaitingForBookingDate";
+                   _userStateService.SetConversation(chatId, "WaitingForBookingDate");
                     await ShowBookingCalendar(chatId, DateTime.UtcNow, cancellationToken);
-                    break;
+                break;
 
                 case "reminder_settings":
                     await HandleReminderSettings(chatId, cancellationToken);
-                    break;
+                break;
 
-                default:
-                    _logger.LogInformation("Unknown callback data: {CallbackData}", callbackQuery.Data);
-                    break;
-            }
+            default:
+                _logger.LogInformation("Unknown callback data: {CallbackData}", callbackQuery.Data);
+                break;
+        }
             if (data.StartsWith("select_day_for_breaks:"))
             {
                 var parts = data.Split(':')[1].Split('_');
                 var employeeId = int.Parse(parts[0]);
                 var day = (DayOfWeek)int.Parse(parts[1]);
                 await HandleDayBreaksSelection(chatId, employeeId, day, cancellationToken);
-                return;
+            return;
             }
 
             if (data.StartsWith("booking_date_"))
             {
-                var selectedDate = DateTime.Parse(data.Replace("booking_date_", ""));
+                var selectedDate = DateTime.Parse(data.Replace("booking_date_", ""), CultureInfo.InvariantCulture);
                 await HandleBookingDateSelection(chatId, selectedDate, cancellationToken);
             }
             else if (data.StartsWith("booking_prev_") || data.StartsWith("booking_next_"))
             {
-                var referenceDate = DateTime.Parse(data.Replace("booking_prev_", "").Replace("booking_next_", ""));
+                var referenceDate = DateTime.Parse(data.Replace("booking_prev_", "").Replace("booking_next_", ""), CultureInfo.InvariantCulture);
                 DateTime newMonth = data.StartsWith("booking_prev_") 
                     ? referenceDate.AddMonths(-1) 
                     : referenceDate.AddMonths(1);
@@ -453,14 +449,14 @@ public class CompanyUpdateHandler
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while processing callback query: {CallbackData}", callbackQuery.Data);
-            await _botClient.SendTextMessageAsync(chatId, "An error occurred while processing the request. Please try again later.", cancellationToken: cancellationToken);
+            await _botClient.SendMessage(chatId, "An error occurred while processing the request. Please try again later.", cancellationToken: cancellationToken);
         }
     }
 
     // ✅ Step 1: Prompt User for Company Name
     private async Task StartCompanyCreation(long chatId, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
 
         _userStateService.SetConversation(chatId, "WaitingForCompanyName");
 
@@ -512,15 +508,15 @@ public class CompanyUpdateHandler
                     cancellationToken: cancellationToken);
 
                 await ShowMainMenu(chatId, cancellationToken);
-                break;
-            
+               break;
+
             case "WaitingForServiceName":
                 var service = creationState.Services.FirstOrDefault(s => s.Id == creationState.CurrentServiceIndex);
                 if (service == null)
                 {
                     await _botClient.SendMessage(
                         chatId: chatId,
-                        text: "❌ Error: Session expired. Please try again from the main menu.",
+                        text: Translations.GetMessage(language, "SessionExpired"),
                         cancellationToken: cancellationToken);
                     return false;
                 }
@@ -528,19 +524,19 @@ public class CompanyUpdateHandler
                 service.Name = userMessage;
                 _companyCreationStateService.UpdateService(chatId, service);
                 _userStateService.SetConversation(chatId, "WaitingFoServiceDescription");
-                await _botClient.SendMessage(
-                    chatId: chatId,
+                    await _botClient.SendMessage(
+                        chatId: chatId,
                     text: Translations.GetMessage(language, "EnterServiceDescription"),
-                    cancellationToken: cancellationToken);
+                        cancellationToken: cancellationToken);
                 break;
             case "WaitingFoServiceDescription":
                 service = creationState.Services.FirstOrDefault(s => s.Id == creationState.CurrentServiceIndex);
                 if (service == null)
                 {
-                    await _botClient.SendMessage(
-                        chatId: chatId,
-                        text: "❌ Error: Session expired. Please try again from the main menu.",
-                        cancellationToken: cancellationToken);
+                await _botClient.SendMessage(
+                    chatId: chatId,
+                        text: Translations.GetMessage(language, "SessionExpired"),
+                    cancellationToken: cancellationToken);
                     return false;
                 }
 
@@ -562,7 +558,7 @@ public class CompanyUpdateHandler
                 {
                     await _botClient.SendMessage(
                         chatId: chatId,
-                        text: "❌ Please enter a valid duration in minutes (e.g., 20):",
+                        text:Translations.GetMessage(language, "InvalidDuration"),
                         cancellationToken: cancellationToken);
                     return false;
                 }
@@ -570,10 +566,10 @@ public class CompanyUpdateHandler
                 service = _companyCreationStateService.GetState(chatId).Services.LastOrDefault();
                 if (service == null)
                 {
-                    await _botClient.SendMessage(
-                        chatId: chatId,
-                        text: "❌ Error: Session expired. Please try again from the main menu.",
-                        cancellationToken: cancellationToken);
+                await _botClient.SendMessage(
+                    chatId: chatId,
+                        text: Translations.GetMessage(language, "SessionExpired"),
+                    cancellationToken: cancellationToken);
                     return false;
                 }
 
@@ -633,7 +629,7 @@ public class CompanyUpdateHandler
 
     public async Task ShowMainMenu(long chatId, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         var company = await _dbContext.Companies.FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
         var keyboardButtons = company == null
@@ -651,16 +647,16 @@ public class CompanyUpdateHandler
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "GetClientLink"), "get_client_link") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ViewDailyBookings"), "view_daily_bookings") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ReminderSettings"), "reminder_settings") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") }
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) }
             };
 
         var keyboard = new InlineKeyboardMarkup(keyboardButtons);
 
-        await _botClient.SendMessage(
-            chatId: chatId,
+            await _botClient.SendMessage(
+                chatId: chatId,
             text: Translations.GetMessage(language, "MainMenu"),
             replyMarkup: keyboard,
-            cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken);
     }
 
     private async Task HandleEmployeeSelectionForService(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -671,7 +667,7 @@ public class CompanyUpdateHandler
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         var employee = company?.Employees.FirstOrDefault(e => e.Id == employeeId);
         if (employee == null)
         {
@@ -689,12 +685,12 @@ public class CompanyUpdateHandler
             Services = new List<ServiceCreationData>()
         };
 
-        userConversations[chatId] = "WaitingForServiceName";
+        _userStateService.SetConversation(chatId, "WaitingForServiceName");
 
         await _botClient.SendMessage(
-            chatId: chatId,
+        chatId: chatId,
             text: Translations.GetMessage(language, "NewService", employee.Name),
-            cancellationToken: cancellationToken);
+        cancellationToken: cancellationToken);
     }
 
     private async Task HandleServicePriceInput(long chatId, string priceInput, CancellationToken cancellationToken)
@@ -716,13 +712,13 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Error: Session expired. Please try again from the main menu.",
+                text: Translations.GetMessage(language, "SessionExpired"),
                 cancellationToken: cancellationToken);
             return;
         }
-        
+
         service.Price = price;
-        userConversations[chatId] = "WaitingForServiceDuration";
+        _userStateService.SetConversation(chatId, "WaitingForServiceDuration");
 
         var predefinedDurations = new InlineKeyboardMarkup(new[]
         {
@@ -758,29 +754,29 @@ public class CompanyUpdateHandler
 
         if (company == null)
         {
-            await _botClient.SendMessage(
-                chatId: chatId,
+        await _botClient.SendMessage(
+            chatId: chatId,
                 text: Translations.GetMessage(language, "NoCompanyFound"),
-                cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken);
             return;
-        }
+    }
 
         var employee = company.Employees.FirstOrDefault();
         if (employee == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
+    {
+        await _botClient.SendMessage(
+            chatId: chatId,
                 text: Translations.GetMessage(language, "NoEmployeeFound"),
-                cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken);
             return;
-        }
+    }
 
         if (employee.Services == null)
-        {
+    {
             employee.Services = new List<Service>();
         }
         var serviceCreationData = creationData.Services.FirstOrDefault(s => s.Id == creationData.CurrentServiceIndex);
-
+        
         if (serviceCreationData == null)
         {
             await _botClient.SendMessage(
@@ -815,7 +811,7 @@ public class CompanyUpdateHandler
 
     private async Task ShowBookingCalendar(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         var daysInMonth = DateTime.DaysInMonth(selectedDate.Year, selectedDate.Month);
         var firstDayOfMonth = new DateTime(selectedDate.Year, selectedDate.Month, 1);
         var currentDate = DateTime.UtcNow.Date;
@@ -830,13 +826,13 @@ public class CompanyUpdateHandler
         // Weekday headers
         calendarButtons.Add(new List<InlineKeyboardButton>
         {
-            InlineKeyboardButton.WithCallbackData("Mo", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Tu", "ignore"),
-            InlineKeyboardButton.WithCallbackData("We", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Th", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Fr", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Sa", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Su", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Mo", CallbackResponses.Ignore),
+            InlineKeyboardButton.WithCallbackData("Tu", CallbackResponses.Ignore),
+            InlineKeyboardButton.WithCallbackData("We", CallbackResponses.Ignore),
+            InlineKeyboardButton.WithCallbackData("Th", CallbackResponses.Ignore),
+            InlineKeyboardButton.WithCallbackData("Fr", CallbackResponses.Ignore),
+            InlineKeyboardButton.WithCallbackData("Sa", CallbackResponses.Ignore),
+            InlineKeyboardButton.WithCallbackData("Su", CallbackResponses.Ignore),
         });
 
         List<InlineKeyboardButton> weekRow = new();
@@ -844,7 +840,7 @@ public class CompanyUpdateHandler
         // Add empty buttons before the first day of the month
         for (int i = 1; i < (int)firstDayOfMonth.DayOfWeek; i++)
         {
-            weekRow.Add(InlineKeyboardButton.WithCallbackData(" ", "ignore"));
+            weekRow.Add(InlineKeyboardButton.WithCallbackData(" ", CallbackResponses.Ignore));
         }
         
         var company = await _dbContext.Companies
@@ -871,7 +867,7 @@ public class CompanyUpdateHandler
             
             if (isPastDate)
             {
-                weekRow.Add(InlineKeyboardButton.WithCallbackData($"{day}⚫", "ignore"));
+                weekRow.Add(InlineKeyboardButton.WithCallbackData($"{day}⚫", CallbackResponses.Ignore));
             }
             else
             {
@@ -891,11 +887,11 @@ public class CompanyUpdateHandler
 
         // Navigation buttons
         var prevButton = isPastMonth || isCurrentMonth
-            ? InlineKeyboardButton.WithCallbackData("⬅️", "ignore")
+            ? InlineKeyboardButton.WithCallbackData("⬅️", CallbackResponses.Ignore)
             : InlineKeyboardButton.WithCallbackData("⬅️", $"booking_prev_{selectedDate:yyyy-MM-dd}");
 
         var nextButton = isFutureMonth || isNextMonth
-            ? InlineKeyboardButton.WithCallbackData("➡️", "ignore")
+            ? InlineKeyboardButton.WithCallbackData("➡️", CallbackResponses.Ignore)
             : InlineKeyboardButton.WithCallbackData("➡️", $"booking_next_{selectedDate:yyyy-MM-dd}");
 
         calendarButtons.Add(new List<InlineKeyboardButton>
@@ -922,10 +918,18 @@ public class CompanyUpdateHandler
 
     private async Task HandleBookingDateSelection(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         var company = await _dbContext.Companies
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
+        if (company == null)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "NoCompanyFound"),
+                cancellationToken: cancellationToken);
+            return;
+        }
         var selectedDateUtc = DateTime.SpecifyKind(selectedDate, DateTimeKind.Utc);
         var dayStart = selectedDateUtc.Date;
         var dayEnd = dayStart.AddDays(1);
@@ -947,7 +951,7 @@ public class CompanyUpdateHandler
                 text: Translations.GetMessage(language, "NoBookingsForDate", selectedDate.ToString("dddd, MMMM d, yyyy")),
                 replyMarkup: new InlineKeyboardMarkup(new[] 
                 { 
-                    new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+                    new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), CallbackResponses.BackToMenu) }
                 }),
                 cancellationToken: cancellationToken);
             return;
@@ -959,7 +963,7 @@ public class CompanyUpdateHandler
             var localTime = booking.BookingTime.ToLocalTime();
             message += Translations.GetMessage(language, "BookingDetailsForCompany", 
                 booking.Service.Name,
-                booking.Client.Name,
+                booking.Client.Name ?? "N/A",
                 localTime.ToString("hh:mm tt"),
                 booking.Client.Name ?? "N/A") + "\n\n";
         }
@@ -969,14 +973,14 @@ public class CompanyUpdateHandler
             text: message,
             replyMarkup: new InlineKeyboardMarkup(new[] 
             { 
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), CallbackResponses.BackToMenu) }
             }),
             cancellationToken: cancellationToken);
     }
 
     private async Task HandleReminderSettings(long chatId, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         var company = await _dbContext.Companies
             .Include(c => c.ReminderSettings)
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
@@ -1008,7 +1012,7 @@ public class CompanyUpdateHandler
             new[] { InlineKeyboardButton.WithCallbackData("6 hours", "reminder_time:6") },
             new[] { InlineKeyboardButton.WithCallbackData("12 hours", "reminder_time:12") },
             new[] { InlineKeyboardButton.WithCallbackData("24 hours", "reminder_time:24") },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), CallbackResponses.BackToMenu) }
         });
 
         await _botClient.SendMessage(
@@ -1022,18 +1026,26 @@ public class CompanyUpdateHandler
     {
         if (callbackQuery?.Message == null) return;
         var chatId = callbackQuery.Message.Chat.Id;
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
-        string data = callbackQuery.Data;
-
+        var language = _userStateService.GetLanguage(chatId);
+        string data = callbackQuery.Data ?? string.Empty;
+        if (string.IsNullOrEmpty(data))
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "InvalidReminderTime"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+        
         if (!data.StartsWith("reminder_time:")) return;
 
         var hoursStr = data.Split(':')[1];
         if (!int.TryParse(hoursStr, out int hours) || hours < 1 || hours > 24)
         {
             await _botClient.SendMessage(
-                chatId: chatId,
+            chatId: chatId,
                 text: Translations.GetMessage(language, "InvalidReminderTime"),
-                cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken);
             return;
         }
 
@@ -1075,7 +1087,7 @@ public class CompanyUpdateHandler
 
     private async Task HandleDayBreaksSelection(long chatId, int employeeId, DayOfWeek day, CancellationToken cancellationToken)
     {
-        var language = userLanguages.GetValueOrDefault(chatId, "EN");
+        var language = _userStateService.GetLanguage(chatId);
         var employee = await _dbContext.Employees
             .Include(e => e.WorkingHours)
                 .ThenInclude(wh => wh.Breaks)
