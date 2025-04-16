@@ -15,6 +15,7 @@ public class ClientConversationState
     public ServiceCreationData ServiceCreationData { get; set; } = new ServiceCreationData();
 
     public ConversationStep CurrentStep { get; set; } = ConversationStep.None;
+    
 }
 
 public enum ConversationStep

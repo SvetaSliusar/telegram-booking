@@ -7,6 +7,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using System.Text.Json;
 using Telegram.Bot.Commands;
+using Telegram.Bot.Enums;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,6 +69,10 @@ builder.Services.AddHostedService<BookingReminderService>();
 builder.Services.AddTransient<BreakCommandHandler>();
 builder.Services.AddTransient<GenerateClientLinkHandler>();
 builder.Services.AddTransient<ServiceCommandHandler>();
+builder.Services.AddTransient<WorkDayCommandHandler>();
+builder.Services.AddTransient<WorkTimeCommandHandler>();
+builder.Services.AddTransient<ConfirmBookingCommand>();
+builder.Services.AddTransient<RejectBookingCommand>();
 
 builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
 {
@@ -88,6 +93,33 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "list_services",
         "add_service",
         "service_duration"
+    );
+    factory.RegisterCommand<ChangeLanguageCommandHandler>(
+        CallbackResponses.ChangeLanguage,
+        "set_language"
+    );
+    factory.RegisterCommand<WorkDayCommandHandler>(
+        "setup_work_days",
+        "workingdays",
+        "workingdays_confirm",
+        "workingdays_clearSelection"
+    );
+
+    factory.RegisterCommand<WorkTimeCommandHandler>(
+        "init_work_time",
+        "setup_work_time_start",
+        "setup_work_time_end",
+        "confirm_working_hours",
+        "clear_working_hours",
+        "change_work_time",
+        "select_day_for_work_time_start"
+    );
+
+    factory.RegisterCommand<ConfirmBookingCommand>(
+        "confirm_booking"
+    );
+    factory.RegisterCommand<RejectBookingCommand>(
+        "reject_booking"
     );
 
     return factory;

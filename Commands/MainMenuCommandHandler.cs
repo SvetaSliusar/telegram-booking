@@ -36,7 +36,7 @@ public class MainMenuCommandHandler : ICallbackCommand
             : new List<List<InlineKeyboardButton>>
             {
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "SetupWorkDays"), "setup_work_days") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "SetupWorkTime"), "setup_work_time") },
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeWorkTime"), "change_work_time") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ManageBreaks"), "manage_breaks") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ListServices"), "list_services") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") },

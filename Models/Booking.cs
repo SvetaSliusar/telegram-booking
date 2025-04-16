@@ -1,6 +1,14 @@
 using System;
 namespace Telegram.Bot.Models
 {
+    public enum BookingStatus
+    {
+        Pending,
+        Confirmed,
+        Rejected,
+        Cancelled
+    }
+
     public class Booking
     {
         public int Id { get; set; }
@@ -22,6 +30,9 @@ namespace Telegram.Bot.Models
 
         // Reminder tracking
         public bool ReminderSent { get; set; }
+
+        // Booking status
+        public BookingStatus Status { get; set; } = BookingStatus.Pending;
     }
 
 }

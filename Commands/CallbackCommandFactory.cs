@@ -52,12 +52,6 @@ public class CallbackCommandFactory : ICallbackCommandFactory
 
         return default;
     }
-
-    private static string ExtractCommandKey(string data)
-    {
-        var separatorIndex = data.IndexOf(':');
-        return separatorIndex >= 0 ? data.Substring(0, separatorIndex) : data;
-    }
 }
 
 

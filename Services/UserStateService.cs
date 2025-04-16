@@ -8,6 +8,7 @@ public class UserStateService : IUserStateService
     private readonly ConcurrentDictionary<long, ClientConversationState> _userStates = new();
     private readonly ConcurrentDictionary<long, string> _userLanguages = new();
     private readonly ConcurrentDictionary<long, string> _userConversations = new();
+    private readonly ConcurrentDictionary<long, int> _lastMessageIds = new();
 
     public ClientConversationState GetOrCreate(long chatId, int companyId)
     {
@@ -56,5 +57,20 @@ public class UserStateService : IUserStateService
     public void RemoveConversation(long chatId)
     {
         _userConversations.TryRemove(chatId, out _);
+    }
+
+    public int? GetLastMessageId(long chatId)
+    {
+        return _lastMessageIds.TryGetValue(chatId, out var messageId) ? messageId : (int?)null;
+    }
+
+    public void SetLastMessageId(long chatId, int messageId)
+    {
+        _lastMessageIds[chatId] = messageId;
+    }
+
+    public void RemoveLastMessageId(long chatId)
+    {
+        _lastMessageIds.TryRemove(chatId, out _);
     }
 }

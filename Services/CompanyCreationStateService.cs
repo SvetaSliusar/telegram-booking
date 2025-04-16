@@ -7,7 +7,6 @@ public class CompanyCreationStateService : ICompanyCreationStateService
 {
     private readonly ConcurrentDictionary<long, CompanyCreationData> _state = new();
     private int _nextServiceId = 1;
-    private int _nextEmployeeId = 1;
 
     public CompanyCreationData GetState(long chatId)
     {
@@ -18,6 +17,12 @@ public class CompanyCreationStateService : ICompanyCreationStateService
     {
         UpdateState(chatId, state => state.CompanyName = name);
     }
+
+    public void SetCompanyAlias(long chatId, string alias)
+    {
+        UpdateState(chatId, state => state.CompanyAlias = alias);
+    }
+
 
     public int AddService(long chatId, ServiceCreationData service)
     {
@@ -54,7 +59,6 @@ public class CompanyCreationStateService : ICompanyCreationStateService
 
     public int AddEmployee(long chatId, EmployeeCreationData employee)
     {
-        employee.Id = Interlocked.Increment(ref _nextEmployeeId);
         UpdateState(chatId, state => state.Employees.Add(employee));
         return employee.Id;
     }
@@ -112,8 +116,104 @@ public class CompanyCreationStateService : ICompanyCreationStateService
             },
             (_, existingState) =>
             {
+                if (existingState.Employees == null)
+                {
+                    existingState.Employees = new List<EmployeeCreationData>();
+                }
                 updateAction(existingState);
                 return existingState;
             });
+    }
+
+    public void AddWorkingDayToEmployee(long chatId, int employeeId, DayOfWeek day)
+    {
+        UpdateState(chatId, state =>
+        {
+            var employee = state.Employees.FirstOrDefault(e => e.Id == employeeId);
+            if (employee != null && !employee.WorkingDays.Contains(day))
+            {
+                employee.WorkingDays.Add(day);
+            }
+        });
+    }
+
+    public void ClearWorkingHours(long chatId, int employeeId)
+    {
+        UpdateState(chatId, state =>
+        {
+            var employee = state.Employees.FirstOrDefault(e => e.Id == employeeId);
+            if (employee != null)
+            {
+                employee.WorkingHours.Clear();
+            }
+        });
+    }
+    
+    public void ClearWorkingDays(long chatId, int employeeId)
+    {
+        UpdateState(chatId, state =>
+        {
+            var employee = state.Employees.FirstOrDefault(e => e.Id == employeeId);
+            if (employee != null)
+            {
+                employee.WorkingDays.Clear();
+            }
+        });
+    }
+
+    public void AddDefaultStartTimeToEmployee(long chatId, int employeeId, TimeSpan startTime)
+    {
+        UpdateState(chatId, state =>
+        {
+            var employee = state.Employees.FirstOrDefault(e => e.Id == employeeId);
+            if (employee != null && employee.WorkingDays.Count > 0)
+            {
+                foreach (var workday in employee.WorkingDays)
+                {
+                    var workingHours = employee.WorkingHours.FirstOrDefault(wh => wh.DayOfWeek == workday);
+                    if (workingHours != null)
+                    {
+                        workingHours.StartTime = startTime;
+                    }
+                    else
+                    {
+                        employee.WorkingHours.Add(new WorkingHoursData
+                        {
+                            DayOfWeek = workday,
+                            StartTime = startTime,
+                            EndTime = TimeSpan.Zero
+                        });
+                    }
+                }
+            }
+        });
+    }
+
+    public void AddDefaultEndTimeToEmployee(long chatId, int employeeId, TimeSpan endTime)
+    {
+        UpdateState(chatId, state =>
+        {
+            var employee = state.Employees.FirstOrDefault(e => e.Id == employeeId);
+            if (employee != null && employee.WorkingDays.Count > 0)
+            {
+                foreach (var workday in employee.WorkingDays)
+                {
+                    var workingHours = employee.WorkingHours.FirstOrDefault(wh => wh.DayOfWeek == workday);
+                    if (workingHours != null)
+                    {
+                        workingHours.EndTime = endTime;
+                    }
+                    else
+                    {
+                        employee.WorkingHours.Add(new WorkingHoursData
+                        {
+                            DayOfWeek = workday,
+                            StartTime = TimeSpan.Zero,
+                            EndTime = endTime
+                        });
+                    }
+                }
+            }
+        });
     }
 }

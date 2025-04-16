@@ -6,7 +6,7 @@ public class Token
 {
     [Key]
     public int Id { get; set; }
-    public string TokenValue { get; set; }
+    public required string TokenValue { get; set; }
     public bool Used { get; set; }
     public long? ChatId { get; set; }
     public string Language { get; set; } = "EN";

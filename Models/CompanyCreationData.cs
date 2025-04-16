@@ -18,7 +18,9 @@ public class CompanyCreationData
     public int CurrentServiceIndex { get; set; }
     public EditingContext EditingContext { get; set; } = EditingContext.None;
     public int? SelectedEmployeeId { get; set; }  // Make nullable to differentiate between modes
-    public bool IsInitialCreation => SelectedEmployeeId == null;  // Helper property
+    public List<string> WorkingDays { get; set; } = new();
+    public TimeSpan DefaultStartTime { get; set; }
+    public TimeSpan DefaultEndTime { get; set; }
 }
 
 public enum EditingContext

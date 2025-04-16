@@ -11,4 +11,7 @@ public interface IUserStateService
     string GetLanguage(long chatId);
     void SetLanguage(long chatId, string language);
     ClientConversationState GetOrCreate(long chatId, int companyId);
+    void SetLastMessageId(long chatId, int messageId);
+    int? GetLastMessageId(long chatId);
+    void RemoveLastMessageId(long chatId);
 }
