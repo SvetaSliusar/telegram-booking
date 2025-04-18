@@ -159,7 +159,10 @@ public static class Translations
             ["BookingConfirmedByCompany"] = "Your booking has been confirmed by the company:\nService: {0}\nEmployee: {1}\nDate: {2}\nTime: {3}",
             ["BookingRejectedByCompany"] = "Your booking has been rejected by the company:\nService: {0}\nEmployee: {1}\nDate: {2}\nTime: {3}",
             ["Reject"] = "❌ Reject",
-            ["SetupWorkTime"] = "🕒 Setup Work Time"
+            ["SetupWorkTime"] = "🕒 Setup Work Time",
+            ["EnterDefaultStartTime"] = "Please enter the default start time for all working days (format: HH:mm):",
+            ["EnterDefaultEndTime"] = "Please enter the default end time for all working days (format: HH:mm):",
+            ["DefaultWorkTimeSet"] = "Default working hours have been set for all days:\nStart: {0}\nEnd: {1}"
         },
         ["UA"] = new Dictionary<string, string>
         {
@@ -315,7 +318,10 @@ public static class Translations
             ["BookingConfirmedByCompany"] = "Ваше бронювання підтверджено компанією:\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас: {3}",
             ["BookingRejectedByCompany"] = "Ваше бронювання відхилено компанією:\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас: {3}",
             ["Reject"] = "❌ Відхилити",
-            ["ManageBreaks"] = "⏳ Керування Перервами"
+            ["ManageBreaks"] = "⏳ Керування Перервами",
+            ["EnterDefaultStartTime"] = "Будь ласка, введіть стандартний час початку роботи для всіх робочих днів (формат: ГГ:хв):",
+            ["EnterDefaultEndTime"] = "Будь ласка, введіть стандартний час закінчення роботи для всіх робочих днів (формат: ГГ:хв):",
+            ["DefaultWorkTimeSet"] = "Стандартний робочий час встановлено для всіх днів:\nПочаток: {0}\nКінець: {1}"
         }
     };
 

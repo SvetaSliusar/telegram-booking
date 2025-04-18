@@ -22,5 +22,6 @@ namespace Telegram.Bot.Enums
         public const string BackToServices = "back_to_services";
         public const string ConfirmBooking = "confirm_booking";
         public const string RejectBooking = "reject_booking";
+        public const string InitWorkTime = "init_work_time";
     }
 }

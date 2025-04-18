@@ -66,10 +66,11 @@ public class ServiceCommandHandler : ICallbackCommand
         var service = state.Services.FirstOrDefault(s => s.Id == state.CurrentServiceIndex);
         if (service == null)
         {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: "❌ Error: Session expired. Please try again from the main menu.",
-                cancellationToken: cancellationToken);
+            var mainMenuCommand = _commandFactory.CreateCommand("back_to_menu");
+            if (mainMenuCommand != null)
+            {
+                await mainMenuCommand.ExecuteAsync(new CallbackQuery(), cancellationToken);
+            }
             return;
         }
 

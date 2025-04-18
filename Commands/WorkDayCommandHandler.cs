@@ -72,7 +72,7 @@ public class WorkDayCommandHandler : ICallbackCommand
             await _botClient.SendMessage(chatId, Translations.GetMessage(language, "NoEmployeeSelected"), cancellationToken: cancellationToken);
             return;
         }
-
+        _companyCreationStateService.ClearState(chatId);
         var employeeId = _companyCreationStateService.AddEmployee(chatId, new EmployeeCreationData
         {
             Id = employee.Id,
@@ -181,7 +181,13 @@ public class WorkDayCommandHandler : ICallbackCommand
         var state = _companyCreationStateService.GetState(chatId);
         var employeeId = state.CurrentEmployeeIndex;
         _companyCreationStateService.ClearWorkingDays(chatId, employeeId);
-
+        var existingHours = _dbContext.WorkingHours
+            .Where(w => w.EmployeeId == state.CurrentEmployeeIndex);
+        if (await existingHours.AnyAsync())
+        {
+            _dbContext.WorkingHours.RemoveRange(existingHours);
+            await _dbContext.SaveChangesAsync();
+        }
         await SendReplyWithWorkingDaysAsync(chatId, language, state, cancellationToken);
     }
 

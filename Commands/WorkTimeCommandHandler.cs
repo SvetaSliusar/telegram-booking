@@ -46,8 +46,8 @@ public class WorkTimeCommandHandler : ICallbackCommand
         {
             { "init_work_time", HandleInitWorkTimeAsync },
             { "select_day_for_work_time_start", HandleSelectDayForWorkTimeAsync },
-            { "setup_work_time_end", HandleSetupWorkTimeEndAsync },
             { "setup_work_time_start", HandleSetupWorkTimeStartAsync },
+            { "setup_work_time_end", HandleSetupWorkTimeEndAsync },
             { "change_work_time", HandleChangeWorkTimeAsync },
             { "confirm_working_hours", HandleConfirmWorkingHoursAsync },
             { "clear_working_hours", HandleClearWorkingHoursAsync }
@@ -176,125 +176,19 @@ public class WorkTimeCommandHandler : ICallbackCommand
     {
         var language = _userStateService.GetLanguage(chatId);
 
-
         var state = _companyCreationStateService.GetState(chatId);
-        var employeeId = state.CurrentEmployeeIndex;
         if (state.Employees == null || state.Employees.Count == 0)
         {
             await _botClient.SendMessage(chatId, "Select working days first.", cancellationToken: cancellationToken);
             return;
         }
 
-        var workingHours = state.Employees.FirstOrDefault(x => x.Id == employeeId)?.WorkingHours;
-        var selectedHours = workingHours?
-            .SelectMany(h => new[] { h.StartTime, h.EndTime })
-            .ToList() ?? new List<TimeSpan>();
+        _userStateService.SetConversation(chatId, $"WaitingForDefaultStartTime");
 
-        var messageBuilder = new System.Text.StringBuilder();
-            messageBuilder.AppendLine(Translations.GetMessage(language, "CurrentWorkingHours", "all working days"));
-        if (selectedHours.Any())
-        {
-            var sortedHours = selectedHours.OrderBy(h => h).ToList();
-            var intervals = new List<string>();
-            for (int i = 0; i < sortedHours.Count; i += 2)
-            {
-                if (i + 1 < sortedHours.Count)
-                {
-                    intervals.Add($"{sortedHours[i]:hh\\:mm}-{sortedHours[i + 1]:hh\\:mm}");
-                }
-            }
-            messageBuilder.AppendLine(Translations.GetMessage(language, "WorkingHoursIntervals", string.Join(", ", intervals)));
-        }
-        else
-        {
-            messageBuilder.AppendLine(Translations.GetMessage(language, "NoHoursSelected"));
-        }
-
-        var keyboardButtons = new List<List<InlineKeyboardButton>>
-        {
-            new List<InlineKeyboardButton> { InlineKeyboardButton.WithCallbackData("🌅 Morning", "ignore") }
-        };
-
-        keyboardButtons.AddRange(CreateRowsFrom2DArray(morningWorkingHours, selectedHours, data));
-
-        keyboardButtons.Add(new List<InlineKeyboardButton> { InlineKeyboardButton.WithCallbackData("🌞 Afternoon", "ignore") });
-        keyboardButtons.AddRange(CreateRowsFrom2DArray(afternoonWorkingHours, selectedHours, data));
-
-        keyboardButtons.Add(new List<InlineKeyboardButton> { InlineKeyboardButton.WithCallbackData("🌙 Evening", "ignore") });
-        keyboardButtons.AddRange(CreateRowsFrom2DArray(eveningWorkingHours, selectedHours, data));
-
-
-        keyboardButtons.Add(new List<InlineKeyboardButton>
-        {
-            InlineKeyboardButton.WithCallbackData("✅ Confirm", $"confirm_working_hours"),
-            InlineKeyboardButton.WithCallbackData("❌ Clear Selection", $"clear_working_hours")
-        });
-
-        var inlineKeyboardMarkup = new InlineKeyboardMarkup(keyboardButtons);
-
-        // Delete previous message before sending a new one
-        await DeletePreviousMessage(chatId, cancellationToken);
-
-        var sentMessage = await _botClient.SendMessage(
+        await _botClient.SendMessage(
             chatId: chatId,
-            text: messageBuilder.ToString(),
-            replyMarkup: inlineKeyboardMarkup,
+            text: Translations.GetMessage(language, "EnterDefaultStartTime"),
             cancellationToken: cancellationToken);
-
-        _userStateService.SetLastMessageId(chatId, sentMessage.MessageId);
-    }
-
-    private static List<List<InlineKeyboardButton>> CreateRowsFrom2DArray(string[,] timeSlots, List<TimeSpan> selectedHours, string timePrefix)
-    {
-        int rows = timeSlots.GetLength(0);
-        int cols = timeSlots.GetLength(1);
-        var keyboardRows = new List<List<InlineKeyboardButton>>();
-
-        for (int i = 0; i < rows; i++)
-        {
-            var row = new string[cols];
-            for (int j = 0; j < cols; j++)
-            {
-                row[j] = timeSlots[i, j];
-            }
-
-            // Create a row of buttons from this line
-            var buttons = CreateHourRow(row, selectedHours, timePrefix).ToList();
-            keyboardRows.Add(buttons);
-        }
-
-        return keyboardRows;
-    }
-
-    // ✅ Helper method to create rows of time slot buttons dynamically
-    private static InlineKeyboardButton[] CreateHourRow(string[] hours, List<TimeSpan> selectedHours, string timePrefix)
-    {
-        if (string.IsNullOrEmpty(timePrefix))
-            timePrefix = "start";
-        return hours.Select(hour =>
-        {
-            TimeSpan timeSpan = TimeSpan.Parse(hour, CultureInfo.InvariantCulture);
-            bool isSelected = selectedHours.Contains(timeSpan);
-            string buttonText = isSelected ? $"{hour} ✅" : hour;
-            return InlineKeyboardButton.WithCallbackData(buttonText, $"setup_work_time_{timePrefix}:{hour}");
-        }).ToArray();
-    }
-
-    private async Task DeletePreviousMessage(long chatId, CancellationToken cancellationToken)
-    {
-        var lastSentMessageId =  _userStateService.GetLastMessageId(chatId);
-
-        if (lastSentMessageId != null)
-        {
-            try
-            {
-                await _botClient.DeleteMessage(chatId, lastSentMessageId.Value, cancellationToken);
-            }
-            catch (ApiRequestException ex)
-            {
-                _logger.LogWarning(ex, "Failed to delete previous message for chat {ChatId}: {Message}", chatId, ex.Message);
-            }
-        }
     }
 
     private async Task HandleConfirmWorkingHoursAsync(long chatId, string data, CancellationToken cancellationToken)
@@ -337,6 +231,14 @@ public class WorkTimeCommandHandler : ICallbackCommand
 
         var employeeId = state.CurrentEmployeeIndex;
         _companyCreationStateService.ClearWorkingHours(chatId, employeeId);
+
+        var existingHours = _dbContext.WorkingHours
+            .Where(w => w.EmployeeId == state.CurrentEmployeeIndex);
+        if (await existingHours.AnyAsync())
+        {
+            _dbContext.WorkingHours.RemoveRange(existingHours);
+            await _dbContext.SaveChangesAsync();
+        }
 
         await HandleInitWorkTimeAsync(chatId, "start", cancellationToken);
     }

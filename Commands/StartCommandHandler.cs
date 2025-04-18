@@ -37,7 +37,7 @@ public class StartCommandHandler : IStartCommandHandler
         // Check if the message starts with /start
         if (!messageText.StartsWith("/start"))
         {
-            return true;
+            return false;
         }
 
         // Extract parameter - handle both /start=123 and /start 123 formats
@@ -57,7 +57,7 @@ public class StartCommandHandler : IStartCommandHandler
                 chatId: chatId,
                 text: "❌ Please provide a valid company token or company alias.",
                 cancellationToken: cancellationToken);
-            return false;
+            return true;
         }
         
         // First try to find a token (can be any combination of characters and numbers)
@@ -80,7 +80,7 @@ public class StartCommandHandler : IStartCommandHandler
         if (company != null)
         {
             await _clientUpdateHandler.StartClientFlow(chatId, company.Id, cancellationToken);
-            return false;
+            return true;
         }
 
         // If neither token nor company alias is valid
@@ -88,6 +88,6 @@ public class StartCommandHandler : IStartCommandHandler
             chatId: chatId,
             text: "❌ Invalid parameter. Please use a valid company token or company alias.",
             cancellationToken: cancellationToken);
-        return false;
+        return true;
     }
 } 

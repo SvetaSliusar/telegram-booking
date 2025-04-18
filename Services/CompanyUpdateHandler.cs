@@ -110,14 +110,26 @@ public class CompanyUpdateHandler
         var state = _userStateService.GetConversation(chatId);
         if (!string.IsNullOrEmpty(state))
         {
+            if (state == "WaitingForDefaultStartTime")
+            {
+                await HandleDefaultStartTimeInput(chatId, userMessage, cancellationToken);
+            return;
+        }
+
+            if (state.StartsWith("WaitingForDefaultEndTime"))
+            {
+                await HandleDefaultEndTimeInput(chatId, userMessage, cancellationToken);
+                return;
+            }
+
             if (state.StartsWith("WaitingForBreakStart_"))
             {
                 var parts = state.Split('_');
                 var employeeId = int.Parse(parts[1]);
                 var day = (DayOfWeek)int.Parse(parts[2]);
                 await HandleBreakStartTimeInput(chatId, employeeId, day, userMessage, cancellationToken);
-            return;
-        }
+                return;
+            }
 
             if (state.StartsWith("WaitingForBreakEnd_"))
             {
@@ -152,11 +164,119 @@ public class CompanyUpdateHandler
             if (isSuccess) return;
         }
 
-        // Handle default message
             await _botClient.SendMessage(
                 chatId: chatId,
-            text: Translations.GetMessage(language, "UseMenuButton"),
+        text: Translations.GetMessage(language, "UseMenuButton"),
                 cancellationToken: cancellationToken);
+    }
+
+    private async Task HandleDefaultStartTimeInput(long chatId, string timeInput, CancellationToken cancellationToken)
+    {
+        var language = _userStateService.GetLanguage(chatId);
+        
+        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan startTime))
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "InvalidTimeFormat"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        _userStateService.SetConversation(chatId, $"WaitingForDefaultEndTime_{startTime}");
+
+            await _botClient.SendMessage(
+                chatId: chatId,
+            text: Translations.GetMessage(language, "EnterDefaultEndTime"),
+                cancellationToken: cancellationToken);
+    }
+
+    private async Task HandleDefaultEndTimeInput(long chatId, string timeInput, CancellationToken cancellationToken)
+    {
+        var language = _userStateService.GetLanguage(chatId);
+        
+        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan endTime))
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "InvalidTimeFormat"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var state = _userStateService.GetConversation(chatId);
+        if (!state.StartsWith("WaitingForDefaultEndTime_"))
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "InvalidState"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var startTime = TimeSpan.Parse(state.Split('_')[1]);
+
+        if (endTime <= startTime)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "InvalidWorkTime"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var creationData = _companyCreationStateService.GetState(chatId);
+        var currentEmployee = creationData.Employees.FirstOrDefault(x => x.Id == creationData.CurrentEmployeeIndex);
+
+        if (currentEmployee?.WorkingDays != null && currentEmployee.WorkingDays?.Count > 0)
+        {
+            var workingDays = currentEmployee?.WorkingDays;
+
+            foreach (var dayOfWeek in workingDays)
+            {
+                var existingWorkingHour = await _dbContext.WorkingHours.FirstOrDefaultAsync(w =>
+                    w.EmployeeId == creationData.CurrentEmployeeIndex &&
+                    w.DayOfWeek == dayOfWeek);
+
+                if (existingWorkingHour != null)
+                {
+                    // Update existing entry
+                    existingWorkingHour.StartTime = startTime;
+                    existingWorkingHour.EndTime = endTime;
+                }
+                else
+                {
+                    // Add new entry
+                    _dbContext.WorkingHours.Add(new WorkingHours
+                    {
+                        EmployeeId = creationData.CurrentEmployeeIndex,
+                        DayOfWeek = dayOfWeek,
+                        StartTime = startTime,
+                        EndTime = endTime
+                    });
+                }
+            }
+
+            await _dbContext.SaveChangesAsync();
+            _companyCreationStateService.ClearWorkingDays(chatId, creationData.CurrentEmployeeIndex);
+            _companyCreationStateService.ClearWorkingHours(chatId, creationData.CurrentEmployeeIndex);
+
+            _userStateService.RemoveConversation(chatId);
+
+                await _botClient.SendMessage(
+                    chatId: chatId,
+                text: Translations.GetMessage(language, "DefaultWorkTimeSet", startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
+                    cancellationToken: cancellationToken);
+
+            await ShowMainMenu(chatId, cancellationToken);
+        }
+        else
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: "❌ No working hours selected. Please select working hours first.",
+                cancellationToken: cancellationToken);
+        }
     }
 
     private async Task HandleBreakStartTimeInput(long chatId, int employeeId, DayOfWeek day, string timeInput, CancellationToken cancellationToken)
@@ -183,8 +303,8 @@ public class CompanyUpdateHandler
                 chatId: chatId,
                 text: Translations.GetMessage(language, "NoWorkingHours"),
                 cancellationToken: cancellationToken);
-            return;
-        }
+                return;
+            }
 
         // Validate that start time is within working hours
         if (startTime < workingHours.StartTime || startTime >= workingHours.EndTime)
@@ -223,14 +343,6 @@ public class CompanyUpdateHandler
         var workingHours = await _dbContext.WorkingHours
             .FirstOrDefaultAsync(wh => wh.EmployeeId == employeeId && wh.DayOfWeek == day, cancellationToken);
 
-        if (startTime < workingHours?.StartTime || startTime >= workingHours?.EndTime)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
-                cancellationToken: cancellationToken);
-            return;
-        }
         _userStateService.SetConversation(chatId, $"WaitingForWorkEndTime_{employeeId}_{(int)day}_{startTime}");
 
         await _botClient.SendMessage(
