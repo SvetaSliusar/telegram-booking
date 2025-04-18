@@ -14,6 +14,7 @@ public class ServiceCommandHandler : ICallbackCommand
     private readonly IUserStateService _userStateService;
     private readonly ICompanyCreationStateService _companyCreationStateService;
     private readonly BookingDbContext _dbContext;
+    private readonly ILogger<ServiceCommandHandler> _logger;
 
     private readonly ICallbackCommandFactory _commandFactory;
 
@@ -22,13 +23,15 @@ public class ServiceCommandHandler : ICallbackCommand
         BookingDbContext dbContext,
         ITelegramBotClient botClient,
         ICompanyCreationStateService companyCreationStateService,
-        ICallbackCommandFactory commandFactory)
+        ICallbackCommandFactory commandFactory,
+        ILogger<ServiceCommandHandler> logger)
     {
         _userStateService = userStateService;
         _dbContext = dbContext;
         _botClient = botClient;
         _commandFactory = commandFactory;
         _companyCreationStateService = companyCreationStateService;
+        _logger = logger;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -52,7 +55,7 @@ public class ServiceCommandHandler : ICallbackCommand
         }
         else
         {
-            Console.WriteLine($"Unknown break command: {commandKey}");
+            _logger.LogError("Unknown break command: {CommandKey}", commandKey);
         }
     }
 

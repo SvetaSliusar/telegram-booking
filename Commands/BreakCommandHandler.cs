@@ -14,15 +14,18 @@ public class BreakCommandHandler : ICallbackCommand
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
+    private readonly ILogger<BreakCommandHandler> _logger;
 
     public BreakCommandHandler(
         IUserStateService userStateService, 
         BookingDbContext dbContext,
-        ITelegramBotClient botClient)
+        ITelegramBotClient botClient,
+        ILogger<BreakCommandHandler> logger)
     {
         _userStateService = userStateService;
         _dbContext = dbContext;
         _botClient = botClient;
+        _logger = logger;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -51,7 +54,7 @@ public class BreakCommandHandler : ICallbackCommand
         }
         else
         {
-            Console.WriteLine($"Unknown break command: {commandKey}");
+           _logger.LogError("Unknown break command: {CommandKey}", commandKey);
         }
     }
 

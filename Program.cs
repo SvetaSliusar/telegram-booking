@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using System.Text.Json;
 using Telegram.Bot.Commands;
 using Telegram.Bot.Enums;
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,13 @@ if (!string.IsNullOrEmpty(keyVaultUri) && !builder.Environment.IsDevelopment()) 
 {
     builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
 }
+
+// ✅ Add Application Insights
+var applicationInsightsOptions = new ApplicationInsightsServiceOptions
+{
+    ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"]
+};
+builder.Services.AddApplicationInsightsTelemetry(applicationInsightsOptions);
 
 // ✅ Setup Bot Configuration
 var botConfigurationSection = builder.Configuration.GetSection(BotConfiguration.Configuration);
@@ -73,6 +81,7 @@ builder.Services.AddTransient<WorkDayCommandHandler>();
 builder.Services.AddTransient<WorkTimeCommandHandler>();
 builder.Services.AddTransient<ConfirmBookingCommand>();
 builder.Services.AddTransient<RejectBookingCommand>();
+builder.Services.AddTransient<MainMenuCommandHandler>();
 
 builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
 {
@@ -121,6 +130,10 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
     factory.RegisterCommand<RejectBookingCommand>(
         "reject_booking"
     );
+    factory.RegisterCommand<MainMenuCommandHandler>(
+        "menu",
+        "back_to_menu"
+    );
 
     return factory;
 });
@@ -153,7 +166,6 @@ if (string.IsNullOrEmpty(botConfiguration.Route))
     throw new Exception("Bot webhook route is missing from configuration.");
 }
 
-//app.MapBotWebhookRoute<BotController>(route: botConfiguration.Route);
 app.MapControllers();
 app.MapHealthChecks("/health");
 app.MapHealthChecks("/health/details", new HealthCheckOptions
