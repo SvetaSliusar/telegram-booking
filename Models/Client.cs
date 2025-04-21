@@ -1,11 +1,26 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Telegram.Bot.Models;
 
 public class Client
 {
     public long Id { get; set; }
-    public string Name { get; set; }
+
+    [Required]
     public long ChatId { get; set; }
-    public ICollection<Booking> Bookings { get; set; }
+
+    [Required]
+    public string Name { get; set; } = string.Empty;
+
+    [Required]
+    public string TimeZoneId { get; set; } = "UTC";
+
+    [Required]
     public string Language { get; set; } = "EN";
-    public string TimeZoneId { get; set; } = "UTC"; // Default to UTC if not specified
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime? LastActiveAt { get; set; }
+
+    public virtual ICollection<ClientCompanyInvite> CompanyInvites { get; set; } = new List<ClientCompanyInvite>();
 }

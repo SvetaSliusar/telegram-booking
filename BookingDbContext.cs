@@ -11,6 +11,7 @@ namespace Telegram.Bot
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<Client> Clients { get; set; }
         public DbSet<Employee> Employees { get; set; }
+        public DbSet<ClientCompanyInvite> ClientCompanyInvites { get; set; }
         
         // New DbSet for Tokens
         public DbSet<Token> Tokens { get; set; }
@@ -34,6 +35,16 @@ namespace Telegram.Bot
                 .HasMany(c => c.Employees)
                 .WithOne(s => s.Company)
                 .HasForeignKey(s => s.CompanyId);
+                
+            modelBuilder.Entity<ClientCompanyInvite>()
+                .HasOne(cci => cci.Client)
+                .WithMany(c => c.CompanyInvites)
+                .HasForeignKey(cci => cci.ClientId);
+                
+            modelBuilder.Entity<ClientCompanyInvite>()
+                .HasOne(cci => cci.Company)
+                .WithMany(c => c.ClientInvites)
+                .HasForeignKey(cci => cci.CompanyId);
         }
     }
 }

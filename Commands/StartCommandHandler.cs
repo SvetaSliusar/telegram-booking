@@ -90,9 +90,9 @@ public class StartCommandHandler : IStartCommandHandler
                 client = new Client
                 {
                     ChatId = chatId,
-                    Name = "New Client", // Default name, can be updated later
-                    TimeZoneId = "UTC", // Default timezone, can be changed later
-                    Language = "EN" // Default language, can be changed later
+                    Name = "New Client",
+                    TimeZoneId = "UTC",
+                    Language = "EN"
                 };
                 _dbContext.Clients.Add(client);
                 await _dbContext.SaveChangesAsync(cancellationToken);
