@@ -19,8 +19,9 @@ public class CompanyUpdateHandler
     private readonly BookingDbContext _dbContext;
     private readonly ICallbackCommandFactory _commandFactory;
     private readonly IUserStateService _userStateService;
-
     private readonly ICompanyCreationStateService _companyCreationStateService;
+
+    private readonly IEnumerable<IStateHandler> _stateHandlers;
 
     public CompanyUpdateHandler(
         ITelegramBotClient botClient,
@@ -28,7 +29,8 @@ public class CompanyUpdateHandler
         BookingDbContext dbContext,
         ICallbackCommandFactory callbackCommandFactory,
         IUserStateService userStateService,
-        ICompanyCreationStateService companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        IEnumerable<IStateHandler> stateHandlers)
     {
         _botClient = botClient;
         _logger = logger;
@@ -36,6 +38,7 @@ public class CompanyUpdateHandler
         _commandFactory = callbackCommandFactory;
         _userStateService = userStateService;
         _companyCreationStateService = companyCreationStateService;
+        _stateHandlers = stateHandlers;
     }
 
     public async Task StartCompanyFlow(long chatId, CancellationToken cancellationToken)
@@ -82,14 +85,13 @@ public class CompanyUpdateHandler
 
     public async Task HandleUpdateAsync(Update update, CancellationToken cancellationToken)
     {
-        if (update == null) return;
-
         var handler = update switch
         {
             { Message: { } message } => BotOnMessageReceived(message, cancellationToken),
             { EditedMessage: { } message } => BotOnMessageReceived(message, cancellationToken),
             { CallbackQuery: { } callbackQuery } => BotOnCallbackQueryReceived(callbackQuery, cancellationToken),
             _ => Task.CompletedTask
+
         };
 
         await handler;
@@ -97,382 +99,26 @@ public class CompanyUpdateHandler
 
     private async Task BotOnMessageReceived(Message message, CancellationToken cancellationToken)
     {
-        if (message?.Text is not { } userMessage) return;
+        if (message.Text is not { } messageText)
+            return;
+
         var chatId = message.Chat.Id;
         var language = _userStateService.GetLanguage(chatId);
+        var conversationState = _userStateService.GetConversation(chatId);
 
-        // Handle Menu button click
-        if (userMessage == "/menu")
+        var handler = _stateHandlers.FirstOrDefault(h => h.CanHandle(conversationState));
+        if (handler != null)
         {
-            await ShowMainMenu(chatId, cancellationToken);
-            return;
-        }
-        var state = _userStateService.GetConversation(chatId);
-        if (!string.IsNullOrEmpty(state))
-        {
-            if (state == "WaitingForDefaultStartTime")
-            {
-                await HandleDefaultStartTimeInput(chatId, userMessage, cancellationToken);
+            await handler.HandleAsync(chatId, conversationState, messageText, cancellationToken);
             return;
         }
 
-            if (state.StartsWith("WaitingForDefaultEndTime"))
-            {
-                await HandleDefaultEndTimeInput(chatId, userMessage, cancellationToken);
-                return;
-            }
-
-            if (state.StartsWith("WaitingForBreakStart_"))
-            {
-                var parts = state.Split('_');
-                var employeeId = int.Parse(parts[1]);
-                var day = (DayOfWeek)int.Parse(parts[2]);
-                await HandleBreakStartTimeInput(chatId, employeeId, day, userMessage, cancellationToken);
-                return;
-            }
-
-            if (state.StartsWith("WaitingForBreakEnd_"))
-            {
-                var parts = state.Split('_');
-                var employeeId = int.Parse(parts[1]);
-                var day = (DayOfWeek)int.Parse(parts[2]);
-                var startTime = TimeSpan.Parse(parts[3]);
-                await HandleBreakEndTimeInput(chatId, employeeId, day, startTime, userMessage, cancellationToken);
-                return;
-            }
-
-            if (state.StartsWith("WaitingForWorkStartTime_"))
-            {
-                var parts = state.Split('_');
-                var employeeId = int.Parse(parts[1]);
-                var day = (DayOfWeek)int.Parse(parts[2]);
-                await HandleStartWorkTimeInput(chatId, employeeId, day, userMessage, cancellationToken);
-                return;
-            }
-
-            if (state.StartsWith("WaitingForWorkEndTime_"))
-            {
-                var parts = state.Split('_');
-                var employeeId = int.Parse(parts[1]);
-                var day = (DayOfWeek)int.Parse(parts[2]);
-                var startTime = TimeSpan.Parse(parts[3]);
-                await HandleEndWorkTimeInput(chatId, employeeId, day, startTime, userMessage, cancellationToken);
-                return;
-            }
-
-            var isSuccess = await HandleCompanyCreationInput(chatId, userMessage, cancellationToken);
-            if (isSuccess) return;
-        }
-
-            await _botClient.SendMessage(
-                chatId: chatId,
-        text: Translations.GetMessage(language, "UseMenuButton"),
-                cancellationToken: cancellationToken);
+        await HandleNewConversation(chatId, messageText, language, cancellationToken);
     }
 
-    private async Task HandleDefaultStartTimeInput(long chatId, string timeInput, CancellationToken cancellationToken)
+    private async Task HandleNewConversation(long chatId, string messageText, string language, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
-        
-        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan startTime))
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        _userStateService.SetConversation(chatId, $"WaitingForDefaultEndTime_{startTime}");
-
-            await _botClient.SendMessage(
-                chatId: chatId,
-            text: Translations.GetMessage(language, "EnterDefaultEndTime"),
-                cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleDefaultEndTimeInput(long chatId, string timeInput, CancellationToken cancellationToken)
-    {
-        var language = _userStateService.GetLanguage(chatId);
-        
-        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan endTime))
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var state = _userStateService.GetConversation(chatId);
-        if (!state.StartsWith("WaitingForDefaultEndTime_"))
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidState"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var startTime = TimeSpan.Parse(state.Split('_')[1]);
-
-        if (endTime <= startTime)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidWorkTime"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var creationData = _companyCreationStateService.GetState(chatId);
-        var currentEmployee = creationData.Employees.FirstOrDefault(x => x.Id == creationData.CurrentEmployeeIndex);
-
-        if (currentEmployee?.WorkingDays != null && currentEmployee.WorkingDays?.Count > 0)
-        {
-            var workingDays = currentEmployee?.WorkingDays;
-
-            foreach (var dayOfWeek in workingDays)
-            {
-                var existingWorkingHour = await _dbContext.WorkingHours.FirstOrDefaultAsync(w =>
-                    w.EmployeeId == creationData.CurrentEmployeeIndex &&
-                    w.DayOfWeek == dayOfWeek);
-
-                if (existingWorkingHour != null)
-                {
-                    // Update existing entry
-                    existingWorkingHour.StartTime = startTime;
-                    existingWorkingHour.EndTime = endTime;
-                }
-                else
-                {
-                    // Add new entry
-                    _dbContext.WorkingHours.Add(new WorkingHours
-                    {
-                        EmployeeId = creationData.CurrentEmployeeIndex,
-                        DayOfWeek = dayOfWeek,
-                        StartTime = startTime,
-                        EndTime = endTime
-                    });
-                }
-            }
-
-            await _dbContext.SaveChangesAsync();
-            _companyCreationStateService.ClearWorkingDays(chatId, creationData.CurrentEmployeeIndex);
-            _companyCreationStateService.ClearWorkingHours(chatId, creationData.CurrentEmployeeIndex);
-
-            _userStateService.RemoveConversation(chatId);
-
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                text: Translations.GetMessage(language, "DefaultWorkTimeSet", startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
-                    cancellationToken: cancellationToken);
-
-            await ShowMainMenu(chatId, cancellationToken);
-        }
-        else
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: "❌ No working hours selected. Please select working hours first.",
-                cancellationToken: cancellationToken);
-        }
-    }
-
-    private async Task HandleBreakStartTimeInput(long chatId, int employeeId, DayOfWeek day, string timeInput, CancellationToken cancellationToken)
-    {
-        var language = _userStateService.GetLanguage(chatId);
-        
-        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan startTime))
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Get working hours for validation
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.EmployeeId == employeeId && wh.DayOfWeek == day, cancellationToken);
-
-        if (workingHours == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHours"),
-                cancellationToken: cancellationToken);
-                return;
-            }
-
-        // Validate that start time is within working hours
-        if (startTime < workingHours.StartTime || startTime >= workingHours.EndTime)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidBreakTime"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-        _userStateService.SetConversation(chatId, $"WaitingForBreakEnd_{employeeId}_{(int)day}_{startTime}");
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "BreakEndTime"),
-            replyMarkup: new InlineKeyboardMarkup(new[]
-            {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), $"waiting_for_break_start:{employeeId}_{(int)day}") }
-            }),
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleStartWorkTimeInput(long chatId, int employeeId, DayOfWeek day, string timeInput, CancellationToken cancellationToken)
-    {
-        var language = _userStateService.GetLanguage(chatId);
-        
-        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan startTime))
-        {
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
-                    cancellationToken: cancellationToken);
-            return;
-        }
-
-        var workingHours = await _dbContext.WorkingHours
-            .FirstOrDefaultAsync(wh => wh.EmployeeId == employeeId && wh.DayOfWeek == day, cancellationToken);
-
-        _userStateService.SetConversation(chatId, $"WaitingForWorkEndTime_{employeeId}_{(int)day}_{startTime}");
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "WorkTimeEnd"),
-            replyMarkup: new InlineKeyboardMarkup(new[]
-            {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), $"change_work_time") }
-            }),
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleEndWorkTimeInput(long chatId, int employeeId, DayOfWeek day, TimeSpan startTime, string timeInput, CancellationToken cancellationToken)
-    {
-        var language = _userStateService.GetLanguage(chatId);
-        
-        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan endTime))
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
-                cancellationToken: cancellationToken);
-                return;
-            }
-
-        // Get working hours for validation
-        var workingHours = await _dbContext.WorkingHours
-            .FirstOrDefaultAsync(wh => wh.EmployeeId == employeeId && wh.DayOfWeek == day, cancellationToken);
-
-        if (workingHours == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHours"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        if (endTime <= startTime)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidWorkTime"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        workingHours.StartTime = startTime;
-        workingHours.EndTime = endTime;
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        // Clear the conversation state
-        _userStateService.RemoveConversation(chatId);
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: "✅ Work time is updated.",
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleBreakEndTimeInput(long chatId, int employeeId, DayOfWeek day, TimeSpan startTime, string timeInput, CancellationToken cancellationToken)
-    {
-        var language = _userStateService.GetLanguage(chatId);
-        
-        if (!TimeSpan.TryParse(timeInput, CultureInfo.InvariantCulture, out TimeSpan endTime))
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Get working hours for validation
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.EmployeeId == employeeId && wh.DayOfWeek == day, cancellationToken);
-
-        if (workingHours == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHours"),
-                cancellationToken: cancellationToken);
-        return;
-    }
-
-        // Validate that end time is within working hours and after start time
-        if (endTime <= startTime || endTime > workingHours.EndTime)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidBreakTime"),
-                cancellationToken: cancellationToken);
-        return;
-    }
-
-        // Check for overlapping breaks
-        if (workingHours.Breaks.Any(b => 
-            (startTime >= b.StartTime && startTime < b.EndTime) ||
-            (endTime > b.StartTime && endTime <= b.EndTime) ||
-            (startTime <= b.StartTime && endTime >= b.EndTime)))
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "BreakOverlap"),
-                cancellationToken: cancellationToken);
-        return;
-    }
-
-        // Add the break
-        workingHours.Breaks.Add(new Break
-        {
-            StartTime = startTime,
-            EndTime = endTime
-        });
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        // Clear the conversation state
-        _userStateService.RemoveConversation(chatId);
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "BreakAdded"),
-            cancellationToken: cancellationToken);
-
-        // Return to day breaks selection
-        await HandleDayBreaksSelection(chatId, employeeId, day, cancellationToken);
+        await ShowMainMenu(chatId, cancellationToken);
     }
 
     private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -480,7 +126,6 @@ public class CompanyUpdateHandler
         if (callbackQuery?.Message == null || string.IsNullOrEmpty(callbackQuery.Data))
                     return;
 
-        // First, try new factory-based commands
         var command = _commandFactory.CreateCommand(callbackQuery);
         if (command != null)
         {
@@ -493,7 +138,6 @@ public class CompanyUpdateHandler
 
         try
         {
-            // Add new handlers for service management
             switch (data)
             {
                 case CallbackResponses.BackToMenu:
@@ -512,10 +156,8 @@ public class CompanyUpdateHandler
             return;
         }
 
-            // ✅ Ensure data is in the expected format
             if (string.IsNullOrEmpty(data)) return;
 
-        // ✅ Handle other actions
         switch (data)
         {
             case "create_company":
@@ -565,7 +207,6 @@ public class CompanyUpdateHandler
         }
     }
 
-    // ✅ Step 1: Prompt User for Company Name
     private async Task StartCompanyCreation(long chatId, CancellationToken cancellationToken)
     {
         var language = _userStateService.GetLanguage(chatId);
@@ -580,164 +221,6 @@ public class CompanyUpdateHandler
     }
 
     private static ConcurrentDictionary<long, CompanyCreationData> userInputs = new ConcurrentDictionary<long, CompanyCreationData>();
-    // ✅ Step 2: Handle User's Input for Company Details
-    private async Task<bool> HandleCompanyCreationInput(long chatId, string userMessage, CancellationToken cancellationToken)
-    {
-        var userState = _userStateService.GetConversation(chatId);
-        if (string.IsNullOrEmpty(userState)) return false;
-        var language = _userStateService.GetLanguage(chatId);
-        var creationState = _companyCreationStateService.GetState(chatId);
-
-        switch (userState)
-        {
-            case "WaitingForCompanyName":
-                _companyCreationStateService.SetCompanyName(chatId, userMessage);
-                _companyCreationStateService.SetCompanyAlias(chatId, GenerateCompanyAlias(userMessage));
-                _userStateService.SetConversation(chatId, "WaitingForEmployeeName");
-
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                    text: Translations.GetMessage(language, "EnterYourName"),
-                    parseMode: ParseMode.Markdown,
-                    cancellationToken: cancellationToken);
-                break;
-
-            case "WaitingForEmployeeName":
-                _companyCreationStateService.AddEmployee(chatId, new EmployeeCreationData
-                {
-                    Name = userMessage,
-                    Services = new List<int>(),
-                    WorkingDays = new List<DayOfWeek>(),
-                    WorkingHours = new List<WorkingHoursData>()
-                });
-
-                await SaveCompanyData(chatId, cancellationToken);
-                _companyCreationStateService.ClearState(chatId);
-
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                    text: Translations.GetMessage(language, "BusinessCreated"),
-                    cancellationToken: cancellationToken);
-
-                await ShowMainMenu(chatId, cancellationToken);
-               break;
-
-            case "WaitingForServiceName":
-                var service = creationState.Services.FirstOrDefault(s => s.Id == creationState.CurrentServiceIndex);
-                if (service == null)
-                {
-                    await _botClient.SendMessage(
-                        chatId: chatId,
-                        text: Translations.GetMessage(language, "SessionExpired"),
-                        cancellationToken: cancellationToken);
-                    return false;
-                }
-
-                service.Name = userMessage;
-                _companyCreationStateService.UpdateService(chatId, service);
-                _userStateService.SetConversation(chatId, "WaitingFoServiceDescription");
-                    await _botClient.SendMessage(
-                        chatId: chatId,
-                    text: Translations.GetMessage(language, "EnterServiceDescription"),
-                        cancellationToken: cancellationToken);
-                break;
-            case "WaitingFoServiceDescription":
-                service = creationState.Services.FirstOrDefault(s => s.Id == creationState.CurrentServiceIndex);
-                if (service == null)
-                {
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                        text: Translations.GetMessage(language, "SessionExpired"),
-                    cancellationToken: cancellationToken);
-                    return false;
-                }
-
-                service.Description = userMessage;
-                _companyCreationStateService.UpdateService(chatId, service);
-                _userStateService.SetConversation(chatId, "WaitingForServicePrice");
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                    text: Translations.GetMessage(language, "EnterServicePrice"),
-                    cancellationToken: cancellationToken);
-                break;
-
-            case "WaitingForServicePrice":
-                await HandleServicePriceInput(chatId, userMessage, cancellationToken);
-                break;
-
-            case "WaitingForCustomDuration":
-                if (!int.TryParse(userMessage, out var customDuration) || customDuration <= 0)
-                {
-                    await _botClient.SendMessage(
-                        chatId: chatId,
-                        text:Translations.GetMessage(language, "InvalidDuration"),
-                        cancellationToken: cancellationToken);
-                    return false;
-                }
-
-                service = _companyCreationStateService.GetState(chatId).Services.LastOrDefault();
-                if (service == null)
-                {
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                        text: Translations.GetMessage(language, "SessionExpired"),
-                    cancellationToken: cancellationToken);
-                    return false;
-                }
-
-                service.Duration = customDuration;
-                _companyCreationStateService.UpdateService(chatId, service);
-                await SaveNewService(chatId, cancellationToken);
-                break;
-
-            default:
-                return false;
-        }
-
-        return true;
-    }
-
-    private static string GenerateCompanyAlias(string companyName)
-    {
-        // Convert to lowercase and replace spaces with underscores
-        var alias = companyName.ToLower()
-            .Replace(" ", "_")
-            .Replace("-", "_")
-            .Replace(".", "_")
-            .Replace(",", "_")
-            .Replace("'", "")
-            .Replace("\"", "");
-
-        // Remove any non-alphanumeric characters except underscores
-        alias = new string(alias.Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray());
-
-        // Remove consecutive underscores
-        alias = alias.Replace("__", "_");
-
-        // Trim underscores from start and end
-        alias = alias.Trim('_');
-
-        return alias;
-    }
-
-    // ✅ Step 3: Save Company to Database
-   private async Task SaveCompanyData(long chatId, CancellationToken cancellationToken)
-    {
-        var state = _companyCreationStateService.GetState(chatId);
-        var company = new Company
-        {
-            Name = state.CompanyName,
-            Alias = state.CompanyAlias,
-            TokenId = (await _dbContext.Tokens.FirstAsync(t => t.ChatId == chatId)).Id,
-            Employees = state.Employees.Select(e => new Employee
-            {
-                Name = e.Name
-            }).ToList()
-        };
-
-        _dbContext.Companies.Add(company);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
 
     public async Task ShowMainMenu(long chatId, CancellationToken cancellationToken)
     {
@@ -803,122 +286,6 @@ public class CompanyUpdateHandler
         chatId: chatId,
             text: Translations.GetMessage(language, "NewService", employee.Name),
         cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleServicePriceInput(long chatId, string priceInput, CancellationToken cancellationToken)
-    {
-        var language = _userStateService.GetConversation(chatId);
-        
-        if (!decimal.TryParse(priceInput, out decimal price) || price < 0)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidPrice"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var state = _companyCreationStateService.GetState(chatId);
-        var service = state.Services.FirstOrDefault(s => s.Id == state.CurrentServiceIndex);
-        if (service == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "SessionExpired"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        service.Price = price;
-        _userStateService.SetConversation(chatId, "WaitingForServiceDuration");
-
-        var predefinedDurations = new InlineKeyboardMarkup(new[]
-        {
-            new [] { InlineKeyboardButton.WithCallbackData("10 min", "service_duration:10"), InlineKeyboardButton.WithCallbackData("15 min", "service_duration:15") },
-            new [] { InlineKeyboardButton.WithCallbackData("30 min", "service_duration:30"), InlineKeyboardButton.WithCallbackData("45 min", "service_duration:45") },
-            new [] { InlineKeyboardButton.WithCallbackData("Custom", "service_duration:custom") }
-        });
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "ChooseDuration"),
-            replyMarkup: predefinedDurations,
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task SaveNewService(long chatId, CancellationToken cancellationToken)
-    {
-        var language = _userStateService.GetLanguage(chatId);
-        var creationData = _companyCreationStateService.GetState(chatId);
-        if (creationData == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "SessionExpired"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Handle adding service to existing employee
-        var company = await _dbContext.Companies
-            .Include(c => c.Employees)
-            .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
-
-        if (company == null)
-        {
-        await _botClient.SendMessage(
-            chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
-            cancellationToken: cancellationToken);
-            return;
-    }
-
-        var employee = company.Employees.FirstOrDefault();
-        if (employee == null)
-    {
-        await _botClient.SendMessage(
-            chatId: chatId,
-                text: Translations.GetMessage(language, "NoEmployeeFound"),
-            cancellationToken: cancellationToken);
-            return;
-    }
-
-        if (employee.Services == null)
-    {
-            employee.Services = new List<Service>();
-        }
-        var serviceCreationData = creationData.Services.FirstOrDefault(s => s.Id == creationData.CurrentServiceIndex);
-        
-        if (serviceCreationData == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "SessionExpired"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var service = new Service
-        {
-            Name = serviceCreationData.Name,
-            Price = serviceCreationData.Price,
-            Duration = TimeSpan.FromMinutes(serviceCreationData.Duration),
-            Description = "Service description",
-            EmployeeId = employee.Id
-        };
-
-        employee.Services.Add(service);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "ServiceAddedForEmployee", service.Name, employee.Name),
-            cancellationToken: cancellationToken);
-        
-        _companyCreationStateService.RemoveService(chatId, serviceCreationData.Id);
-        _userStateService.RemoveConversation(chatId);
-
-        await ShowMainMenu(chatId, cancellationToken);
     }
 
     private async Task ShowBookingCalendar(long chatId, DateTime selectedDate, CancellationToken cancellationToken)

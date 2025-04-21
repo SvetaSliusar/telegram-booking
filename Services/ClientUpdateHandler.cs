@@ -279,7 +279,7 @@ public class ClientUpdateHandler
         var bookings = await _dbContext.Bookings
             .Include(b => b.Service)
                 .ThenInclude(s => s.Employee)
-            .Where(b => b.ClientId == client.Id && b.BookingTime >= DateTime.UtcNow)
+            .Where(b => b.ClientId == client.Id && b.BookingTime >= DateTime.UtcNow && b.Status == BookingStatus.Confirmed)
             .OrderBy(b => b.BookingTime)
             .ToListAsync(cancellationToken);
 

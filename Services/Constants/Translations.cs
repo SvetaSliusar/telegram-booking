@@ -63,6 +63,7 @@ public static class Translations
             ["TokenAccepted"] = "✅ Token accepted! Use the Menu button to access all features.",
             ["InvalidToken"] = "❌ Invalid token or company not found. Please check and enter again.",
             ["ErrorOccurred"] = "❌ An error occurred. Please try again.",
+            ["ErrorProcessingRequest"] = "❌ An error occurred while processing your request. Please try again or contact support.",
             ["Monday"] = "Monday",
             ["Tuesday"] = "Tuesday",
             ["Wednesday"] = "Wednesday",
@@ -162,7 +163,8 @@ public static class Translations
             ["SetupWorkTime"] = "🕒 Setup Work Time",
             ["EnterDefaultStartTime"] = "Please enter the default start time for all working days (format: HH:mm):",
             ["EnterDefaultEndTime"] = "Please enter the default end time for all working days (format: HH:mm):",
-            ["DefaultWorkTimeSet"] = "Default working hours have been set for all days:\nStart: {0}\nEnd: {1}"
+            ["DefaultWorkTimeSet"] = "Default working hours have been set for all days:\nStart: {0}\nEnd: {1}",
+            ["WorkTimeUpdated"] = "✅ Work time is updated."
         },
         ["UA"] = new Dictionary<string, string>
         {
@@ -321,7 +323,9 @@ public static class Translations
             ["ManageBreaks"] = "⏳ Керування Перервами",
             ["EnterDefaultStartTime"] = "Будь ласка, введіть стандартний час початку роботи для всіх робочих днів (формат: ГГ:хв):",
             ["EnterDefaultEndTime"] = "Будь ласка, введіть стандартний час закінчення роботи для всіх робочих днів (формат: ГГ:хв):",
-            ["DefaultWorkTimeSet"] = "Стандартний робочий час встановлено для всіх днів:\nПочаток: {0}\nКінець: {1}"
+            ["DefaultWorkTimeSet"] = "Стандартний робочий час встановлено для всіх днів:\nПочаток: {0}\nКінець: {1}",
+            ["ErrorProcessingRequest"] = "❌ Помилка при обробці вашого запиту. Будь ласка, спробуйте ще раз або зверніться до служби підтримки.",
+            ["WorkTimeUpdated"] = "✅ Робочий час оновлено."
         }
     };
 

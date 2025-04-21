@@ -9,6 +9,7 @@ using System.Text.Json;
 using Telegram.Bot.Commands;
 using Telegram.Bot.Enums;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Telegram.Bot.Services.StateHandlers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -140,6 +141,15 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
 
 #endregion
 
+// Register state handlers
+builder.Services.AddScoped<IStateHandler, DefaultStartTimeHandler>();
+builder.Services.AddScoped<IStateHandler, DefaultEndTimeHandler>();
+builder.Services.AddScoped<IStateHandler, BreakStartTimeHandler>();
+builder.Services.AddScoped<IStateHandler, BreakEndTimeHandler>();
+builder.Services.AddScoped<IStateHandler, WorkStartTimeHandler>();
+builder.Services.AddScoped<IStateHandler, WorkEndTimeHandler>();
+builder.Services.AddScoped<IStateHandler, ServiceDataHandler>();
+builder.Services.AddScoped<IStateHandler, InitialCompanyDataHandler>();
 
 // ✅ Hosted Service to Manage Webhook
 builder.Services.AddHostedService<ConfigureWebhook>();

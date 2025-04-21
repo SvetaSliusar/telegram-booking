@@ -15,6 +15,7 @@ namespace Telegram.Bot.Enums
         public const string SetInterval = "set_interval_{0}"; // {0} = minutes
         public const string GenerateInviteLink = "generate_invite_link";
         public const string BackToMenu = "back_to_menu";
+        public const string MainMenu = "menu";
         public const string Ignore = "ignore";
         public const string BookAppointment = "book_appointment";
         public const string ViewBookings = "view_bookings";
