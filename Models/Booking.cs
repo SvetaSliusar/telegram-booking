@@ -18,15 +18,15 @@ namespace Telegram.Bot.Models
 
         // Foreign key to the Service
         public int ServiceId { get; set; }
-        public Service Service { get; set; }
+        public required Service Service { get; set; }
 
         // Foreign key to the Company
         public int CompanyId { get; set; }
-        public Company Company { get; set; }
+        public required Company Company { get; set; }
 
         // Foreign key to Client
         public long ClientId { get; set; }
-        public Client Client { get; set; }
+        public required Client Client { get; set; }
 
         // Reminder tracking
         public bool ReminderSent { get; set; }

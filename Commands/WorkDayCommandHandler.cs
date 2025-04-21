@@ -98,12 +98,12 @@ public class WorkDayCommandHandler : ICallbackCommand
 
     private async Task SendReplyWithWorkingDaysAsync(long chatId, string language, CompanyCreationData state, CancellationToken cancellationToken = default)
     {
-        var workingDays = state.Employees.FirstOrDefault(e => e.Id == state.CurrentEmployeeIndex)?.WorkingDays;
+        var workingDays = state.Employees.FirstOrDefault(e => e.Id == state.CurrentEmployeeIndex)?.WorkingDays ?? new List<DayOfWeek>();
 
         var messageBuilder = new System.Text.StringBuilder();
         messageBuilder.AppendLine(Translations.GetMessage(language, "CurrentWorkingDays"));
         messageBuilder.AppendLine(workingDays?.Count != 0
-            ? string.Join(", ", workingDays)
+            ? string.Join(", ", workingDays ?? Enumerable.Empty<DayOfWeek>())
             : Translations.GetMessage(language, "NoDaysSelected"));
 
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup(new[]

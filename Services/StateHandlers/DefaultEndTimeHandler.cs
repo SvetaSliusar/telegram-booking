@@ -7,7 +7,7 @@ namespace Telegram.Bot.Services.StateHandlers;
 
 public class DefaultEndTimeHandler : BaseStateHandler
 {
-    public override List<string> StateNames => new List<string> {  "WaitingForDefaultEndTime" };
+    public override List<string> StateNames => new List<string> {  "WaitingForDefaultEndTime_" };
 
     public DefaultEndTimeHandler(
         ITelegramBotClient botClient,
@@ -17,6 +17,11 @@ public class DefaultEndTimeHandler : BaseStateHandler
         ICompanyCreationStateService companyCreationStateService)
         : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
     {
+    }
+
+    public override bool CanHandle(string state)
+    {
+        return state.StartsWith(StateNames[0]);
     }
 
     public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
@@ -73,13 +78,24 @@ public class DefaultEndTimeHandler : BaseStateHandler
                 }
                 else
                 {
+                    var employee = await DbContext.Employees.FindAsync(creationData.CurrentEmployeeIndex);
+                    if (employee == null)
+                    {
+                        await BotClient.SendMessage(
+                            chatId: chatId,
+                            text: "❌ Employee not found.",
+                            cancellationToken: cancellationToken);
+                        return;
+                    }
+
                     // Add new entry
                     DbContext.WorkingHours.Add(new WorkingHours
                     {
                         EmployeeId = creationData.CurrentEmployeeIndex,
                         DayOfWeek = dayOfWeek,
                         StartTime = startTime,
-                        EndTime = endTime
+                        EndTime = endTime,
+                        Employee = employee
                     });
                 }
             }

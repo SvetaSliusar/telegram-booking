@@ -24,11 +24,17 @@ namespace Telegram.Bot.Commands
 
         public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
         {
+            if (string.IsNullOrEmpty(callbackQuery.Data)) return;
             var data = callbackQuery.Data.Split(':');
             if (data.Length < 2) return;
 
             var bookingId = int.Parse(data[1]);
             var language = _userStateService.GetLanguage(callbackQuery.From.Id);
+
+            if (callbackQuery.Message == null)
+            {
+                return;
+            }
 
             var booking = await _dbContext.Bookings
                 .Include(b => b.Service)

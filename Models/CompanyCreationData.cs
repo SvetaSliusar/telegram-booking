@@ -9,12 +9,12 @@ public enum CompanyFlowMode
 public class CompanyCreationData
 {
     public CompanyFlowMode Mode { get; set; } = CompanyFlowMode.Create;
-    public string CompanyName { get; set; }
+    public required string CompanyName { get; set; }
     public int EmployeeCount { get; set; }
-    public List<EmployeeCreationData> Employees { get; set; }
+    public List<EmployeeCreationData> Employees { get; set; } = new();
     public int CurrentEmployeeIndex { get; set; }
-    public string CompanyAlias { get; set; }
-    public List<ServiceCreationData> Services { get; set; }
+    public required string CompanyAlias { get; set; }
+    public List<ServiceCreationData> Services { get; set; } = new();
     public int CurrentServiceIndex { get; set; }
     public EditingContext EditingContext { get; set; } = EditingContext.None;
     public int? SelectedEmployeeId { get; set; }  // Make nullable to differentiate between modes

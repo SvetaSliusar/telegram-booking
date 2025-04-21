@@ -85,7 +85,8 @@ public class BreakEndTimeHandler : BaseStateHandler
         workingHours.Breaks.Add(new Break
         {
             StartTime = startTime,
-            EndTime = endTime
+            EndTime = endTime,
+            WorkingHours = workingHours
         });
 
         await DbContext.SaveChangesAsync(cancellationToken);

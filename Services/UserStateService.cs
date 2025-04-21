@@ -25,8 +25,16 @@ public class UserStateService : IUserStateService
                 // Reset full state if company changes
                 state.CompanyId = companyId;
                 state.CurrentStep = ConversationStep.AwaitingLanguage;
-                state.CompanyCreationData = new CompanyCreationData();
-                state.ServiceCreationData = new ServiceCreationData();
+                state.CompanyCreationData = new CompanyCreationData
+                {
+                    CompanyName = string.Empty,
+                    CompanyAlias = string.Empty
+                };
+                state.ServiceCreationData = new ServiceCreationData
+                {
+                    Name = string.Empty,
+                    Description = string.Empty
+                };
                 state.CurrentStep = ConversationStep.None;
             }
 

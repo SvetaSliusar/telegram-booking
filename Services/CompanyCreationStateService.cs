@@ -10,7 +10,17 @@ public class CompanyCreationStateService : ICompanyCreationStateService
 
     public CompanyCreationData GetState(long chatId)
     {
-        return _state.GetOrAdd(chatId, _ => new CompanyCreationData());
+        return _state.GetOrAdd(chatId, _ => new CompanyCreationData
+        {
+            CompanyName = "New Company",
+            CompanyAlias = "new-company",
+            Mode = CompanyFlowMode.Create,
+            Services = new List<ServiceCreationData>(),
+            Employees = new List<EmployeeCreationData>(),
+            WorkingDays = new List<string>(),
+            DefaultStartTime = new TimeSpan(9, 0, 0),
+            DefaultEndTime = new TimeSpan(17, 0, 0)
+        });
     }
 
     public void SetCompanyName(long chatId, string name)
@@ -108,6 +118,8 @@ public class CompanyCreationStateService : ICompanyCreationStateService
             {
                 var newState = new CompanyCreationData
                 {
+                    CompanyName = "New Company",
+                    CompanyAlias = "new-company",
                     Services = new List<ServiceCreationData>(),
                     Employees = new List<EmployeeCreationData>()
                 };

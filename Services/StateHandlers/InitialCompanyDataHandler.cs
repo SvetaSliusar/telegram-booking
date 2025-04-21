@@ -49,6 +49,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
 
                 await SaveCompanyData(chatId, cancellationToken);
                 CompanyCreationStateService.ClearState(chatId);
+                UserStateService.RemoveConversation(chatId);
 
                 await BotClient.SendMessage(
                     chatId: chatId,
@@ -61,15 +62,28 @@ public class InitialCompanyDataHandler : BaseStateHandler
     private async Task SaveCompanyData(long chatId, CancellationToken cancellationToken)
     {
         var state = CompanyCreationStateService.GetState(chatId);
+        var token = await DbContext.Tokens.FirstAsync(t => t.ChatId == chatId);
+        
         var company = new Company
         {
             Name = state.CompanyName,
             Alias = state.CompanyAlias,
-            TokenId = (await DbContext.Tokens.FirstAsync(t => t.ChatId == chatId)).Id,
-            Employees = state.Employees.Select(e => new Employee
+            TokenId = token.Id,
+            Token = token
+        };
+
+        company.Employees = state.Employees.Select(e => new Employee
             {
-                Name = e.Name
-            }).ToList()
+                Name = e.Name,
+                Services = new List<Service>(),
+                WorkingHours = new List<WorkingHours>(),
+                Company = company,
+            }).ToList();
+
+        company.ReminderSettings = new ReminderSettings
+        {
+            HoursBeforeReminder = 24,
+            Company = company
         };
 
         DbContext.Companies.Add(company);

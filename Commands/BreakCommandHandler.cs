@@ -60,17 +60,33 @@ public class BreakCommandHandler : ICallbackCommand
 
     private async Task HandleAddBreakAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var (employerId, day) = ParseEmployerIdAndDayFromData(data);
         var language = _userStateService.GetLanguage(chatId);
-        _userStateService.SetConversation(chatId, $"WaitingForBreakStart_{employerId}_{(int)day}");
+        var company = await _dbContext.Companies
+            .Include(c => c.Employees)
+                .ThenInclude(e => e.WorkingHours)
+            .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
+
+        var employee = company?.Employees.FirstOrDefault();
+        if (employee == null)
+        {
+            await _botClient.SendMessage(chatId, Translations.GetMessage(language, "NoEmployeeSelected"), cancellationToken: cancellationToken);
+            return;
+        }
+
+        var workingHours = new WorkingHours
+        {
+            DayOfWeek = Enum.Parse<DayOfWeek>(data),
+            Employee = employee,
+            StartTime = new TimeSpan(9, 0, 0),
+            EndTime = new TimeSpan(17, 0, 0)
+        };
+
+        employee.WorkingHours.Add(workingHours);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "BreakStartTime"),
-            replyMarkup: new InlineKeyboardMarkup(new[]
-            {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), $"select_day_for_breaks:{employerId}_{(int)day}") }
-            }),
+            text: Translations.GetMessage(language, "BreakAdded"),
             cancellationToken: cancellationToken);
     }
 
@@ -287,7 +303,8 @@ public class BreakCommandHandler : ICallbackCommand
         workingHours.Breaks.Add(new Break
         {
             StartTime = startTime,
-            EndTime = endTime
+            EndTime = endTime,
+            WorkingHours = workingHours
         });
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -452,13 +469,18 @@ public class BreakCommandHandler : ICallbackCommand
             workingHours = new WorkingHours
             {
                 DayOfWeek = day,
-                EmployeeId = employee.Id
+                EmployeeId = employee.Id,
+                Employee = employee,
+                StartTime = startTime,
+                EndTime = endTime
             };
             employee.WorkingHours.Add(workingHours);
         }
-
-        workingHours.StartTime = startTime;
-        workingHours.EndTime = endTime;
+        else
+        {
+            workingHours.StartTime = startTime;
+            workingHours.EndTime = endTime;
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 

@@ -49,11 +49,11 @@ public class ServiceDataHandler : BaseStateHandler
                 service = creationState.Services.FirstOrDefault(s => s.Id == creationState.CurrentServiceIndex);
                 if (service == null)
                 {
-                await BotClient.SendMessage(
-                    chatId: chatId,
-                        text: Translations.GetMessage(language, "SessionExpired"),
-                    cancellationToken: cancellationToken);
-                    return;
+                    await BotClient.SendMessage(
+                        chatId: chatId,
+                            text: Translations.GetMessage(language, "SessionExpired"),
+                        cancellationToken: cancellationToken);
+                        return;
                 }
 
                 service.Description = message;
@@ -86,6 +86,7 @@ public class ServiceDataHandler : BaseStateHandler
                         chatId: chatId,
                             text: Translations.GetMessage(language, "SessionExpired"),
                         cancellationToken: cancellationToken);
+                    return;
                 }
 
                 service.Duration = customDuration;
@@ -115,25 +116,28 @@ public class ServiceDataHandler : BaseStateHandler
 
         if (company == null)
         {
-        await BotClient.SendMessage(
-            chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
-            cancellationToken: cancellationToken);
-            return;
-    }
+            await BotClient.SendMessage(
+                chatId: chatId,
+                    text: Translations.GetMessage(language, "NoCompanyFound"),
+                cancellationToken: cancellationToken);
+                return;
+        }
 
-        var employee = company.Employees.FirstOrDefault();
+        var employee = await DbContext.Employees
+            .Include(e => e.Services)
+            .FirstOrDefaultAsync(e => e.CompanyId == company.Id, cancellationToken);
+
         if (employee == null)
-    {
-        await BotClient.SendMessage(
-            chatId: chatId,
-                text: Translations.GetMessage(language, "NoEmployeeFound"),
-            cancellationToken: cancellationToken);
-            return;
-    }
+        {
+            await BotClient.SendMessage(
+                chatId: chatId,
+                    text: Translations.GetMessage(language, "NoEmployeeFound"),
+                cancellationToken: cancellationToken);
+                return;
+        }
 
         if (employee.Services == null)
-    {
+        {
             employee.Services = new List<Service>();
         }
         var serviceCreationData = creationData.Services.FirstOrDefault(s => s.Id == creationData.CurrentServiceIndex);
@@ -152,8 +156,9 @@ public class ServiceDataHandler : BaseStateHandler
             Name = serviceCreationData.Name,
             Price = serviceCreationData.Price,
             Duration = TimeSpan.FromMinutes(serviceCreationData.Duration),
-            Description = "Service description",
-            EmployeeId = employee.Id
+            Description = serviceCreationData.Description,
+            EmployeeId = employee.Id,
+            Employee = employee
         };
 
         employee.Services.Add(service);

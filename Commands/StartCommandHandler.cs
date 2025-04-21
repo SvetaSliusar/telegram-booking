@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Telegram.Bot.Models;
 
 namespace Telegram.Bot.Services;
 
@@ -79,6 +80,43 @@ public class StartCommandHandler : IStartCommandHandler
 
         if (company != null)
         {
+            // Check if client exists
+            var client = await _dbContext.Clients
+                .FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
+
+            if (client == null)
+            {
+                // Create new client with company ID
+                client = new Client
+                {
+                    ChatId = chatId,
+                    Name = "New Client", // Default name, can be updated later
+                    TimeZoneId = "UTC", // Default timezone, can be changed later
+                    Language = "EN" // Default language, can be changed later
+                };
+                _dbContext.Clients.Add(client);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            // Create a ClientCompanyInvite record to track that this company invited this client
+            var existingInvite = await _dbContext.ClientCompanyInvites
+                .FirstOrDefaultAsync(cci => cci.ClientId == client.Id && cci.CompanyId == company.Id, cancellationToken);
+
+            if (existingInvite == null)
+            {
+                var invite = new ClientCompanyInvite
+                {
+                    ClientId = client.Id,
+                    CompanyId = company.Id,
+                    InviteDate = DateTime.UtcNow,
+                    Used = false,
+                    Client = client,
+                    Company = company
+                };
+                _dbContext.ClientCompanyInvites.Add(invite);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+
             await _clientUpdateHandler.StartClientFlow(chatId, company.Id, cancellationToken);
             return true;
         }

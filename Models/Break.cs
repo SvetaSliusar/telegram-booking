@@ -6,6 +6,6 @@ namespace Telegram.Bot.Models
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
         public int WorkingHoursId { get; set; }
-        public virtual WorkingHours WorkingHours { get; set; }
+        public required virtual WorkingHours WorkingHours { get; set; }
     }
 } 

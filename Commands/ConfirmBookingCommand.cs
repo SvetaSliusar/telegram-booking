@@ -25,6 +25,7 @@ namespace Telegram.Bot.Commands
 
         public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
         {
+            if (string.IsNullOrEmpty(callbackQuery?.Data) || callbackQuery?.Message == null) return;
             var data = callbackQuery.Data.Split(':');
             if (data.Length < 2) return;
 
@@ -41,7 +42,7 @@ namespace Telegram.Bot.Commands
             if (booking == null)
             {
                 await _botClient.SendMessage(
-                    chatId: callbackQuery.Message.Chat.Id,
+                    chatId: callbackQuery.Message?.Chat.Id ?? throw new InvalidOperationException("CallbackQuery.Message is null"),
                     text: Translations.GetMessage(language, "BookingNotFound"),
                     cancellationToken: cancellationToken);
                 return;

@@ -124,7 +124,7 @@ public class CompanyUpdateHandler
     private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery, CancellationToken cancellationToken)
     {
         if (callbackQuery?.Message == null || string.IsNullOrEmpty(callbackQuery.Data))
-                    return;
+            return;
 
         var command = _commandFactory.CreateCommand(callbackQuery);
         if (command != null)
@@ -256,6 +256,7 @@ public class CompanyUpdateHandler
 
     private async Task HandleEmployeeSelectionForService(CallbackQuery callbackQuery, CancellationToken cancellationToken)
     {
+        if (callbackQuery?.Message == null || string.IsNullOrEmpty(callbackQuery?.Data)) return;
         var chatId = callbackQuery.Message.Chat.Id;
         var employeeId = int.Parse(callbackQuery.Data.Split(':')[1]);
 
@@ -276,6 +277,7 @@ public class CompanyUpdateHandler
         userInputs[chatId] = new CompanyCreationData
         {
             CompanyName = company.Name,
+            CompanyAlias = company.Alias,
             SelectedEmployeeId = employeeId,
             Services = new List<ServiceCreationData>()
         };
@@ -283,9 +285,9 @@ public class CompanyUpdateHandler
         _userStateService.SetConversation(chatId, "WaitingForServiceName");
 
         await _botClient.SendMessage(
-        chatId: chatId,
+            chatId: chatId,
             text: Translations.GetMessage(language, "NewService", employee.Name),
-        cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken);
     }
 
     private async Task ShowBookingCalendar(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
@@ -329,13 +331,15 @@ public class CompanyUpdateHandler
         var monthStart = DateTime.SpecifyKind(new DateTime(selectedDate.Year, selectedDate.Month, 1), DateTimeKind.Utc);
         var monthEnd = DateTime.SpecifyKind(monthStart.AddMonths(1).AddDays(-1), DateTimeKind.Utc);
         
-        var bookedDates = await _dbContext.Bookings
-            .Where(b => b.CompanyId == company.Id && 
-                        b.BookingTime >= monthStart && 
-                        b.BookingTime <= monthEnd)
-            .Select(b => b.BookingTime.Date)
-            .Distinct()
-            .ToListAsync(cancellationToken);
+        var bookedDates = _dbContext.Bookings != null
+            ? await _dbContext.Bookings
+                .Where(b => b.CompanyId == company.Id && 
+                            b.BookingTime >= monthStart && 
+                            b.BookingTime <= monthEnd)
+                .Select(b => b.BookingTime.Date)
+                .Distinct()
+                .ToListAsync(cancellationToken)
+            : new List<DateTime>();
 
         // Generate day buttons
         for (int day = 1; day <= daysInMonth; day++)
@@ -479,7 +483,8 @@ public class CompanyUpdateHandler
             company.ReminderSettings = new ReminderSettings
             {
                 CompanyId = company.Id,
-                HoursBeforeReminder = 24
+                HoursBeforeReminder = 24,
+                Company = company
             };
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
@@ -546,7 +551,8 @@ public class CompanyUpdateHandler
             company.ReminderSettings = new ReminderSettings
             {
                 CompanyId = company.Id,
-                HoursBeforeReminder = hours
+                HoursBeforeReminder = hours,
+                Company = company
             };
         }
         else

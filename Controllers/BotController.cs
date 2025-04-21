@@ -46,7 +46,7 @@ public class BotController : ControllerBase
         _logger.LogInformation("✅ Received update: {update}", update);
         long? chatId = default;
 
-        if (update.Message != null)
+        if (update?.Message != null)
         {
             var messageText = update.Message.Text;
             chatId = update.Message.Chat.Id;

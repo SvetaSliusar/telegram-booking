@@ -103,7 +103,13 @@ public class ServiceCommandHandler : ICallbackCommand
     {
         var language = _userStateService.GetLanguage(chatId);
 
-        var serviceId = _companyCreationStateService.AddService(chatId, new ServiceCreationData());
+        var serviceId = _companyCreationStateService.AddService(chatId, new ServiceCreationData
+        {
+            Name = "New Service",
+            Description = "Service description",
+            Price = 0,
+            Duration = 30
+        });
         var state = _companyCreationStateService.GetState(chatId);
         state.CurrentServiceIndex = serviceId;
         
@@ -197,7 +203,8 @@ public class ServiceCommandHandler : ICallbackCommand
             Duration = TimeSpan.FromMinutes(serviceCreationData.Duration),
             Price = serviceCreationData.Price,
             EmployeeId = employee.Id,
-            Description = serviceCreationData.Description
+            Description = serviceCreationData.Description,
+            Employee = employee
         };
 
         employee.Services.Add(service);

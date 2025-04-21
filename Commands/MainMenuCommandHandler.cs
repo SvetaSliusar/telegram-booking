@@ -24,6 +24,10 @@ public class MainMenuCommandHandler : ICallbackCommand
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
     {
+        if (callbackQuery?.Message == null)
+        {
+            return;
+        }
         var chatId = callbackQuery.Message.Chat.Id;
         var language = _userStateService.GetLanguage(chatId);
         var company = await _dbContext.Companies.FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);

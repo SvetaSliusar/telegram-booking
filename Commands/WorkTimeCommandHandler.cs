@@ -200,12 +200,23 @@ public class WorkTimeCommandHandler : ICallbackCommand
 
         if (workingHours != null && workingHours.Count > 0)
         {
+            var employee = await _dbContext.Employees.FindAsync(employeeId);
+            if (employee == null)
+            {
+                await _botClient.SendMessage(
+                    chatId: chatId,
+                    text: "❌ Employee not found.",
+                    cancellationToken: cancellationToken);
+                return;
+            }
+
             _dbContext.WorkingHours.AddRange(workingHours.Select(wh => new WorkingHours
             {
                 EmployeeId = employeeId,
                 DayOfWeek = wh.DayOfWeek,
                 StartTime = wh.StartTime,
-                EndTime = wh.EndTime
+                EndTime = wh.EndTime,
+                Employee = employee
             }));
             await _dbContext.SaveChangesAsync();
             _companyCreationStateService.ClearWorkingDays(chatId, employeeId);
