@@ -85,6 +85,7 @@ builder.Services.AddTransient<WorkDayCommandHandler>();
 builder.Services.AddTransient<WorkTimeCommandHandler>();
 builder.Services.AddTransient<ConfirmBookingCommand>();
 builder.Services.AddTransient<RejectBookingCommand>();
+builder.Services.AddTransient<EditCompanyCommandHandler>();
 builder.Services.AddTransient<MainMenuCommandHandler>();
 builder.Services.AddTransient<IMainMenuCommandHandler>(provider => provider.GetRequiredService<MainMenuCommandHandler>());
 builder.Services.AddTransient<ChangeLanguageCommandHandler>();
@@ -139,6 +140,9 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
     factory.RegisterCommand<MainMenuCommandHandler>(
         "menu",
         "back_to_menu"
+    );
+    factory.RegisterCommand<EditCompanyCommandHandler>(
+        "edit_company_menu"
     );
     return factory;
 });

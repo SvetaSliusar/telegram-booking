@@ -9,12 +9,13 @@ namespace Telegram.Bot.Services.StateHandlers;
 
 public class InitialCompanyDataHandler : BaseStateHandler
 {
-    public override List<string> StateNames => new List<string> {  "WaitingForCompanyName", "WaitingForEmployeeName" };
+    public override List<string> StateNames => new List<string> {  
+        "WaitingForCompanyName", "WaitingForEmployeeName", "WaitingForCompanyAlias" };
 
     public InitialCompanyDataHandler(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        ILogger<WorkStartTimeHandler> logger,
+        ILogger<InitialCompanyDataHandler> logger,
         BookingDbContext dbContext,
         ICompanyCreationStateService companyCreationStateService)
         : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
@@ -92,8 +93,14 @@ public class InitialCompanyDataHandler : BaseStateHandler
 
                 await BotClient.SendMessage(
                     chatId: chatId,
-                    text: Translations.GetMessage(language, "BusinessCreated"),
+                    text: Translations.GetMessage(language, "DataSaved"),
                     cancellationToken: cancellationToken);
+                var keyboard = new InlineKeyboardMarkup(new[]
+                {
+                    new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "SetupWorkDays"), "setup_work_days") }
+                });
+
+               await BotClient.SendMessage(chatId, Translations.GetMessage(language, "TheNextStep"), replyMarkup: keyboard, cancellationToken: cancellationToken);
                break;
         }
     }

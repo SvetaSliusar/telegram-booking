@@ -64,19 +64,15 @@ public class ServiceCommandHandler : ICallbackCommand
         var durationValue = data;
         var state = _companyCreationStateService.GetState(chatId);
         var service = state.Services.FirstOrDefault(s => s.Id == state.CurrentServiceIndex);
+        var language = _userStateService.GetLanguage(chatId);
         if (service == null)
         {
-            var mainMenuCommand = _commandFactory.CreateCommand("back_to_menu");
-            if (mainMenuCommand != null)
-            {
-                await mainMenuCommand.ExecuteAsync(new CallbackQuery(), cancellationToken);
-            }
+            await HandleServiceCreationAsync(language, chatId, cancellationToken);
             return;
         }
 
         if (durationValue == "custom")
         {
-            var language = _userStateService.GetLanguage(chatId);
             _userStateService.SetConversation(chatId, "WaitingForCustomDuration");
 
             await _botClient.SendMessage(
@@ -92,12 +88,24 @@ public class ServiceCommandHandler : ICallbackCommand
 
             await SaveNewService(chatId, service, cancellationToken);
 
-            var mainMenuCommand = _commandFactory.CreateCommand("back_to_menu");
-            if (mainMenuCommand != null)
-            {
-                await mainMenuCommand.ExecuteAsync(new CallbackQuery(), cancellationToken);
-            }
+            
+            await HandleServiceCreationAsync(language, chatId, cancellationToken);
         }
+    }
+
+    private async Task HandleServiceCreationAsync(string language, long chatId, CancellationToken cancellationToken)
+    {
+        var keyboard = new InlineKeyboardMarkup(new[]
+        {
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+        });
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "TheNextStep"),
+            replyMarkup: keyboard,
+            cancellationToken: cancellationToken);
     }
 
     private async Task HandleAddServiceAsync(long chatId, string data, CancellationToken cancellationToken)

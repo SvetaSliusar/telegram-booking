@@ -70,7 +70,7 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         return UserRole.Unknown;
     }
 
-    private async Task ShowClientMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)
+    public async Task ShowClientMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)
     {
         var buttons = new[]
         {
@@ -89,25 +89,22 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
             cancellationToken: cancellationToken);
     }
 
-    private async Task ShowCompanyMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)
+    public async Task ShowCompanyMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)
     {
         var company = await _dbContext.Companies.FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
-        var keyboardButtons = company == null
-            ? new List<List<InlineKeyboardButton>>
+        if (company == null)
+        {
+            await ShowEmptyCompanyStateAsync(chatId, language, cancellationToken);
+            return;
+        }
+
+        var keyboardButtons = new List<List<InlineKeyboardButton>>
             {
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "CreateCompany"), "create_company") }
-            }
-            : new List<List<InlineKeyboardButton>>
-            {
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "SetupWorkDays"), "setup_work_days") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeWorkTime"), "change_work_time") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ManageBreaks"), "manage_breaks") },
+                new(){ InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "EditCompany"), "edit_company_menu") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ListServices"), "list_services") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "GetClientLink"), "get_client_link") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ViewDailyBookings"), "view_daily_bookings") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ReminderSettings"), "reminder_settings") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") }
             };
 
@@ -116,6 +113,22 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         await _botClient.SendMessage(
             chatId: chatId,
             text: Translations.GetMessage(language, "MainMenu"),
+            replyMarkup: keyboard,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task ShowEmptyCompanyStateAsync(long chatId, string language, CancellationToken cancellationToken)
+    {
+        var welcomeMessage = Translations.GetMessage(language, "WelcomeNoCompany");
+        
+        var keyboard = new InlineKeyboardMarkup(new List<List<InlineKeyboardButton>>
+        {
+            new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "CreateCompany"), "create_company") }
+        });
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: welcomeMessage,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }

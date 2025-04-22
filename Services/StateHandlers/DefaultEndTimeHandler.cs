@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
 
@@ -106,12 +107,17 @@ public class DefaultEndTimeHandler : BaseStateHandler
 
             UserStateService.RemoveConversation(chatId);
 
-                await BotClient.SendMessage(
-                    chatId: chatId,
+            await BotClient.SendMessage(
+                chatId: chatId,
                 text: Translations.GetMessage(language, "DefaultWorkTimeSet", startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
-                    cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken);
 
-            await SendMessage(chatId, "UseMenuButton", cancellationToken);
+            var keyboard = new InlineKeyboardMarkup(new[]
+            {
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddSevice"), "add_service") }
+            });
+
+            await BotClient.SendMessage(chatId, Translations.GetMessage(language, "TheNextStep"), replyMarkup: keyboard, cancellationToken: cancellationToken);
         }
         else
         {

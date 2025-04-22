@@ -6,7 +6,7 @@ public static class Translations
     {
         ["EN"] = new Dictionary<string, string>
         {
-            ["Welcome"] = "Welcome! Please select your role:",
+            ["WelcomeNoCompany"] = "👋 Welcome! Let's set up your business profile to get started.",
             ["Back"] = "Back",
             ["IAmCompany"] = "🏢 I am a Company",
             ["IAmClient"] = "👤 I am a Client",
@@ -23,6 +23,7 @@ public static class Translations
             ["CreateCompany"] = "🏢 Create Company",
             ["EnterBusinessName"] = "🏢 Please enter your **business name**:",
             ["EnterYourName"] = "👤 Enter **your name** (business owner):",
+            ["DataSaved"] = "✅ Data saved successfully!",
             ["BusinessCreated"] = "✅ Your business has been created successfully! Use /menu to set up working hours and services.",
             ["EnterServiceName"] = "🛠 Enter the name of the new service:",
             ["EnterServicePrice"] = "💵 Enter the price of this service (e.g., 25):",
@@ -42,15 +43,8 @@ public static class Translations
             ["SelectBreakTime"] = "⏳ Select the break time between services:",
             ["WorkingHoursUpdated"] = "✅ Working hours have been updated successfully!",
             ["ClientLink"] = "🔗 Your client booking link:\n\n`{0}`\n\nCopy this link and share it with your clients to allow them to book appointments with you.",
-            ["LanguageSet"] = "🌎 Language set to: {0}",
             ["ServiceAddedForEmployee"] = "✅ Service '{0}' added successfully for {1}!",
             ["WorkingHoursIntervals"] = "{0}",
-            ["WorkingDaysUpdated"] = "✅ Working days have been updated successfully!",
-            ["EnterCustomBreakTime"] = "⏳ Enter the custom break time in minutes (e.g., 25):",
-            ["InvalidBreakTime"] = "❌ Please enter a valid break time in minutes (e.g., 25):",
-            ["BreakTimeUpdated"] = "✅ Working hours and break time have been updated successfully!",
-            ["InvalidPrice"] = "❌ Please enter a valid price.",
-            ["InvalidDuration"] = "❌ Please enter a valid duration in minutes (e.g., 20):",
             ["NoCompanyFound"] = "❌ Error: Company not found. Please start over.",
             ["NoEmployeeFoundForCompany"] = "❌ Error: No employee found for your company.",
             ["NoDaysSelectedError"] = "❌ No days selected. Please select at least one.",
@@ -61,7 +55,6 @@ public static class Translations
             ["NoServiceDataFound"] = "❌ Error: No service data found.",
             ["NoEmployeeFoundInCreation"] = "❌ Error: No employee found in creation flow.",
             ["TokenAccepted"] = "✅ Token accepted! Use the Menu button to access all features.",
-            ["InvalidToken"] = "❌ Invalid token or company not found. Please check and enter again.",
             ["ErrorOccurred"] = "❌ An error occurred. Please try again.",
             ["ErrorProcessingRequest"] = "❌ An error occurred while processing your request. Please try again or contact support.",
             ["Monday"] = "Monday",
@@ -82,11 +75,9 @@ public static class Translations
             ["InvalidToken"] = "❌ Invalid token or company not found. Please check and enter again.",
             ["NoEmployeeFound"] = "❌ No employee found. Please contact support.",
             ["EnterServiceDescription"] = "🛠 Enter the description of the new service:",
-            ["ChooseDuration"] = "⏳ Choose a time duration for this service:",
             ["InvalidPrice"] = "❌ Please enter a valid price.",
             ["InvalidDuration"] = "❌ Please enter a valid duration in minutes (e.g., 20):",
             ["EnterCustomBreakTime"] = "⏳ Enter the custom break time in minutes (e.g., 25):",
-            ["InvalidBreakTime"] = "❌ Please enter a valid break time in minutes (e.g., 25):",
             ["BreakTimeUpdated"] = "✅ Working hours and break time have been updated successfully!",
             ["SelectLanguage"] = "🌐 Select your language / Оберіть мову:",
             ["NewService"] = "🛠 Enter the name of the new service:",
@@ -178,11 +169,15 @@ public static class Translations
             ["24hours"] = "24 hours",
             ["SendCompanyAlias"] = "Send a company alias in English:",
             ["AliasRequired"] = "Alias should be set in English. Try again:",
-            ["AliasAlreadyExists"] = "❌ Alias already exists. Please choose a different one:"
+            ["AliasAlreadyExists"] = "❌ Alias already exists. Please choose a different one:",
+            ["TheNextStep"] = "The next step:",
+            ["EditCompany"]= "✏️ Edit Company Info",
+            ["EditCompanyMenuTitle"] = "🔧 Company Setup Options:",
+            ["BackToMainMenu"] = "🔙 Back to Main Menu"
         },
         ["UA"] = new Dictionary<string, string>
         {
-            ["Welcome"] = "Ласкаво просимо! Будь ласка, оберіть вашу роль:",
+            ["WelcomeNoCompany"] = "Ласкаво просимо! Будь ласка, створіть профіль вашої компанії.",
             ["Back"] = "Назад",
             ["IAmCompany"] = "🏢 Я Компанія",
             ["ChangeWorkTime"] = "🕒 Змінити Робочий Час",
@@ -203,7 +198,6 @@ public static class Translations
             ["BusinessCreated"] = "✅ Ваш бізнес успішно створено! Використовуйте /menu для налаштування робочого часу та послуг.",
             ["EnterServiceName"] = "🛠 Введіть назву нової послуги:",
             ["EnterServicePrice"] = "💵 Введіть ціну цієї послуги (наприклад, 25):",
-            ["ChooseDuration"] = "⏳ Виберіть тривалість цієї послуги:",
             ["ServiceAdded"] = "✅ Послугу '{0}' успішно додано!",
             ["NoServices"] = "❌ Послуги не знайдено. Будь ласка, спочатку додайте послуги.",
             ["CurrentWorkingDays"] = "📅 Поточні Робочі Дні:",
@@ -239,7 +233,6 @@ public static class Translations
             ["SessionExpired"] = "❌ Помилка: Сесія закінчилася. Будь ласка, спробуйте знову з головного меню.",
             ["NoServiceDataFound"] = "❌ Помилка: Дані про послугу не знайдено.",
             ["NoEmployeeFoundInCreation"] = "❌ Помилка: Співробітника не знайдено в процесі створення.",
-            ["TokenAccepted"] = "✅ Токен прийнято! Використовуйте /menu для доступу до всіх функцій.",
             ["InvalidToken"] = "❌ Невірний токен або компанію не знайдено. Будь ласка, перевірте та введіть знову.",
             ["SelectLanguage"] = "🌐 Оберіть мову / Select your language:",
             ["ErrorOccurred"] = "❌ Сталася помилка. Будь ласка, спробуйте знову.",
@@ -261,7 +254,6 @@ public static class Translations
             ["InvalidToken"] = "❌ Невірний токен або компанію не знайдено. Будь ласка, перевірте та введіть знову.",
             ["NoEmployeeFound"] = "❌ Співробітника не знайдено. Будь ласка, зверніться до служби підтримки.",
             ["EnterServicePrice"] = "💵 Введіть ціну цієї послуги (наприклад, 25):",
-            ["ChooseDuration"] = "⏳ Виберіть тривалість цієї послуги:",
             ["InvalidPrice"] = "❌ Будь ласка, введіть коректну ціну.",
             ["InvalidDuration"] = "❌ Будь ласка, введіть коректну тривалість у хвилинах (наприклад, 20):",
             ["EnterCustomBreakTime"] = "⏳ Введіть час перерви в хвилинах (наприклад, 25):",
@@ -279,7 +271,6 @@ public static class Translations
             ["BookingDetails"] = "• {0} з {1}\n  📅 {2}\n  ⏰ {3}",
             ["NoServicesAvailable"] = "❌ Немає доступних послуг для {0}.",
             ["CompanyServices"] = "📋 Послуги, що надаються {0}:",
-            ["LanguageSet"] = "🌎 Мову встановлено: {0}",
             ["NewBookingNotification"] = "📅 Новий Запис!\n\nПослуга: {0}\nКлієнт: {1}\nДата: {2}\nЧас: {3}",
             ["BookingConfirmation"] = "✅ Ваш запис на {0} з {1} на {2} о {3} підтверджено!",
             ["ViewDailyBookings"] = "📅 Переглянути Записи на День",
@@ -355,7 +346,12 @@ public static class Translations
             ["24hours"] = "24 годин",
             ["SendCompanyAlias"] = "Відправ скорочену назву компанії англійською:",
             ["AliasRequired"] = "Назва має бути вказана англійською. Спробуйте ще раз:",
-            ["AliasAlreadyExists"] = "❌ Назва вже існує. Будь ласка, виберіть іншу:"
+            ["AliasAlreadyExists"] = "❌ Назва вже існує. Будь ласка, виберіть іншу:",
+            ["TheNextStep"] = "Наступний крок:",
+            ["DataSaved"] = "✅ Дані збережено успішно!",
+            ["EditCompany"]= "✏️ Змінити дані компанії",
+            ["EditCompanyMenuTitle"] = "🔧 Змінити назву компанії:",
+            ["BackToMainMenu"] = "🔙 Повернутись до головного меню"
         }
     };
 

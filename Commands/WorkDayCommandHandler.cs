@@ -172,7 +172,7 @@ public class WorkDayCommandHandler : ICallbackCommand
             new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "SetupWorkTime"), "init_work_time") }
         });
 
-        await _botClient.SendMessage(chatId, "The next step: ", replyMarkup: keyboard, cancellationToken: cancellationToken);
+        await _botClient.SendMessage(chatId, Translations.GetMessage(language, "TheNextStep"), replyMarkup: keyboard, cancellationToken: cancellationToken);
     }
 
     public async Task HandleClearSelectionAsync(long chatId, string data, CancellationToken cancellationToken)
