@@ -5,17 +5,20 @@ using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 
 namespace Telegram.Bot.Commands;
-public class ChangeLanguageCommandHandler : ICallbackCommand
+public class ChangeLanguageCommandHandler : ICallbackCommand, IChangeLanguageCommandHandler
 {
     private readonly IUserStateService _userStateService;
     private readonly ITelegramBotClient _botClient;
+    private readonly IMainMenuCommandHandler _mainMenuHandler;
 
     public ChangeLanguageCommandHandler(
         IUserStateService userStateService,
-        ITelegramBotClient botClient)
+        ITelegramBotClient botClient,
+        IMainMenuCommandHandler mainMenuHandler)
     {
         _userStateService = userStateService;
         _botClient = botClient;
+        _mainMenuHandler = mainMenuHandler;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -26,8 +29,8 @@ public class ChangeLanguageCommandHandler : ICallbackCommand
         var (commandKey, data) = SplitCommandData(callbackQuery.Data);
         var commandHandlers = new Dictionary<string, Func<long, string, CancellationToken, Task>>(StringComparer.OrdinalIgnoreCase)
         {
-            {"change_language", HanldeChangeLanguageAsync },
-            {"set_language", HandleSetLanguageAsync }
+            {"change_language", HandleChangeLanguageCommandAsync },
+            {"set_language", HandleSetLanguageCommandAsync }
         };
         var chatId = callbackQuery.Message.Chat.Id;
         if (commandHandlers.TryGetValue(commandKey, out var handler))
@@ -43,7 +46,7 @@ public class ChangeLanguageCommandHandler : ICallbackCommand
         }
     }
 
-    public async Task HanldeChangeLanguageAsync(long chatId, string data, CancellationToken cancellationToken)
+    public async Task HandleChangeLanguageCommandAsync(long chatId, string messageText, CancellationToken cancellationToken)
     {
         var languageKeyboard = new InlineKeyboardMarkup(new[]
         {
@@ -58,12 +61,14 @@ public class ChangeLanguageCommandHandler : ICallbackCommand
             cancellationToken: cancellationToken);
     }
 
-    public async Task HandleSetLanguageAsync(long chatId, string data, CancellationToken cancellationToken)
+    public async Task HandleSetLanguageCommandAsync(long chatId, string messageText, CancellationToken cancellationToken)
     {
-        _userStateService.SetLanguage(chatId, data);
+        _userStateService.SetLanguage(chatId, messageText);
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(data, "LanguageSet", data),
+            text: Translations.GetMessage(messageText, "LanguageSet", messageText),
             cancellationToken: cancellationToken);
+
+        await _mainMenuHandler.ShowMainMenuAsync(chatId, cancellationToken);
     }
 }

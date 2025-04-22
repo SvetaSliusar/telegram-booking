@@ -28,7 +28,47 @@ public class InitialCompanyDataHandler : BaseStateHandler
         {
             case "WaitingForCompanyName":
                 CompanyCreationStateService.SetCompanyName(chatId, message);
-                CompanyCreationStateService.SetCompanyAlias(chatId, GenerateCompanyAlias(message));
+                if (IsEnglish(message))
+                {
+                    CompanyCreationStateService.SetCompanyAlias(chatId, GenerateCompanyAlias(message));
+                    UserStateService.SetConversation(chatId, "WaitingForEmployeeName");
+
+                    await BotClient.SendMessage(
+                        chatId: chatId,
+                        text: Translations.GetMessage(language, "EnterYourName"),
+                        parseMode: ParseMode.Markdown,
+                        cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    UserStateService.SetConversation(chatId, "WaitingForCompanyAlias");
+                    await BotClient.SendMessage(
+                        chatId: chatId,
+                        text: Translations.GetMessage(language, "SendCompanyAlias"),
+                        parseMode: ParseMode.Markdown,
+                        cancellationToken: cancellationToken);
+                }
+                break;
+            case "WaitingForCompanyAlias":
+                if (string.IsNullOrWhiteSpace(message) || !IsEnglish(message))
+                {
+                    await BotClient.SendMessage(
+                        chatId: chatId,
+                        text: Translations.GetMessage(language, "AliasRequired"),
+                        cancellationToken: cancellationToken);
+                    return;
+                }
+
+                if (await DbContext.Companies.AnyAsync(c => c.Alias == message))
+                {
+                    await BotClient.SendMessage(
+                        chatId: chatId,
+                        text: Translations.GetMessage(language, "AliasAlreadyExists"),
+                        cancellationToken: cancellationToken);
+                    return;
+                }
+
+                CompanyCreationStateService.SetCompanyAlias(chatId, message);
                 UserStateService.SetConversation(chatId, "WaitingForEmployeeName");
 
                 await BotClient.SendMessage(
@@ -36,8 +76,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                     text: Translations.GetMessage(language, "EnterYourName"),
                     parseMode: ParseMode.Markdown,
                     cancellationToken: cancellationToken);
-                break;
-
+               break;
             case "WaitingForEmployeeName":
                 CompanyCreationStateService.AddEmployee(chatId, new EmployeeCreationData
                 {
@@ -89,6 +128,8 @@ public class InitialCompanyDataHandler : BaseStateHandler
         DbContext.Companies.Add(company);
         await DbContext.SaveChangesAsync(cancellationToken);
     }
+
+    private bool IsEnglish(string input) => input.All(c => c <= 127);
 
     private static string GenerateCompanyAlias(string companyName)
     {

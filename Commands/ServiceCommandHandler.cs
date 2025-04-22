@@ -76,11 +76,12 @@ public class ServiceCommandHandler : ICallbackCommand
 
         if (durationValue == "custom")
         {
+            var language = _userStateService.GetLanguage(chatId);
             _userStateService.SetConversation(chatId, "WaitingForCustomDuration");
 
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "⏳ Enter the custom duration in minutes (e.g., 20):",
+                text: Translations.GetMessage(language, "EnterCustomDuration"),
                 cancellationToken: cancellationToken);
             return;
         }

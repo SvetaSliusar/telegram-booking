@@ -5,6 +5,8 @@ using Telegram.Bot.Types.ReplyMarkups;
 using System.Collections.Concurrent;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Enums;
+using Telegram.Bot.Commands;
+using System.Text;
 
 namespace Telegram.Bot.Services;
 public class ClientUpdateHandler
@@ -12,15 +14,21 @@ public class ClientUpdateHandler
     private readonly ITelegramBotClient _botClient;
     private readonly BookingDbContext _dbContext;
     private readonly IUserStateService _userStateService;
+    private readonly IMainMenuCommandHandler _mainMenuHandler;
+    private readonly IChangeLanguageCommandHandler _changeLanguageCommandHandler;
 
     public ClientUpdateHandler(
         ITelegramBotClient botClient,
         BookingDbContext dbContext,
-        IUserStateService userStateService)
+        IUserStateService userStateService,
+        IMainMenuCommandHandler mainMenuHandler,
+        IChangeLanguageCommandHandler changeLanguageCommandHandler)
     {
         _botClient = botClient;
         _dbContext = dbContext;
         _userStateService = userStateService;
+        _mainMenuHandler = mainMenuHandler;
+        _changeLanguageCommandHandler = changeLanguageCommandHandler;
     }
 
     public async Task StartClientFlow(long chatId, int companyId, CancellationToken cancellationToken)
@@ -44,23 +52,7 @@ public class ClientUpdateHandler
 
     private async Task ShowMainMenu(long chatId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
-
-        var buttons = new[]
-        {
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BookAppointment"), "book_appointment") },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "MyBookings"), "view_bookings") },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeTimezone"), "change_timezone") }
-        };
-
-        var keyboard = new InlineKeyboardMarkup(buttons);
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "ClientMainMenu"),
-            replyMarkup: keyboard,
-            cancellationToken: cancellationToken);
+        await _mainMenuHandler.ShowMainMenuAsync(chatId, cancellationToken);
     }
 
     public async Task HandleUpdateAsync(Update update, CancellationToken cancellationToken)
@@ -70,7 +62,7 @@ public class ClientUpdateHandler
         var handler = update switch
         {
             { Message: { } message } => BotOnMessageReceived(message, cancellationToken),
-            //{ EditedMessage: { } message } => BotOnMessageReceived(message, cancellationToken),
+            { EditedMessage: { } message } => BotOnMessageReceived(message, cancellationToken),
             { CallbackQuery: { } callbackQuery } => BotOnCallbackQueryReceived(callbackQuery, cancellationToken),
             _ => Task.CompletedTask
         };
@@ -84,12 +76,6 @@ public class ClientUpdateHandler
 
         var chatId = message.Chat.Id;
         var language = _userStateService.GetLanguage(chatId);
-        
-        if (messageText.StartsWith("/menu"))
-        {
-            await ShowMainMenu(chatId, cancellationToken);
-            return;
-        }
 
         await _botClient.SendMessage(
             chatId: chatId,
@@ -102,7 +88,6 @@ public class ClientUpdateHandler
         if (callbackQuery?.Message == null || callbackQuery?.Data == null) return;
         var chatId = callbackQuery.Message.Chat.Id;
         string data = callbackQuery.Data;
-        var language = _userStateService.GetLanguage(chatId);
 
         switch (data)
         {
@@ -112,41 +97,18 @@ public class ClientUpdateHandler
             case "view_bookings":
                 await HandleViewBookings(chatId, cancellationToken);
                 break;
-            case CallbackResponses.ChangeLanguage:
-                var languageKeyboard = new InlineKeyboardMarkup(new[]
-                {
-                    new[] { InlineKeyboardButton.WithCallbackData("English", "set_language:EN") },
-                    new[] { InlineKeyboardButton.WithCallbackData("Українська", "set_language:UA") }
-                });
-
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                    text: Translations.GetMessage(language, "SelectLanguage"),
-                    replyMarkup: languageKeyboard,
-                    cancellationToken: cancellationToken);
-                break;
             case "change_timezone":
                 await HandleTimezoneSelection(chatId, cancellationToken);
                 break;
-            case var s when s.StartsWith("set_language:"):
-                var selectedLanguage = s.Split(':')[1];
-                await SetLanguage(chatId, selectedLanguage, cancellationToken);
-                break;
             case "back_to_menu":
-                var client = await _dbContext.Clients
-                    .FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
-
-                if (client != null)
-                {
-                    await ShowMainMenu(chatId, cancellationToken);
-                }
-                else
-                {
-                    await _botClient.SendMessage(
-                        chatId: chatId,
-                        text: Translations.GetMessage(language, "NoClientFound"),
-                        cancellationToken: cancellationToken);
-                }
+                await ShowMainMenu(chatId, cancellationToken);
+                break;
+            case "change_language":
+                await _changeLanguageCommandHandler.HandleChangeLanguageCommandAsync(chatId, data, cancellationToken);
+                break;
+            case var s when s != null && s.StartsWith("set_language"):
+                var selectedLanguage = s.Split(':')[1];
+                await _changeLanguageCommandHandler.HandleSetLanguageCommandAsync(chatId, selectedLanguage, cancellationToken);
                 break;
             case var s when s != null && s.StartsWith("category_"):
                 var category = data.Replace("category_", "");
@@ -248,18 +210,24 @@ public class ClientUpdateHandler
             return;
         }
 
-        var message = Translations.GetMessage(language, "UpcomingBookings") + "\n\n";
+        var messageBuilder = new StringBuilder();
+        messageBuilder.AppendLine(Translations.GetMessage(language, "UpcomingBookings"));
+        messageBuilder.AppendLine();
         var clientTimeZone = TimeZoneInfo.FindSystemTimeZoneById(client.TimeZoneId);
 
         foreach (var booking in bookings)
         {
             var localTime = TimeZoneInfo.ConvertTimeFromUtc(booking.BookingTime, clientTimeZone);
-            message += Translations.GetMessage(language, "BookingDetails", 
+            messageBuilder.AppendLine(Translations.GetMessage(language, "BookingDetails",
+                booking.Company.Name,
                 booking.Service.Name, 
                 booking.Service.Employee.Name,
                 localTime.ToString("dddd, MMMM d, yyyy"),
-                localTime.ToString("hh:mm tt")) + "\n\n";
+                localTime.ToString("hh:mm tt")));
+            messageBuilder.AppendLine();
         }
+
+        var message = messageBuilder.ToString();
 
         await _botClient.SendMessage(
             chatId: chatId,

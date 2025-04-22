@@ -15,8 +15,7 @@ public class Client
     [Required]
     public string TimeZoneId { get; set; } = "UTC";
 
-    [Required]
-    public string Language { get; set; } = "EN";
+    public string? Language { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

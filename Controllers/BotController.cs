@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Telegram.Bot.Commands;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types;
@@ -13,23 +14,20 @@ public class BotController : ControllerBase
     private readonly IStartCommandHandler _startCommandHandler;
     private readonly CompanyUpdateHandler _companyUpdateHandler;
     private readonly ClientUpdateHandler _clientUpdateHandler;
-    private readonly ICompanyService _companyService;
-    private readonly ITelegramBotClient _botClient;
+    private readonly IMainMenuCommandHandler _mainMenuHandler;
 
     public BotController(
         ILogger<BotController> logger,
         IStartCommandHandler startCommandHandler,
         CompanyUpdateHandler companyUpdateHandler,
         ClientUpdateHandler clientUpdateHandler,
-        ICompanyService companyService,
-        ITelegramBotClient botClient)
+        IMainMenuCommandHandler mainMenuHandler)
     {
         _logger = logger;
         _startCommandHandler = startCommandHandler;
         _companyUpdateHandler = companyUpdateHandler;
         _clientUpdateHandler = clientUpdateHandler;
-        _companyService = companyService;
-        _botClient = botClient;
+        _mainMenuHandler = mainMenuHandler;
     }
 
     [HttpPost]
@@ -57,35 +55,21 @@ public class BotController : ControllerBase
             {
                 return Ok();
             }
-        }
-        else if (update.CallbackQuery != null)
-        {
-            var callbackData = update.CallbackQuery.Data;
-            chatId = update.CallbackQuery.From.Id;
 
-            if (callbackData == "choose_company")
+            if (messageText == "/menu")
             {
-                await _companyUpdateHandler.StartCompanyFlow(chatId.Value, cancellationToken);
-            }
-            else if (callbackData == "choose_client")
-            {
-                var company = await _companyService.GetFirstCompanyAsync(cancellationToken);
-                if (company != null)
-                {
-                    await _clientUpdateHandler.StartClientFlow(chatId.Value, company.Id, cancellationToken);
-                }
-                else
-                {
-                    await _botClient.SendMessage(
-                        chatId: chatId.Value,
-                        text: "❌ No companies available at the moment.",
-                        cancellationToken: cancellationToken);
-                }
+                await _mainMenuHandler.ShowMainMenuAsync(chatId.Value, cancellationToken);
+                return Ok();
             }
         }
 
         if (update.Message != null || update.CallbackQuery != null)
         {
+            if (update.CallbackQuery != null)
+            {
+                chatId = update.CallbackQuery.Message.Chat.Id;
+            }   
+
             if (chatId.HasValue && _companyUpdateHandler.GetMode(chatId.Value) == Mode.Company)
                 await _companyUpdateHandler.HandleUpdateAsync(update, cancellationToken);
             else if (chatId.HasValue && _companyUpdateHandler.GetMode(chatId.Value) == Mode.Client)

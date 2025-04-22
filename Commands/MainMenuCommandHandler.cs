@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
@@ -6,7 +7,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Commands;
 
-public class MainMenuCommandHandler : ICallbackCommand
+public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
 {
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
@@ -28,8 +29,68 @@ public class MainMenuCommandHandler : ICallbackCommand
         {
             return;
         }
-        var chatId = callbackQuery.Message.Chat.Id;
+        long chatId = callbackQuery.Message.Chat.Id;
+
+        await ShowMainMenuAsync(chatId, cancellationToken);
+    }
+
+    public async Task ShowMainMenuAsync(long chatId, CancellationToken cancellationToken)
+    {
         var language = _userStateService.GetLanguage(chatId);
+        var role = await GetUserRoleAsync(chatId, cancellationToken);
+        switch (role)
+        {
+            case UserRole.Client:
+                await ShowClientMainMenuAsync(chatId, language, cancellationToken);
+                break;
+            case UserRole.Company:
+                await ShowCompanyMainMenuAsync(chatId, language, cancellationToken);
+                break;
+            default:
+                await _botClient.SendMessage(
+                    chatId: chatId,
+                    text: Translations.GetMessage(language, "UnknownRole"),
+                    cancellationToken: cancellationToken);
+                break;
+        }
+    }
+
+    private async Task<UserRole> GetUserRoleAsync(long chatId, CancellationToken cancellationToken)
+    {
+        var isClient = await _dbContext.Clients.AnyAsync(c => c.ChatId == chatId, cancellationToken);
+        if (isClient)
+            return UserRole.Client;
+
+        var isCompany = await _dbContext.Tokens
+            .Include(t => t.Company)
+            .AnyAsync(t => t.ChatId == chatId, cancellationToken);
+        if (isCompany)
+            return UserRole.Company;
+
+        return UserRole.Unknown;
+    }
+
+    private async Task ShowClientMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)
+    {
+        var buttons = new[]
+        {
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BookAppointment"), "book_appointment") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "MyBookings"), "view_bookings") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeTimezone"), "change_timezone") }
+        };
+
+        var keyboard = new InlineKeyboardMarkup(buttons);
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "MainMenu"),
+            replyMarkup: keyboard,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task ShowCompanyMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)
+    {
         var company = await _dbContext.Companies.FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
         var keyboardButtons = company == null

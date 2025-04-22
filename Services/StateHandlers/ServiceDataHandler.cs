@@ -13,7 +13,7 @@ public class ServiceDataHandler : BaseStateHandler
     public ServiceDataHandler(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        ILogger<WorkStartTimeHandler> logger,
+        ILogger<ServiceDataHandler> logger,
         BookingDbContext dbContext,
         ICompanyCreationStateService companyCreationStateService)
         : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
@@ -202,9 +202,11 @@ public class ServiceDataHandler : BaseStateHandler
 
         var predefinedDurations = new InlineKeyboardMarkup(new[]
         {
-            new [] { InlineKeyboardButton.WithCallbackData("10 min", "service_duration:10"), InlineKeyboardButton.WithCallbackData("15 min", "service_duration:15") },
-            new [] { InlineKeyboardButton.WithCallbackData("30 min", "service_duration:30"), InlineKeyboardButton.WithCallbackData("45 min", "service_duration:45") },
-            new [] { InlineKeyboardButton.WithCallbackData("Custom", "service_duration:custom") }
+            new [] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "10min"), "service_duration:10"), 
+                     InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "15min"), "service_duration:15") },
+            new [] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "30min"), "service_duration:30"), 
+                     InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "45min"), "service_duration:45") },
+            new [] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Custom"), "service_duration:custom") }
         });
 
         await BotClient.SendMessage(

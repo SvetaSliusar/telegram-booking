@@ -9,6 +9,8 @@ using System.Text;
 using Telegram.Bot.Commands;
 using System.Globalization;
 using Telegram.Bot.Enums;
+using System.Transactions;
+using System.Linq.Expressions;
 
 namespace Telegram.Bot.Services;
 
@@ -39,42 +41,6 @@ public class CompanyUpdateHandler
         _userStateService = userStateService;
         _companyCreationStateService = companyCreationStateService;
         _stateHandlers = stateHandlers;
-    }
-
-    public async Task StartCompanyFlow(long chatId, CancellationToken cancellationToken)
-    {
-        var language = _userStateService.GetLanguage(chatId);
-        
-        // Add persistent menu button
-        var replyKeyboard = new ReplyKeyboardMarkup(new[]
-        {
-            new[] { new KeyboardButton("📋 Menu") }
-        })
-        {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = false
-        };
-
-        var existingToken = await _dbContext.Tokens.FirstOrDefaultAsync(t => t.ChatId == chatId, cancellationToken);
-
-        if (existingToken == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: Translations.GetMessage(language, "EnterToken"),
-                replyMarkup: new ForceReplyMarkup { Selective = true },
-                cancellationToken: cancellationToken);
-            _userStateService.SetConversation(chatId, "WaitingForToken");
-            return;
-        }
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "WelcomeBack"),
-            replyMarkup: replyKeyboard,
-            cancellationToken: cancellationToken);
-
-        await ShowMainMenu(chatId, cancellationToken);
     }
 
     public Mode GetMode(long chatId)
@@ -113,10 +79,10 @@ public class CompanyUpdateHandler
             return;
         }
 
-        await HandleNewConversation(chatId, messageText, language, cancellationToken);
+        await HandleNewConversation(chatId, cancellationToken);
     }
 
-    private async Task HandleNewConversation(long chatId, string messageText, string language, CancellationToken cancellationToken)
+    private async Task HandleNewConversation(long chatId, CancellationToken cancellationToken)
     {
         await ShowMainMenu(chatId, cancellationToken);
     }
@@ -224,8 +190,8 @@ public class CompanyUpdateHandler
 
     public async Task ShowMainMenu(long chatId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
         var company = await _dbContext.Companies.FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
+        var language = _userStateService.GetLanguage(chatId);
 
         var keyboardButtons = company == null
             ? new List<List<InlineKeyboardButton>>
@@ -247,11 +213,11 @@ public class CompanyUpdateHandler
 
         var keyboard = new InlineKeyboardMarkup(keyboardButtons);
 
-            await _botClient.SendMessage(
-                chatId: chatId,
+        await _botClient.SendMessage(
+            chatId: chatId,
             text: Translations.GetMessage(language, "MainMenu"),
             replyMarkup: keyboard,
-                cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken);
     }
 
     private async Task HandleEmployeeSelectionForService(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -491,11 +457,11 @@ public class CompanyUpdateHandler
 
         var keyboard = new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("1 hour", "reminder_time:1") },
-            new[] { InlineKeyboardButton.WithCallbackData("3 hours", "reminder_time:3") },
-            new[] { InlineKeyboardButton.WithCallbackData("6 hours", "reminder_time:6") },
-            new[] { InlineKeyboardButton.WithCallbackData("12 hours", "reminder_time:12") },
-            new[] { InlineKeyboardButton.WithCallbackData("24 hours", "reminder_time:24") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "1hour"), "reminder_time:1") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "3hours"), "reminder_time:3") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "6hours"), "reminder_time:6") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "12hours"), "reminder_time:12") },
+            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "24hours"), "reminder_time:24") },
             new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), CallbackResponses.BackToMenu) }
         });
 

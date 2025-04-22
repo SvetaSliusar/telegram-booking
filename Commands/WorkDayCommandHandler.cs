@@ -41,7 +41,7 @@ public class WorkDayCommandHandler : ICallbackCommand
 
         var commandHandlers = new Dictionary<string, Func<long, string, CancellationToken, Task>>(StringComparer.OrdinalIgnoreCase)
         {
-            {"setup_work_days", HandleSetupWorkDaysAsync },
+            { "setup_work_days", HandleSetupWorkDaysAsync },
             { "workingdays", HandleAddWorkingDayAsync },
             { "workingdays_confirm", HandleConfirmWorkingDaysAsync },
             { "workingdays_clearSelection", HandleClearSelectionAsync }
@@ -109,7 +109,7 @@ public class WorkDayCommandHandler : ICallbackCommand
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup(new[]
         {
             CreateDayRow(new List<DayOfWeek> { DayOfWeek.Monday, DayOfWeek.Tuesday }, workingDays),
-            CreateDayRow(new List<DayOfWeek> {DayOfWeek.Wednesday, DayOfWeek.Thursday  }, workingDays),
+            CreateDayRow(new List<DayOfWeek> { DayOfWeek.Wednesday, DayOfWeek.Thursday  }, workingDays),
             CreateDayRow(new List<DayOfWeek> { DayOfWeek.Friday, DayOfWeek.Saturday }, workingDays),
             CreateDayRow(new List<DayOfWeek> { DayOfWeek.Sunday }, workingDays),
             new []

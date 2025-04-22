@@ -9,6 +9,6 @@ public class Token
     public required string TokenValue { get; set; }
     public bool Used { get; set; }
     public long? ChatId { get; set; }
-    public string Language { get; set; } = "EN";
+    public string? Language { get; set; }
     public required virtual Company Company { get; set; }
 } 

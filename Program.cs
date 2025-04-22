@@ -69,7 +69,10 @@ builder.Services.AddDbContext<BookingDbContext>(options =>
 builder.Services.AddScoped<ClientUpdateHandler>();
 builder.Services.AddScoped<CompanyUpdateHandler>();
 builder.Services.AddScoped<TokensService>();
-builder.Services.AddSingleton<IUserStateService, UserStateService>();
+builder.Services.AddSingleton<IUserStateService>(sp => 
+    new UserStateService(
+        sp.GetRequiredService<IServiceScopeFactory>(),
+        sp.GetRequiredService<ILogger<UserStateService>>()));
 builder.Services.AddSingleton<ICompanyCreationStateService, CompanyCreationStateService>();
 builder.Services.AddScoped<IStartCommandHandler, StartCommandHandler>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
@@ -83,7 +86,9 @@ builder.Services.AddTransient<WorkTimeCommandHandler>();
 builder.Services.AddTransient<ConfirmBookingCommand>();
 builder.Services.AddTransient<RejectBookingCommand>();
 builder.Services.AddTransient<MainMenuCommandHandler>();
-
+builder.Services.AddTransient<IMainMenuCommandHandler>(provider => provider.GetRequiredService<MainMenuCommandHandler>());
+builder.Services.AddTransient<ChangeLanguageCommandHandler>();
+builder.Services.AddTransient<IChangeLanguageCommandHandler>(provider => provider.GetRequiredService<ChangeLanguageCommandHandler>());
 builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
 {
     var factory = new CallbackCommandFactory(serviceProvider);
@@ -135,7 +140,6 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "menu",
         "back_to_menu"
     );
-
     return factory;
 });
 
