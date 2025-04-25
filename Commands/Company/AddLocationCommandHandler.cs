@@ -1,10 +1,11 @@
 
+using Telegram.Bot.Commands;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
-namespace Telegram.Bot.Commands;
+namespace Telegram.Bot.Command.Company;
 
 public class AddLocationCommandHandler : ICallbackCommand
 {

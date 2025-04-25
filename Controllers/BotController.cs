@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Telegram.Bot.Commands;
+using Telegram.Bot.Commands.Common;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types;

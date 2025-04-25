@@ -186,6 +186,8 @@ public static class Translations
             ["FeedbackThankYou"] = "Thank you for your feedback! We appreciate your opinion.",
             ["FeedbackTooLong"] = "❌ Feedback is too long. Please keep it under 500 characters.",
             ["FeedbackError"] = "❌ An error occurred while processing your feedback. Please try again later.",
+            ["InvalidCompanySelection"] = "❌ Invalid company selection. Please try again.",
+            ["NoServiceSeleted"] = "❌ No service selected. Please select a service to proceed.",
         },
         ["UA"] = new Dictionary<string, string>
         {
@@ -374,7 +376,9 @@ public static class Translations
             ["FeedbackPrompt"] = "Будь ласка, залиште свій відгук про наш сервіс:",
             ["FeedbackThankYou"] = "Дякуємо за ваш відгук! Ми цінуємо вашу думку.",
             ["FeedbackTooLong"] = "❌ Відгук занадто довгий. Будь ласка, скоротіть його до 1000 символів.",
-            ["FeedbackError"] = "❌ Сталася помилка при надсиланні відгуку. Будь ласка, спробуйте пізніше."
+            ["FeedbackError"] = "❌ Сталася помилка при надсиланні відгуку. Будь ласка, спробуйте пізніше.",
+            ["InvalidCompanySelection"] = "❌ Компанію не знайдено. Будь ласка, спробуйте ще раз.",
+            ["NoServiceSeleted"] = "❌ Послугу не вибрано. Будь ласка, виберіть послугу для продовження."
         }
     };
 

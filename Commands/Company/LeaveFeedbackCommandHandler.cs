@@ -5,7 +5,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace Telegram.Bot.Commands;
+namespace Telegram.Bot.Commands.Company;
 
 public class LeaveFeedbbackCommandHanlder : ICallbackCommand
 {

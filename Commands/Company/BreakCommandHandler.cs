@@ -7,7 +7,7 @@ using Telegram.Bot.Models;
 using System.Text;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 
-namespace Telegram.Bot.Commands;
+namespace Telegram.Bot.Commands.Company;
 
 public class BreakCommandHandler : ICallbackCommand
 {

@@ -10,6 +10,10 @@ using Telegram.Bot.Commands;
 using Telegram.Bot.Enums;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Telegram.Bot.Services.StateHandlers;
+using Telegram.Bot.Commands.Company;
+using Telegram.Bot.Commands.Common;
+using Telegram.Bot.Command.Company;
+using Telegram.Bot.Commands.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,10 +78,18 @@ builder.Services.AddSingleton<IUserStateService>(sp =>
         sp.GetRequiredService<IServiceScopeFactory>(),
         sp.GetRequiredService<ILogger<UserStateService>>()));
 builder.Services.AddSingleton<ICompanyCreationStateService, CompanyCreationStateService>();
-builder.Services.AddScoped<IStartCommandHandler, StartCommandHandler>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddHostedService<BookingReminderService>();
 #region Command Handlers
+
+#region Common Commands
+builder.Services.AddScoped<IStartCommandHandler, StartCommandHandler>();
+builder.Services.AddTransient<IMainMenuCommandHandler>(provider => provider.GetRequiredService<MainMenuCommandHandler>());
+builder.Services.AddTransient<ChangeLanguageCommandHandler>();
+builder.Services.AddTransient<IChangeLanguageCommandHandler>(provider => provider.GetRequiredService<ChangeLanguageCommandHandler>());
+#endregion Common Commands
+
+#region Company Commands
 builder.Services.AddTransient<BreakCommandHandler>();
 builder.Services.AddTransient<GenerateClientLinkHandler>();
 builder.Services.AddTransient<ServiceCommandHandler>();
@@ -89,12 +101,35 @@ builder.Services.AddTransient<EditCompanyCommandHandler>();
 builder.Services.AddTransient<MainMenuCommandHandler>();
 builder.Services.AddTransient<AddLocationCommandHandler>();
 builder.Services.AddTransient<LeaveFeedbbackCommandHanlder>();
-builder.Services.AddTransient<IMainMenuCommandHandler>(provider => provider.GetRequiredService<MainMenuCommandHandler>());
-builder.Services.AddTransient<ChangeLanguageCommandHandler>();
-builder.Services.AddTransient<IChangeLanguageCommandHandler>(provider => provider.GetRequiredService<ChangeLanguageCommandHandler>());
+#endregion Company Commands
+#region Client Commands
+builder.Services.AddTransient<ICalendarService>(provider => provider.GetRequiredService<ChooseDateTimeCommandHandler>());
+builder.Services.AddTransient<BookAppointmentCommandHandler>();
+builder.Services.AddTransient<ViewBookingsCommandHanlder>();
+builder.Services.AddTransient<ChooseCompanyCommandHandler>();
+builder.Services.AddTransient<ChooseServiceCommandHandler>();
+builder.Services.AddTransient<ChooseDateTimeCommandHandler>();
+builder.Services.AddTransient<ChangeTimezoneCommandHandler>();
+#endregion Client Commands
+
 builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
 {
     var factory = new CallbackCommandFactory(serviceProvider);
+    factory.RegisterCommand<BookAppointmentCommandHandler>("book_appointment");
+    factory.RegisterCommand<ViewBookingsCommandHanlder>("view_bookings");
+    factory.RegisterCommand<ChangeTimezoneCommandHandler>(
+        "change_timezone", 
+        "set_timezone"
+    );
+    factory.RegisterCommand<ChooseCompanyCommandHandler>("choose_company");
+    factory.RegisterCommand<ChooseServiceCommandHandler>("choose_service");
+    factory.RegisterCommand<ChooseDateTimeCommandHandler>(
+        "choose_date",
+        "choose_this_month", 
+        "choose_next_month", 
+        "choose_previous_month",
+        "choose_time"
+    );
 
     factory.RegisterCommand<BreakCommandHandler>(
         "manage_breaks",

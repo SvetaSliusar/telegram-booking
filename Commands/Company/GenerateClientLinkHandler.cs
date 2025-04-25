@@ -4,7 +4,7 @@ using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
-namespace Telegram.Bot.Commands;
+namespace Telegram.Bot.Commands.Company;
 
 public class GenerateClientLinkHandler : ICallbackCommand
 {

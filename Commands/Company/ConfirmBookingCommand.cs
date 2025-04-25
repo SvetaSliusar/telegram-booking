@@ -4,7 +4,7 @@ using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Services;
 
-namespace Telegram.Bot.Commands
+namespace Telegram.Bot.Commands.Company
 {
     public class ConfirmBookingCommand : ICallbackCommand
     {

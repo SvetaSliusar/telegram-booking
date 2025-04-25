@@ -6,7 +6,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 
-namespace Telegram.Bot.Commands;
+namespace Telegram.Bot.Commands.Company;
 
 public class ServiceCommandHandler : ICallbackCommand
 {

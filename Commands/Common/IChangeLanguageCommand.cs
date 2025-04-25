@@ -1,4 +1,4 @@
-namespace Telegram.Bot.Commands;
+namespace Telegram.Bot.Commands.Common;
 
 public interface IChangeLanguageCommandHandler
 {

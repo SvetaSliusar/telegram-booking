@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Telegram.Bot.Commands;
 using Telegram.Bot.Models;
+using Telegram.Bot.Services;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace Telegram.Bot.Services;
+namespace Telegram.Bot.Commands.Common;
 
 public interface IStartCommandHandler
 {
@@ -20,6 +20,7 @@ public class StartCommandHandler : IStartCommandHandler
     private const string DefaultLanguage = "EN";
     private const string StartCommand = "/start";
     private const string StartCommandWithParameter = "/start=";
+    private const int DemoCompanyId = 1; 
 
     public StartCommandHandler(
         ITelegramBotClient botClient,
@@ -75,10 +76,8 @@ public class StartCommandHandler : IStartCommandHandler
             return true;
         }
 
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: "❌ Please provide a valid company token or company alias.",
-            cancellationToken: cancellationToken);
+        await AddClientIfNotExists(chatId, DemoCompanyId, cancellationToken);
+        await ShowInitialLanguageSelection(chatId, cancellationToken);
 
         return true;
     }
@@ -112,7 +111,7 @@ public class StartCommandHandler : IStartCommandHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "❌ Invalid parameter. Please use a valid company token or company alias.",
+            text: "❌ Invalid parameter. Please use a valid company token or alias.",
             cancellationToken: cancellationToken);
 
         return true;
@@ -123,7 +122,7 @@ public class StartCommandHandler : IStartCommandHandler
         var client = await _dbContext.Clients.FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
         if (client == null)
         {
-            client = new Client
+            client = new Models.Client
             {
                 ChatId = chatId,
                 Name = "New Client",
@@ -164,4 +163,4 @@ public class StartCommandHandler : IStartCommandHandler
             replyMarkup: languageKeyboard,
             cancellationToken: cancellationToken);
     }
-} 
+}
