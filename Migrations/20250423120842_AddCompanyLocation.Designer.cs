@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Telegram.Bot;
@@ -11,9 +12,11 @@ using Telegram.Bot;
 namespace TelegramBookingBot.Migrations
 {
     [DbContext(typeof(BookingDbContext))]
-    partial class BookingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250423120842_AddCompanyLocation")]
+    partial class AddCompanyLocation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -196,41 +199,6 @@ namespace TelegramBookingBot.Migrations
                     b.HasIndex("CompanyId");
 
                     b.ToTable("Employees");
-                });
-
-            modelBuilder.Entity("Telegram.Bot.Models.Feedback", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AdminResponse")
-                        .HasColumnType("text");
-
-                    b.Property<int>("CompanyId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsResolved")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime?>("ResolvedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CompanyId");
-
-                    b.ToTable("Feedbacks");
                 });
 
             modelBuilder.Entity("Telegram.Bot.Models.ReminderSettings", b =>
@@ -425,17 +393,6 @@ namespace TelegramBookingBot.Migrations
                     b.Navigation("Company");
                 });
 
-            modelBuilder.Entity("Telegram.Bot.Models.Feedback", b =>
-                {
-                    b.HasOne("Telegram.Bot.Models.Company", "Company")
-                        .WithMany("Feedbacks")
-                        .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Company");
-                });
-
             modelBuilder.Entity("Telegram.Bot.Models.ReminderSettings", b =>
                 {
                     b.HasOne("Telegram.Bot.Models.Company", "Company")
@@ -479,8 +436,6 @@ namespace TelegramBookingBot.Migrations
                     b.Navigation("ClientInvites");
 
                     b.Navigation("Employees");
-
-                    b.Navigation("Feedbacks");
 
                     b.Navigation("ReminderSettings");
                 });

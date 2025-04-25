@@ -143,7 +143,8 @@ public class UserStateService : IUserStateService
                 state.ServiceCreationData = new ServiceCreationData
                 {
                     Name = string.Empty,
-                    Description = string.Empty
+                    Description = string.Empty,
+                    Currency = Currency.EUR
                 };
                 state.CurrentStep = ConversationStep.None;
             }

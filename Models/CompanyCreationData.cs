@@ -10,6 +10,7 @@ public class CompanyCreationData
 {
     public CompanyFlowMode Mode { get; set; } = CompanyFlowMode.Create;
     public required string CompanyName { get; set; }
+    public string? CompanyLocation { get; set; }
     public int EmployeeCount { get; set; }
     public List<EmployeeCreationData> Employees { get; set; } = new();
     public int CurrentEmployeeIndex { get; set; }

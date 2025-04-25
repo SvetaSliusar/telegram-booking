@@ -37,7 +37,7 @@ public class StartCommandHandler : IStartCommandHandler
 
     public async Task<bool> HandleStartCommandAsync(string messageText, long chatId, CancellationToken cancellationToken)
     {
-        if (!messageText.StartsWith("/start"))
+        if (string.IsNullOrEmpty(messageText) || !messageText.StartsWith("/start"))
             return false;
 
         string parameter = ExtractStartParameter(messageText);

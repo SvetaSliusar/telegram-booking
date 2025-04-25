@@ -31,7 +31,7 @@ public class WorkStartTimeHandler : BaseStateHandler
         var day = (DayOfWeek)int.Parse(parts[2]);
         var language = UserStateService.GetLanguage(chatId);
         
-        if (!TimeSpan.TryParse(message, CultureInfo.InvariantCulture, out TimeSpan startTime))
+        if (!TimeSpan.TryParseExact(message, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan startTime))
         {
                 await BotClient.SendMessage(
                     chatId: chatId,

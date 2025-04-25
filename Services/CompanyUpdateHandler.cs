@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
@@ -19,7 +18,6 @@ public class CompanyUpdateHandler
     private readonly BookingDbContext _dbContext;
     private readonly ICallbackCommandFactory _commandFactory;
     private readonly IUserStateService _userStateService;
-    private readonly ICompanyCreationStateService _companyCreationStateService;
 
     private readonly IEnumerable<IStateHandler> _stateHandlers;
 
@@ -29,7 +27,6 @@ public class CompanyUpdateHandler
         BookingDbContext dbContext,
         ICallbackCommandFactory callbackCommandFactory,
         IUserStateService userStateService,
-        ICompanyCreationStateService companyCreationStateService,
         IEnumerable<IStateHandler> stateHandlers)
     {
         _botClient = botClient;
@@ -37,7 +34,6 @@ public class CompanyUpdateHandler
         _dbContext = dbContext;
         _commandFactory = callbackCommandFactory;
         _userStateService = userStateService;
-        _companyCreationStateService = companyCreationStateService;
         _stateHandlers = stateHandlers;
     }
 
@@ -62,8 +58,11 @@ public class CompanyUpdateHandler
     }
 
     private async Task BotOnMessageReceived(Message message, CancellationToken cancellationToken)
-    {
-        if (message.Text is not { } messageText)
+    {       
+        var messageText = string.IsNullOrEmpty(message.Text) 
+            ? message.Venue?.Address 
+            : message.Text;
+        if (string.IsNullOrEmpty(messageText))
             return;
 
         var chatId = message.Chat.Id;

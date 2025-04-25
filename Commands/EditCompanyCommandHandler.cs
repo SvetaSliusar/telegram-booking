@@ -40,6 +40,7 @@ public class EditCompanyCommandHandler : ICallbackCommand
                 InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ManageBreaks"), "manage_breaks")
             },
             new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") },
+            new () { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddLocation"), "add_location") },
             new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ReminderSettings"), "reminder_settings") },
             new()
             {

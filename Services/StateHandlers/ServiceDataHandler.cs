@@ -58,11 +58,7 @@ public class ServiceDataHandler : BaseStateHandler
 
                 service.Description = message;
                 CompanyCreationStateService.UpdateService(chatId, service);
-                UserStateService.SetConversation(chatId, "WaitingForServicePrice");
-                await BotClient.SendMessage(
-                    chatId: chatId,
-                    text: Translations.GetMessage(language, "EnterServicePrice"),
-                    cancellationToken: cancellationToken);
+                await ShowPriceCurrency(chatId, cancellationToken);
                 break;
 
             case "WaitingForServicePrice":
@@ -92,6 +88,7 @@ public class ServiceDataHandler : BaseStateHandler
                 service.Duration = customDuration;
                 CompanyCreationStateService.UpdateService(chatId, service);
                 await SaveNewService(chatId, cancellationToken);
+                await HandleServiceCreationAsync(language, chatId, cancellationToken);
                 break;
         }
     }
@@ -157,6 +154,7 @@ public class ServiceDataHandler : BaseStateHandler
             Price = serviceCreationData.Price,
             Duration = TimeSpan.FromMinutes(serviceCreationData.Duration),
             Description = serviceCreationData.Description,
+            Currency = serviceCreationData.Currency,
             EmployeeId = employee.Id,
             Employee = employee
         };
@@ -171,6 +169,34 @@ public class ServiceDataHandler : BaseStateHandler
         
         CompanyCreationStateService.RemoveService(chatId, serviceCreationData.Id);
         UserStateService.RemoveConversation(chatId);
+    }
+
+    private async Task ShowPriceCurrency(long chatId, CancellationToken cancellationToken)
+    {
+        var language = UserStateService.GetLanguage(chatId);
+        var state = CompanyCreationStateService.GetState(chatId);
+        var service = state.Services.FirstOrDefault(s => s.Id == state.CurrentServiceIndex);
+        if (service == null)
+        {
+            await BotClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "SessionExpired"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var currencyKeyboard = new InlineKeyboardMarkup(new[]
+        {
+            new[] { InlineKeyboardButton.WithCallbackData("USD", $"service_currency:{Currency.USD}") },
+            new[] { InlineKeyboardButton.WithCallbackData("EUR", $"service_currency:{Currency.EUR}") },
+            new[] { InlineKeyboardButton.WithCallbackData("UAH", $"service_currency:{Currency.UAH}") }
+        });
+
+        await BotClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "ChooseCurrency"),
+            replyMarkup: currencyKeyboard,
+            cancellationToken: cancellationToken);
     }
 
     private async Task HandleServicePriceInput(long chatId, string priceInput, CancellationToken cancellationToken)
@@ -215,4 +241,19 @@ public class ServiceDataHandler : BaseStateHandler
             replyMarkup: predefinedDurations,
             cancellationToken: cancellationToken);
     }
+
+        private async Task HandleServiceCreationAsync(string language, long chatId, CancellationToken cancellationToken)
+        {
+            var keyboard = new InlineKeyboardMarkup(new[]
+            {
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") },
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+            });
+
+            await BotClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "TheNextStep"),
+                replyMarkup: keyboard,
+                cancellationToken: cancellationToken);
+        }
 } 

@@ -87,6 +87,8 @@ builder.Services.AddTransient<ConfirmBookingCommand>();
 builder.Services.AddTransient<RejectBookingCommand>();
 builder.Services.AddTransient<EditCompanyCommandHandler>();
 builder.Services.AddTransient<MainMenuCommandHandler>();
+builder.Services.AddTransient<AddLocationCommandHandler>();
+builder.Services.AddTransient<LeaveFeedbbackCommandHanlder>();
 builder.Services.AddTransient<IMainMenuCommandHandler>(provider => provider.GetRequiredService<MainMenuCommandHandler>());
 builder.Services.AddTransient<ChangeLanguageCommandHandler>();
 builder.Services.AddTransient<IChangeLanguageCommandHandler>(provider => provider.GetRequiredService<ChangeLanguageCommandHandler>());
@@ -108,7 +110,8 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
     factory.RegisterCommand<ServiceCommandHandler>(
         "list_services",
         "add_service",
-        "service_duration"
+        "service_duration",
+        "service_currency"
     );
     factory.RegisterCommand<ChangeLanguageCommandHandler>(
         CallbackResponses.ChangeLanguage,
@@ -144,6 +147,12 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
     factory.RegisterCommand<EditCompanyCommandHandler>(
         "edit_company_menu"
     );
+    factory.RegisterCommand<AddLocationCommandHandler>(
+        "add_location"
+    );
+    factory.RegisterCommand<LeaveFeedbbackCommandHanlder>(
+        "leave_feedback"
+    );
     return factory;
 });
 
@@ -158,7 +167,8 @@ builder.Services.AddScoped<IStateHandler, WorkStartTimeHandler>();
 builder.Services.AddScoped<IStateHandler, WorkEndTimeHandler>();
 builder.Services.AddScoped<IStateHandler, ServiceDataHandler>();
 builder.Services.AddScoped<IStateHandler, InitialCompanyDataHandler>();
-
+builder.Services.AddScoped<IStateHandler, LocationHandler>();
+builder.Services.AddScoped<IStateHandler, FeedbackPromptHanlder>();
 // ✅ Hosted Service to Manage Webhook
 builder.Services.AddHostedService<ConfigureWebhook>();
 

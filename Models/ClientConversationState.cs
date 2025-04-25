@@ -18,8 +18,8 @@ public class ClientConversationState
         Employees = new List<EmployeeCreationData>(),
         Services = new List<ServiceCreationData>(),
         WorkingDays = new List<string>(),
-        DefaultStartTime = new TimeSpan(9, 0, 0), // 9:00 AM
-        DefaultEndTime = new TimeSpan(17, 0, 0)  // 5:00 PM
+        DefaultStartTime = new TimeSpan(9, 0, 0),
+        DefaultEndTime = new TimeSpan(17, 0, 0)
     };
 
     public ServiceCreationData ServiceCreationData { get; set; } = new()
@@ -27,7 +27,8 @@ public class ClientConversationState
         Name = "New Service",
         Description = "Service description",
         Price = 0,
-        Duration = 30
+        Duration = 30,
+        Currency = Currency.EUR
     };
 
     public ConversationStep CurrentStep { get; set; } = ConversationStep.None;

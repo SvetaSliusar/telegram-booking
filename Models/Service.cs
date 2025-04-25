@@ -6,6 +6,7 @@ public class Service
     public required string Name { get; set; }
     public decimal Price { get; set; }
     public required string Description { get; set; }
+    public required Currency Currency { get; set; }
     public TimeSpan Duration { get; set; }  // Duration of the service (e.g., 1 hour)
     public int EmployeeId { get; set; }
     public required virtual Employee Employee { get; set; }

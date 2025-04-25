@@ -110,10 +110,6 @@ public class ClientUpdateHandler
                 var selectedLanguage = s.Split(':')[1];
                 await _changeLanguageCommandHandler.HandleSetLanguageCommandAsync(chatId, selectedLanguage, cancellationToken);
                 break;
-            case var s when s != null && s.StartsWith("category_"):
-                var category = data.Replace("category_", "");
-                await HandleCategorySelection(chatId, category, cancellationToken);
-                break;
             case var s when s != null && s.StartsWith("company_"):
                 var companyId = int.Parse(data.Replace("company_", ""));
                 await HandleCompanySelection(chatId, companyId, cancellationToken);
@@ -125,6 +121,10 @@ public class ClientUpdateHandler
             case var s when s != null && s.StartsWith("date_"):
                 var selectedDate = DateTime.Parse(data.Replace("date_", ""));
                 await HandleDateSelection(chatId, selectedDate, cancellationToken);
+                break;
+            case var s when s != null && s.StartsWith("this_"):
+                var currentDate = DateTime.UtcNow;
+                await ShowCalendar(chatId, currentDate, cancellationToken);
                 break;
             case var s when s != null && (s.StartsWith("prev_") || s.StartsWith("next_")):
                 var referenceDate = DateTime.Parse(data.Replace("prev_", "").Replace("next_", ""));
@@ -236,33 +236,6 @@ public class ClientUpdateHandler
             { 
                 new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
             }),
-            cancellationToken: cancellationToken);
-    }
-
-    public async Task HandleCategorySelection(long chatId, string category, CancellationToken cancellationToken)
-    {
-        var companies = await _dbContext.Companies
-        // .Where(c => c.Category == category)
-            .ToListAsync(cancellationToken);
-
-        if (!companies.Any())
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: "❌ No companies found for this category. Please try another.",
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var companyButtons = companies.Select(c =>
-            new[] { InlineKeyboardButton.WithCallbackData(c.Name, $"company_{c.Id}") }).ToArray();
-
-        InlineKeyboardMarkup companyKeyboard = new(companyButtons);
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: "Here are the companies offering this service:",
-            replyMarkup: companyKeyboard,
             cancellationToken: cancellationToken);
     }
 
@@ -580,43 +553,26 @@ public class ClientUpdateHandler
 
     public async Task ShowCalendar(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
     {
-        var daysInMonth = DateTime.DaysInMonth(selectedDate.Year, selectedDate.Month);
-        var firstDayOfMonth = new DateTime(selectedDate.Year, selectedDate.Month, 1);
         var currentDate = DateTime.UtcNow.Date;
-        var nextMonth = currentDate.AddMonths(1);
-        var isCurrentMonth = selectedDate.Year == currentDate.Year && selectedDate.Month == currentDate.Month;
-        var isNextMonth = selectedDate.Year == nextMonth.Year && selectedDate.Month == nextMonth.Month;
-        var isPastMonth = selectedDate < currentDate;
-        var isFutureMonth = selectedDate > nextMonth;
+        var currentMonthStart = new DateTime(currentDate.Year, currentDate.Month, 1);
+        var nextMonthStart = currentMonthStart.AddMonths(1);
+        var nextMonthEnd = nextMonthStart.AddMonths(1).AddDays(-1);
 
-        List<List<InlineKeyboardButton>> calendarButtons = new();
-
-        // Weekday headers
-        calendarButtons.Add(new List<InlineKeyboardButton>
-        {
-            InlineKeyboardButton.WithCallbackData("Mo", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Tu", "ignore"),
-            InlineKeyboardButton.WithCallbackData("We", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Th", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Fr", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Sa", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Su", "ignore"),
-        });
-
-        List<InlineKeyboardButton> weekRow = new();
-
-        // Add empty buttons before the first day of the month
-        for (int i = 1; i < (int)firstDayOfMonth.DayOfWeek; i++)
-        {
-            weekRow.Add(InlineKeyboardButton.WithCallbackData(" ", "ignore"));
-        }
-
-        // Get the service ID from the user conversation state
-        if (!userConversations.TryGetValue(chatId, out var state) || !state.StartsWith("WaitingForDate_"))
+        // Restrict booking window
+        if (selectedDate < currentMonthStart || selectedDate > nextMonthEnd)
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Error: No service selected. Please try again.",
+                text: "⚠️ You can only book for this and next month.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        if (!userConversations.TryGetValue(chatId, out var state) || !state.StartsWith("WaitingForDate_"))
+        {
+            await _botClient.SendMessage(
+                chatId: chatId, 
+                text: "❌ No service selected. Please try again.",
                 cancellationToken: cancellationToken);
             return;
         }
@@ -631,142 +587,136 @@ public class ClientUpdateHandler
         if (service == null || service.Employee == null)
         {
             await _botClient.SendMessage(
-                chatId: chatId,
-                text: "❌ Error: Service or employee not found. Please try again.",
+                chatId: chatId, 
+                text: "❌ Service or employee not found.", 
                 cancellationToken: cancellationToken);
             return;
         }
 
-        // Get all bookings for this service in the current month
-        var monthStart = DateTime.SpecifyKind(new DateTime(selectedDate.Year, selectedDate.Month, 1), DateTimeKind.Utc);
-        var monthEnd = DateTime.SpecifyKind(monthStart.AddMonths(1).AddDays(-1), DateTimeKind.Utc);
-        
+        var daysInMonth = DateTime.DaysInMonth(selectedDate.Year, selectedDate.Month);
+        var firstDayOfMonth = new DateTime(selectedDate.Year, selectedDate.Month, 1);
+        var startIndex = ((int)firstDayOfMonth.DayOfWeek + 6) % 7;
+
+        var monthStart = DateTime.SpecifyKind(firstDayOfMonth, DateTimeKind.Utc);
+        var monthEnd = DateTime.SpecifyKind(firstDayOfMonth.AddMonths(1).AddDays(-1), DateTimeKind.Utc);
+
         var bookedTimes = await _dbContext.Bookings
-            .Where(b => b.ServiceId == serviceId && 
-                        b.BookingTime >= monthStart && 
-                        b.BookingTime <= monthEnd)
+            .Where(b => b.ServiceId == serviceId && b.BookingTime >= monthStart && b.BookingTime <= monthEnd)
             .Select(b => b.BookingTime)
             .ToListAsync(cancellationToken);
 
-        // Generate day buttons
+        List<List<InlineKeyboardButton>> calendarButtons = new();
+
+        calendarButtons.Add(new List<InlineKeyboardButton>
+        {
+            InlineKeyboardButton.WithCallbackData("Mo", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Tu", "ignore"),
+            InlineKeyboardButton.WithCallbackData("We", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Th", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Fr", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Sa", "ignore"),
+            InlineKeyboardButton.WithCallbackData("Su", "ignore"),
+        });
+
+        List<InlineKeyboardButton> weekRow = new();
+
+        for (int i = 0; i < startIndex; i++)
+            weekRow.Add(InlineKeyboardButton.WithCallbackData(" ", "ignore"));
+
         for (int day = 1; day <= daysInMonth; day++)
         {
             var date = DateTime.SpecifyKind(new DateTime(selectedDate.Year, selectedDate.Month, day), DateTimeKind.Utc);
-            var dayOfWeek = date.DayOfWeek;
-            
-            // Check if employee works on this day
-            var workingHours = service.Employee.WorkingHours
-                .FirstOrDefault(wh => wh.DayOfWeek == dayOfWeek);
-            
-            if (workingHours == null)
+            var isToday = date.Date == currentDate;
+            var workingHours = service.Employee.WorkingHours.FirstOrDefault(wh => wh.DayOfWeek == date.DayOfWeek);
+
+            string label = day.ToString();
+            string callbackData = "ignore";
+
+            if (workingHours != null && date.Date >= currentDate && date <= nextMonthEnd)
             {
-                // Employee doesn't work on this day
-                weekRow.Add(InlineKeyboardButton.WithCallbackData($"{day}⚫", "ignore"));
-            }
-            else
-            {
-                var isPastDate = date.Date < currentDate;
-                var isTooFarInFuture = date.Date > nextMonth;
-                
-                if (isPastDate || isTooFarInFuture)
+                var dayBookings = bookedTimes.Where(b => b.Date == date.Date).Select(b => b.TimeOfDay).ToList();
+                var currentTime = workingHours.StartTime;
+                bool hasAvailableSlot = false;
+
+                while (currentTime < workingHours.EndTime)
                 {
-                    // Date is in the past or too far in the future
-                    weekRow.Add(InlineKeyboardButton.WithCallbackData($"{day}⚫", "ignore"));
+                    var slotEnd = currentTime.Add(service.Duration);
+
+                    if (slotEnd > workingHours.EndTime)
+                        break;
+
+                    bool isDuringBreak = workingHours.Breaks.Any(b =>
+                        (currentTime >= b.StartTime && currentTime < b.EndTime) ||
+                        (slotEnd > b.StartTime && slotEnd <= b.EndTime) ||
+                        (currentTime <= b.StartTime && slotEnd >= b.EndTime));
+
+                    bool isBooked = dayBookings.Any(bookedTime =>
+                        (currentTime <= bookedTime && bookedTime < slotEnd) ||
+                        (bookedTime <= currentTime && currentTime < bookedTime.Add(service.Duration)));
+
+                    if (!isDuringBreak && !isBooked)
+                    {
+                        hasAvailableSlot = true;
+                        break;
+                    }
+
+                    currentTime = currentTime.Add(service.Duration);
+                }
+
+                if (hasAvailableSlot)
+                {
+                    callbackData = $"date_{date:yyyy-MM-dd}";
                 }
                 else
                 {
-                    // Check if there are any available time slots for this day
-                    var dayStart = date.Date;
-                    var dayEnd = dayStart.AddDays(1);
-                    
-                    var dayBookings = bookedTimes
-                        .Where(b => b.Date == date.Date)
-                        .Select(b => b.TimeOfDay)
-                        .ToList();
-
-                    var hasAvailableSlots = false;
-                    var currentTime = workingHours.StartTime;
-                    var serviceDuration = service.Duration;
-
-                    while (currentTime < workingHours.EndTime)
-                    {
-                        var slotEnd = currentTime.Add(serviceDuration);
-                        
-                        // Check if the slot is within working hours
-                        if (slotEnd > workingHours.EndTime)
-                            break;
-
-                        // Check if the slot overlaps with any breaks
-                        var isDuringBreak = workingHours.Breaks.Any(b => 
-                            (currentTime >= b.StartTime && currentTime < b.EndTime) ||
-                            (slotEnd > b.StartTime && slotEnd <= b.EndTime) ||
-                            (currentTime <= b.StartTime && slotEnd >= b.EndTime));
-
-                        if (!isDuringBreak)
-                        {
-                            // Check if the slot is already booked
-                            var isBooked = dayBookings.Any(bookedTime => 
-                                (currentTime <= bookedTime && bookedTime < slotEnd) ||
-                                (bookedTime <= currentTime && currentTime < bookedTime.Add(serviceDuration)));
-
-                            if (!isBooked)
-                            {
-                                hasAvailableSlots = true;
-                                break;
-                            }
-                        }
-
-                        currentTime = currentTime.Add(serviceDuration);
-                    }
-
-                    if (hasAvailableSlots)
-                    {
-                        weekRow.Add(InlineKeyboardButton.WithCallbackData(day.ToString(), $"date_{date:yyyy-MM-dd}"));
-                    }
-                    else
-                    {
-                        weekRow.Add(InlineKeyboardButton.WithCallbackData($"{day}⚫", "ignore"));
-                    }
+                    label += "⚫";
                 }
             }
+            else
+            {
+                label += workingHours == null ? "🚫" : "⚫";
+            }
 
-            if (weekRow.Count == 7) // New row after each week
+            if (isToday)
+                label += "🔵";
+
+            weekRow.Add(InlineKeyboardButton.WithCallbackData(label, callbackData));
+
+            if (weekRow.Count == 7)
             {
                 calendarButtons.Add(weekRow);
                 weekRow = new List<InlineKeyboardButton>();
             }
         }
 
-        if (weekRow.Any()) // Add last row if not full
+        if (weekRow.Any())
             calendarButtons.Add(weekRow);
 
-        // Navigation buttons
-        var prevButton = isPastMonth || isCurrentMonth
+        var prevButton = selectedDate <= currentMonthStart
             ? InlineKeyboardButton.WithCallbackData("⬅️", "ignore")
             : InlineKeyboardButton.WithCallbackData("⬅️", $"prev_{selectedDate:yyyy-MM-dd}");
 
-        var nextButton = isFutureMonth || isNextMonth
+        var nextButton = selectedDate >= nextMonthStart
             ? InlineKeyboardButton.WithCallbackData("➡️", "ignore")
             : InlineKeyboardButton.WithCallbackData("➡️", $"next_{selectedDate:yyyy-MM-dd}");
 
         calendarButtons.Add(new List<InlineKeyboardButton>
         {
+            InlineKeyboardButton.WithCallbackData("📆 This Month", $"this_{currentDate:yyyy-MM-dd}"),
             prevButton,
             nextButton
         });
 
         var keyboard = new InlineKeyboardMarkup(calendarButtons);
 
-        var messageText = $"📅 Select a date: {selectedDate:MMMM yyyy}\n" +
-                         (isPastMonth ? "⚠️ Past month\n" : "") +
-                         (isFutureMonth ? "⚠️ Future month\n" : "") +
-                         "Available dates are clickable\n" +
-                         "⚫ Unavailable dates (no working hours, fully booked, or non-working days)";
+        string messageText = $"📅 Select a date: {selectedDate:MMMM yyyy}\n" +
+                            "🔵 Today | ⚫ Fully booked | 🚫 Day off\n" +
+                            "You can book appointments only for this and next month.";
 
         await _botClient.SendMessage(
-            chatId: chatId,
-            text: messageText,
-            replyMarkup: keyboard,
+            chatId: chatId, 
+            text: messageText, 
+            replyMarkup: keyboard, 
             cancellationToken: cancellationToken);
     }
 

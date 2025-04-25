@@ -29,7 +29,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
     {
         var language = UserStateService.GetLanguage(chatId);
         
-        if (!TimeSpan.TryParse(message, CultureInfo.InvariantCulture, out TimeSpan endTime))
+        if (!TimeSpan.TryParseExact(message, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan endTime))
         {
             await BotClient.SendMessage(
                 chatId: chatId,
@@ -114,7 +114,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
 
             var keyboard = new InlineKeyboardMarkup(new[]
             {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddSevice"), "add_service") }
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") }
             });
 
             await BotClient.SendMessage(chatId, Translations.GetMessage(language, "TheNextStep"), replyMarkup: keyboard, cancellationToken: cancellationToken);

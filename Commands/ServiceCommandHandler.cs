@@ -16,20 +16,16 @@ public class ServiceCommandHandler : ICallbackCommand
     private readonly BookingDbContext _dbContext;
     private readonly ILogger<ServiceCommandHandler> _logger;
 
-    private readonly ICallbackCommandFactory _commandFactory;
-
     public ServiceCommandHandler(
         IUserStateService userStateService, 
         BookingDbContext dbContext,
         ITelegramBotClient botClient,
         ICompanyCreationStateService companyCreationStateService,
-        ICallbackCommandFactory commandFactory,
         ILogger<ServiceCommandHandler> logger)
     {
         _userStateService = userStateService;
         _dbContext = dbContext;
         _botClient = botClient;
-        _commandFactory = commandFactory;
         _companyCreationStateService = companyCreationStateService;
         _logger = logger;
     }
@@ -46,7 +42,8 @@ public class ServiceCommandHandler : ICallbackCommand
         {
             {"list_services", HandleListServicesAsync },
             {"add_service", HandleAddServiceAsync },
-            {"service_duration", HandleServiceDurationAsync }
+            {"service_duration", HandleServiceDurationAsync },
+            {"service_currency", HandleServiceCurrencyAsync }
         };
 
         if (commandHandlers.TryGetValue(commandKey, out var handler))
@@ -58,6 +55,28 @@ public class ServiceCommandHandler : ICallbackCommand
             _logger.LogError("Unknown break command: {CommandKey}", commandKey);
         }
     }
+
+    private async Task HandleServiceCurrencyAsync(long chatId, string data, CancellationToken cancellationToken)
+    {
+        var state = _companyCreationStateService.GetState(chatId);
+        var service = state.Services.FirstOrDefault(s => s.Id == state.CurrentServiceIndex);
+        var language = _userStateService.GetLanguage(chatId);
+        if (service == null)
+        {
+            await HandleServiceCreationAsync(language, chatId, cancellationToken);
+            return;
+        }
+        var parsedCurrency = Enum.TryParse<Currency>(data, out var currency) ? currency : Currency.EUR;
+
+        service.Currency = parsedCurrency;
+        _companyCreationStateService.UpdateService(chatId, service);
+        _userStateService.SetConversation(chatId, "WaitingForServicePrice");
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "EnterServicePrice", parsedCurrency),
+            cancellationToken: cancellationToken);
+    }
+
 
     private async Task HandleServiceDurationAsync(long chatId, string data, CancellationToken cancellationToken)
     {
@@ -88,12 +107,11 @@ public class ServiceCommandHandler : ICallbackCommand
 
             await SaveNewService(chatId, service, cancellationToken);
 
-            
             await HandleServiceCreationAsync(language, chatId, cancellationToken);
         }
     }
 
-    private async Task HandleServiceCreationAsync(string language, long chatId, CancellationToken cancellationToken)
+    public async Task HandleServiceCreationAsync(string language, long chatId, CancellationToken cancellationToken)
     {
         var keyboard = new InlineKeyboardMarkup(new[]
         {
@@ -117,7 +135,8 @@ public class ServiceCommandHandler : ICallbackCommand
             Name = "New Service",
             Description = "Service description",
             Price = 0,
-            Duration = 30
+            Duration = 30,
+            Currency = Currency.EUR
         });
         var state = _companyCreationStateService.GetState(chatId);
         state.CurrentServiceIndex = serviceId;
@@ -213,6 +232,7 @@ public class ServiceCommandHandler : ICallbackCommand
             Price = serviceCreationData.Price,
             EmployeeId = employee.Id,
             Description = serviceCreationData.Description,
+            Currency = serviceCreationData.Currency,
             Employee = employee
         };
 

@@ -68,6 +68,10 @@ namespace Telegram.Bot.Commands
                     localBookingTime.ToString("dddd, MMMM d, yyyy"),
                     localBookingTime.ToString("hh:mm tt")),
                 cancellationToken: cancellationToken);
+            await _botClient.SendMessage(
+                chatId: booking.Client.ChatId,
+                text: Translations.GetMessage(language, "Location", booking.Company.Location),
+                cancellationToken: cancellationToken);
         }
     }
 }

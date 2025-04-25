@@ -105,7 +105,8 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ListServices"), "list_services") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "GetClientLink"), "get_client_link") },
                 new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ViewDailyBookings"), "view_daily_bookings") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") }
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") },
+                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "LeaveFeedback"), "leave_feedback") },
             };
 
         var keyboard = new InlineKeyboardMarkup(keyboardButtons);

@@ -32,7 +32,7 @@ public class WorkEndTimeHandler : BaseStateHandler
 
         var language = UserStateService.GetLanguage(chatId);
         
-        if (!TimeSpan.TryParse(message, CultureInfo.InvariantCulture, out TimeSpan endTime))
+        if (!TimeSpan.TryParseExact(message, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan endTime))
         {
             await BotClient.SendMessage(
                 chatId: chatId,
