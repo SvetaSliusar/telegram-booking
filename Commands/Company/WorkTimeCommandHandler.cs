@@ -1,8 +1,7 @@
-using System.Formats.Asn1;
 using System.Globalization;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
-using Telegram.Bot.Exceptions;
+using Telegram.Bot.Commands.Helpers;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
@@ -50,7 +49,8 @@ public class WorkTimeCommandHandler : ICallbackCommand
             { "setup_work_time_end", HandleSetupWorkTimeEndAsync },
             { "change_work_time", HandleChangeWorkTimeAsync },
             { "confirm_working_hours", HandleConfirmWorkingHoursAsync },
-            { "clear_working_hours", HandleClearWorkingHoursAsync }
+            { "clear_working_hours", HandleClearWorkingHoursAsync },
+            { "set_company_timezone", HandleSetTimezoneAsync }
         };
 
         if (commandHandlers.TryGetValue(commandKey, out var commandHandler))
@@ -63,9 +63,26 @@ public class WorkTimeCommandHandler : ICallbackCommand
         }
     }
 
-    private static readonly string[,] morningWorkingHours = {{ "8:00", "8:30", "9:00"} , {"9:30", "10:00", "11:00" }};
-    private static readonly string[,] afternoonWorkingHours = {{ "12:00", "12:30", "13:00"}, {"13:30", "14:00", "14:30" }};
-    private static readonly string[,] eveningWorkingHours = {{ "19:00", "19:30", "20:00"}, { "20:30", "21:00", "22:00" }};
+    private async Task HandleSetTimezoneAsync(long chatId, string data, CancellationToken cancellationToken)
+    {
+        var state = _companyCreationStateService.GetState(chatId);
+        var employeeId = state.CurrentEmployeeIndex;
+        var timezone = Enum.Parse<SupportedTimezone>(data);
+        var language = _userStateService.GetLanguage(chatId);
+        _companyCreationStateService.SetTimezone(chatId, employeeId, timezone);
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "TimezoneSet", timezone),
+            cancellationToken: cancellationToken);
+        
+        _userStateService.SetConversation(chatId, $"WaitingForDefaultStartTime_{timezone}");
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "EnterDefaultStartTime"),
+            cancellationToken: cancellationToken);
+    }
     
     private async Task HandleSelectDayForWorkTimeAsync(long chatId, string data, CancellationToken cancellationToken)
     {
@@ -81,7 +98,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
             {
                 new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), "change_work_time") }
             }),
-            cancellationToken: cancellationToken);
+        cancellationToken: cancellationToken);
     }
 
     private async Task HandleChangeWorkTimeAsync(long chatId, string data, CancellationToken cancellationToken)
@@ -123,7 +140,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
                 dayButtons.Add(new[]
                 {
                     InlineKeyboardButton.WithCallbackData(
-                        $"{dayName} ({workingHours.StartTime.ToString(@"hh\:mm")} - {workingHours.EndTime.ToString(@"hh\:mm")})",
+                        $"{dayName} ({workingHours.StartTime.ToString(@"hh\:mm")} - {workingHours.EndTime.ToString(@"hh\:mm")}) {workingHours.Timezone}",
                         $"select_day_for_work_time_start:{employee.Id}_{(int)day}")
                 });
             }
@@ -174,8 +191,6 @@ public class WorkTimeCommandHandler : ICallbackCommand
 
     private async Task HandleInitWorkTimeAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
-
         var state = _companyCreationStateService.GetState(chatId);
         if (state.Employees == null || state.Employees.Count == 0)
         {
@@ -183,12 +198,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
             return;
         }
 
-        _userStateService.SetConversation(chatId, $"WaitingForDefaultStartTime");
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "EnterDefaultStartTime"),
-            cancellationToken: cancellationToken);
+        await ShowTimezoneSelection(chatId, cancellationToken);
     }
 
     private async Task HandleConfirmWorkingHoursAsync(long chatId, string data, CancellationToken cancellationToken)
@@ -252,5 +262,24 @@ public class WorkTimeCommandHandler : ICallbackCommand
         }
 
         await HandleInitWorkTimeAsync(chatId, "start", cancellationToken);
+    }
+
+    private async Task ShowTimezoneSelection(long chatId, CancellationToken cancellationToken)
+    {
+        var timezoneButtons = Enum.GetValues(typeof(SupportedTimezone))
+            .Cast<SupportedTimezone>()
+            .Select(tz => new[] {
+                InlineKeyboardButton.WithCallbackData(tz.ToString().Replace('_', '/'), $"set_company_timezone:{tz.ToTimezoneId()}")
+            })
+            .ToArray();
+
+        var language = _userStateService.GetLanguage(chatId);
+        var keyboard = new InlineKeyboardMarkup(timezoneButtons);
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "SelectTimezone"),
+            replyMarkup: keyboard,
+            cancellationToken: cancellationToken);
     }
 }

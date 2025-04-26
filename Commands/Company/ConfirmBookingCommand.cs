@@ -25,11 +25,12 @@ namespace Telegram.Bot.Commands.Company
         public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(callbackQuery?.Data) || callbackQuery?.Message == null) return;
+            
             var data = callbackQuery.Data.Split(':');
             if (data.Length < 2) return;
 
             var bookingId = int.Parse(data[1]);
-            var language = _userStateService.GetLanguage(callbackQuery.From.Id);
+            var companyLanguage = _userStateService.GetLanguage(callbackQuery.From.Id);
 
             var booking = await _dbContext.Bookings
                 .Include(b => b.Service)
@@ -41,8 +42,8 @@ namespace Telegram.Bot.Commands.Company
             if (booking == null)
             {
                 await _botClient.SendMessage(
-                    chatId: callbackQuery.Message?.Chat.Id ?? throw new InvalidOperationException("CallbackQuery.Message is null"),
-                    text: Translations.GetMessage(language, "BookingNotFound"),
+                    chatId: callbackQuery.Message.Chat.Id,
+                    text: Translations.GetMessage(companyLanguage, "BookingNotFound"),
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -50,28 +51,35 @@ namespace Telegram.Bot.Commands.Company
             booking.Status = BookingStatus.Confirmed;
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            // Notify company
+            // Notify company (admin who confirmed)
             await _botClient.SendMessage(
                 chatId: callbackQuery.Message.Chat.Id,
-                text: Translations.GetMessage(language, "BookingConfirmed"),
+                text: Translations.GetMessage(companyLanguage, "BookingConfirmed"),
                 cancellationToken: cancellationToken);
 
             // Notify client
-            var clientTimeZone = TimeZoneInfo.FindSystemTimeZoneById(booking.Client.TimeZoneId);
-            var localBookingTime = TimeZoneInfo.ConvertTimeFromUtc(booking.BookingTime, clientTimeZone);
+            var clientTimeZoneId = booking.Client.TimeZoneId ?? "Europe/Lisbon"; // safe fallback
+            var clientTimezone = TimeZoneInfo.FindSystemTimeZoneById(clientTimeZoneId);
+            var localBookingTime = TimeZoneInfo.ConvertTimeFromUtc(booking.BookingTime, clientTimezone);
+
+            // Get client language (safe fallback to English if needed)
+            var clientLanguage = _userStateService.GetLanguage(booking.Client.ChatId);
 
             await _botClient.SendMessage(
                 chatId: booking.Client.ChatId,
-                text: Translations.GetMessage(language, "BookingConfirmedByCompany",
+                text: Translations.GetMessage(clientLanguage, "BookingConfirmedByCompany",
                     booking.Service.Name,
                     booking.Service.Employee.Name,
                     localBookingTime.ToString("dddd, MMMM d, yyyy"),
-                    localBookingTime.ToString("hh:mm tt")),
+                    clientTimeZoneId,
+                    localBookingTime.ToString("HH:mm")),
                 cancellationToken: cancellationToken);
+
             await _botClient.SendMessage(
                 chatId: booking.Client.ChatId,
-                text: Translations.GetMessage(language, "Location", booking.Company.Location),
+                text: Translations.GetMessage(clientLanguage, "Location", booking.Company.Location),
                 cancellationToken: cancellationToken);
         }
+
     }
 }

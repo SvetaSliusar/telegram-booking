@@ -1,5 +1,7 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Telegram.Bot.Commands.Helpers;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -60,7 +62,8 @@ public class DefaultEndTimeHandler : BaseStateHandler
 
         var creationData = CompanyCreationStateService.GetState(chatId);
         var currentEmployee = creationData.Employees.FirstOrDefault(x => x.Id == creationData.CurrentEmployeeIndex);
-
+        var timezone = Enum.Parse<SupportedTimezone>(state.Split('_')[2]);
+        
         if (currentEmployee?.WorkingDays != null && currentEmployee.WorkingDays?.Count > 0)
         {
             var workingDays = currentEmployee?.WorkingDays;
@@ -96,7 +99,8 @@ public class DefaultEndTimeHandler : BaseStateHandler
                         DayOfWeek = dayOfWeek,
                         StartTime = startTime,
                         EndTime = endTime,
-                        Employee = employee
+                        Employee = employee,
+                        Timezone = timezone.ToTimezoneId()
                     });
                 }
             }
@@ -109,7 +113,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
 
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "DefaultWorkTimeSet", startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
+                text: Translations.GetMessage(language, "DefaultWorkTimeSet", timezone, startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
                 cancellationToken: cancellationToken);
 
             var keyboard = new InlineKeyboardMarkup(new[]

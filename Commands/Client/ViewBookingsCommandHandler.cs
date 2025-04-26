@@ -52,6 +52,7 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
         var bookings = await _dbContext.Bookings
             .Include(b => b.Service)
                 .ThenInclude(s => s.Employee)
+            .Include(b => b.Company)
             .Where(b => b.ClientId == client.Id && b.BookingTime >= DateTime.UtcNow && b.Status == BookingStatus.Confirmed)
             .OrderBy(b => b.BookingTime)
             .ToListAsync(cancellationToken);
@@ -72,7 +73,9 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
         var messageBuilder = new StringBuilder();
         messageBuilder.AppendLine(Translations.GetMessage(language, "UpcomingBookings"));
         messageBuilder.AppendLine();
-        var clientTimeZone = TimeZoneInfo.FindSystemTimeZoneById(client.TimeZoneId);
+
+        var clientTimezoneId = client.TimeZoneId ?? "Europe/Lisbon";
+        var clientTimeZone = TimeZoneInfo.FindSystemTimeZoneById(clientTimezoneId);
 
         foreach (var booking in bookings)
         {
@@ -82,7 +85,8 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
                 booking.Service.Name, 
                 booking.Service.Employee.Name,
                 localTime.ToString("dddd, MMMM d, yyyy"),
-                localTime.ToString("hh:mm tt")));
+                localTime.ToString("HH:mm"),
+                clientTimeZone.Id));
             messageBuilder.AppendLine();
         }
 
@@ -97,4 +101,5 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
             }),
             cancellationToken: cancellationToken);
     }
+
 }

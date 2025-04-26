@@ -1,3 +1,4 @@
+using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 
 namespace Telegram.Bot.Services;
@@ -31,5 +32,6 @@ public interface ICompanyCreationStateService
     void ClearWorkingHours(long chatId, int employeeId);
     void AddDefaultStartTimeToEmployee(long chatId, int employeeId, TimeSpan startTime);
     void AddDefaultEndTimeToEmployee(long chatId, int employeeId, TimeSpan endTime);
+    void SetTimezone(long chatId, int employeeId, SupportedTimezone timezone);
 }
 

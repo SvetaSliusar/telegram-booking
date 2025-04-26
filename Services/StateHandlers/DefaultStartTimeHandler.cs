@@ -1,4 +1,5 @@
 using System.Globalization;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Services.Constants;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -17,6 +18,11 @@ public class DefaultStartTimeHandler : BaseStateHandler
     {
     }
 
+    public override bool CanHandle(string state)
+    {
+        return state.StartsWith(StateNames[0], StringComparison.OrdinalIgnoreCase);
+    }
+
     public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
     {
         var language = UserStateService.GetLanguage(chatId);
@@ -30,7 +36,8 @@ public class DefaultStartTimeHandler : BaseStateHandler
             return;
         }
 
-        UserStateService.SetConversation(chatId, $"WaitingForDefaultEndTime_{startTime}");
+        var timezone = state.Split('_')[1];
+        UserStateService.SetConversation(chatId, $"WaitingForDefaultEndTime_{startTime}_{timezone}");
 
         await BotClient.SendMessage(
             chatId: chatId,

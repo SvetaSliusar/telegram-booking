@@ -166,7 +166,9 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "confirm_working_hours",
         "clear_working_hours",
         "change_work_time",
-        "select_day_for_work_time_start"
+        "select_day_for_work_time_start",
+        "change_company_timezone",
+        "set_company_timezone"
     );
 
     factory.RegisterCommand<ConfirmBookingCommand>(

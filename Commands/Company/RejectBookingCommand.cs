@@ -71,7 +71,7 @@ namespace Telegram.Bot.Commands.Company
                     booking.Service.Name,
                     booking.Service.Employee.Name,
                     localBookingTime.ToString("dddd, MMMM d, yyyy"),
-                    localBookingTime.ToString("hh:mm tt")),
+                    localBookingTime.ToString("hh:mm")),
                 cancellationToken: cancellationToken);
         }
     }

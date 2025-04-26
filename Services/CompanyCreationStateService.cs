@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 
 namespace Telegram.Bot.Services;
@@ -227,6 +228,25 @@ public class CompanyCreationStateService : ICompanyCreationStateService
                             StartTime = TimeSpan.Zero,
                             EndTime = endTime
                         });
+                    }
+                }
+            }
+        });
+    }
+
+    public void SetTimezone(long chatId, int employeeId, SupportedTimezone timezone)
+    {
+        UpdateState(chatId, state =>
+        {
+            var employee = state.Employees.FirstOrDefault(e => e.Id == employeeId);
+            if (employee != null && employee.WorkingDays.Count > 0)
+            {
+                foreach (var workday in employee.WorkingDays)
+                {
+                    var workingHours = employee.WorkingHours.FirstOrDefault(wh => wh.DayOfWeek == workday);
+                    if (workingHours != null)
+                    {
+                        workingHours.Timezone = timezone;
                     }
                 }
             }

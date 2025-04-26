@@ -1,5 +1,7 @@
 
 using Microsoft.EntityFrameworkCore;
+using Telegram.Bot.Commands.Helpers;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
@@ -49,22 +51,15 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
 
     private async Task ShowTimezoneSelection(long chatId, string data, CancellationToken cancellationToken)
     {
+        var timezoneButtons = Enum.GetValues(typeof(SupportedTimezone))
+            .Cast<SupportedTimezone>()
+            .Select(tz => new[] {
+                InlineKeyboardButton.WithCallbackData(tz.ToString().Replace('_', '/'), $"set_timezone:{tz.ToTimezoneId()}")
+            })
+            .ToArray();
+
         var language = _userStateService.GetLanguage(chatId);
-        var commonTimezones = new[]
-        {
-            "Europe/Kiev",
-            "Europe/London",
-            "Europe/Paris",
-            "Europe/Berlin",
-            "America/New_York",
-            "America/Los_Angeles",
-            "Asia/Dubai",
-            "Asia/Tokyo"
-        };
-
-        var timezoneButtons = commonTimezones.Select(tz =>
-            new[] { InlineKeyboardButton.WithCallbackData(tz, $"set_timezone:{tz}") }).ToArray();
-
+        
         var keyboard = new InlineKeyboardMarkup(timezoneButtons.Concat(new[] 
         { 
             new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }

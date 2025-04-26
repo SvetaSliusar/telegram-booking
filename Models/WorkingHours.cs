@@ -6,6 +6,7 @@ namespace Telegram.Bot.Models
         public DayOfWeek DayOfWeek { get; set; }
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
+        public string Timezone { get; set; }
         public int EmployeeId { get; set; }
         public virtual Employee Employee { get; set; }
         public virtual ICollection<Break> Breaks { get; set; } = new List<Break>();

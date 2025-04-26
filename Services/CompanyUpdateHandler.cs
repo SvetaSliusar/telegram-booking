@@ -326,7 +326,7 @@ public class CompanyUpdateHandler
             message += Translations.GetMessage(language, "BookingDetailsForCompany", 
                 booking.Service.Name,
                 booking.Client.Name ?? "N/A",
-                localTime.ToString("hh:mm tt"),
+                localTime.ToString("hh:mm"),
                 booking.Client.Name ?? "N/A") + "\n\n";
         }
 
