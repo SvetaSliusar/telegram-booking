@@ -186,6 +186,16 @@ public static class Translations
             ["FeedbackError"] = "❌ An error occurred while processing your feedback. Please try again later.",
             ["InvalidCompanySelection"] = "❌ Invalid company selection. Please try again.",
             ["NoServiceSeleted"] = "❌ No service selected. Please select a service to proceed.",
+            ["NewContactThanks"] = "✅ Thanks! We'll contact you soon to set up your company!",
+            ["ContactOptions"] = "How would you like us to contact you?",
+            ["NoContactAccess"] = "❌ I don't have an access to your phone number, please use another option.",
+            ["NoUsername"] = "❌ You don't have a Telegram username set. Please go to Telegram settings and add one.",
+            ["ContactRequestSent"] =  "✅ Got it! We'll contact you on Telegram at @{0}",
+            ["ManualContact"] =  "🚀 Awesome! Please send us your *email address* or *phone number* so we can contact you and help create your company. ✉️\n\nExample:\n`john.doe@example.com` or `+123456789`",
+            ["SharePhone"] = "📱 Share Phone",
+            ["UseTelegramUsername"] = "📨 Use Telegram Username",
+            ["TypeContact"] = "✍️ Type Email or Contact Info",
+            ["SharePhonePrompt"] = "Please tap the button below to share your phone number:"
         },
         ["UA"] = new Dictionary<string, string>
         {
@@ -374,7 +384,17 @@ public static class Translations
             ["FeedbackTooLong"] = "❌ Відгук занадто довгий. Будь ласка, скоротіть його до 1000 символів.",
             ["FeedbackError"] = "❌ Сталася помилка при надсиланні відгуку. Будь ласка, спробуйте пізніше.",
             ["InvalidCompanySelection"] = "❌ Компанію не знайдено. Будь ласка, спробуйте ще раз.",
-            ["NoServiceSeleted"] = "❌ Послугу не вибрано. Будь ласка, виберіть послугу для продовження."
+            ["NoServiceSeleted"] = "❌ Послугу не вибрано. Будь ласка, виберіть послугу для продовження.",
+            ["NewContactThanks"] = "✅ Дякуємо! Ми зв'яжемося з вами найближчим часом, щоб налаштувати вашу компанію!",
+            ["ContactOption"] = "Як ви хочете, щоб ми з вами зв'язалися?",
+            ["NoContactAccess"] = "❌ У мене немає доступу до вашого номера телефону, будь ласка, використайте інший варіант.",
+            ["NoUsername"] = "❌ У вас не встановлено ім'я користувача Telegram. Будь ласка, перейдіть в налаштування Telegram і додайте його.",
+            ["ContactRequestSent"] =  "✅ Зрозуміло! Ми зв'яжемося з вами в Telegram на @{0}",
+            ["ManualContact"] = "🚀 Чудово! Будь ласка, надішліть нам *адресу електронної пошти* або *номер телефону*, щоб ми могли зв'язатися з вами та допомогти створити вашу компанію. ✉️\n\nПриклад:\n`john.doe@example.com` or `+123456789`",
+            ["SharePhone"] = "📱 Поділитися телефоном",
+            ["UseTelegramUsername"] = "📨 Використати ім'я користувача Telegram",
+            ["TypeContact"] = "✍️ Введіть електронну пошту або контактний номер телефону",
+            ["SharePhonePrompt"] = "Будь ласка, натисніть кнопку нижче, щоб поділитися своїм номером телефону:"
         }
     };
 

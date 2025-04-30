@@ -12,19 +12,22 @@ public class ClientUpdateHandler
     private readonly IUserStateService _userStateService;
     private readonly IMainMenuCommandHandler _mainMenuHandler;
     private readonly ICallbackCommandFactory _commandFactory;
+    private readonly IEnumerable<IStateHandler> _stateHandlers;
 
     public ClientUpdateHandler(
         ITelegramBotClient botClient,
         BookingDbContext dbContext,
         IUserStateService userStateService,
         IMainMenuCommandHandler mainMenuHandler,
-        ICallbackCommandFactory commandFactory)
+        ICallbackCommandFactory commandFactory,
+        IEnumerable<IStateHandler> stateHandlers)
     {
         _botClient = botClient;
         _dbContext = dbContext;
         _userStateService = userStateService;
         _mainMenuHandler = mainMenuHandler;
         _commandFactory = commandFactory;
+        _stateHandlers = stateHandlers;
     }
 
     public async Task StartClientFlow(long chatId, int companyId, CancellationToken cancellationToken)
@@ -68,10 +71,21 @@ public class ClientUpdateHandler
 
     private async Task BotOnMessageReceived(Message message, CancellationToken cancellationToken)
     {
-        if (message?.Text is not { } messageText) return;
+        var messageText = string.IsNullOrEmpty(message.Text) 
+            ? message.Contact?.PhoneNumber
+            : message.Text;
+        if (string.IsNullOrEmpty(messageText))
+            return;
 
         var chatId = message.Chat.Id;
         var language = _userStateService.GetLanguage(chatId);
+        var conversationState = _userStateService.GetConversation(chatId);
+        var handler = _stateHandlers.FirstOrDefault(h => h.CanHandle(conversationState));
+        if (handler != null)
+        {
+            await handler.HandleAsync(chatId, conversationState, messageText, cancellationToken);
+            return;
+        }
 
         await _botClient.SendMessage(
             chatId: chatId,

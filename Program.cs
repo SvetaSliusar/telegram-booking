@@ -110,6 +110,7 @@ builder.Services.AddTransient<ChooseCompanyCommandHandler>();
 builder.Services.AddTransient<ChooseServiceCommandHandler>();
 builder.Services.AddTransient<ChooseDateTimeCommandHandler>();
 builder.Services.AddTransient<ChangeTimezoneCommandHandler>();
+builder.Services.AddTransient<RequestCompanyCreationCommandHanlder>();
 #endregion Client Commands
 
 builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
@@ -190,6 +191,13 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
     factory.RegisterCommand<LeaveFeedbbackCommandHanlder>(
         "leave_feedback"
     );
+    factory.RegisterCommand<RequestCompanyCreationCommandHanlder>(
+        "request_company_creation",
+        "share_username_request",
+        "share_phone_request",
+        "manual_contact_request"
+    );
+
     return factory;
 });
 
@@ -197,6 +205,7 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
 
 // Register state handlers
 builder.Services.AddScoped<IStateHandler, DefaultStartTimeHandler>();
+builder.Services.AddScoped<IStateHandler, ContactInfoHandler>();
 builder.Services.AddScoped<IStateHandler, DefaultEndTimeHandler>();
 builder.Services.AddScoped<IStateHandler, BreakStartTimeHandler>();
 builder.Services.AddScoped<IStateHandler, BreakEndTimeHandler>();

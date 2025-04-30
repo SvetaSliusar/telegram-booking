@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Telegram.Bot.Enums;
+using Telegram.Bot.Infrastructure.Configs;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
@@ -12,15 +14,19 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
+    private readonly BotConfiguration _botConfig = new BotConfiguration();
 
     public MainMenuCommandHandler(
         IUserStateService userStateService, 
         BookingDbContext dbContext,
-        ITelegramBotClient botClient)
+        ITelegramBotClient botClient,
+        IOptions<BotConfiguration> botOptions)
     {
         _userStateService = userStateService;
         _dbContext = dbContext;
         _botClient = botClient;
+        if (botOptions != null)
+            _botConfig = botOptions.Value;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -72,21 +78,62 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
 
     public async Task ShowClientMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)
     {
-        var buttons = new[]
+        var client = await _dbContext.Clients
+            .Include(c => c.CompanyInvites)
+                .ThenInclude(i => i.Company)
+            .FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
+
+        if (client == null)
         {
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BookAppointment"), "book_appointment") },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "MyBookings"), "view_bookings") },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeTimezone"), "change_timezone") }
-        };
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: "❌ Client not found.",
+                cancellationToken: cancellationToken);
+            return;
+        }
 
-        var keyboard = new InlineKeyboardMarkup(buttons);
+        var isDemoClient = client.CompanyInvites
+            .Any(invite => invite.Company.Alias.ToLower() == "demo");
 
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: Translations.GetMessage(language, "MainMenu"),
-            replyMarkup: keyboard,
-            cancellationToken: cancellationToken);
+        if (isDemoClient)
+        {
+            var demoButtons = new[]
+            {
+                new[] { InlineKeyboardButton.WithCallbackData("📸 Book Appointment", "book_appointment") },
+                new[] { InlineKeyboardButton.WithCallbackData("📋 My Bookings", "view_bookings") },
+                new[] { InlineKeyboardButton.WithCallbackData("🌐 Change Language", CallbackResponses.ChangeLanguage) },
+                new[] { InlineKeyboardButton.WithCallbackData("🌎 Change Timezone", "change_timezone") },
+                new[] { InlineKeyboardButton.WithUrl("🌟 Learn More", _botConfig.LearMoreUrl) },
+                new[] { InlineKeyboardButton.WithCallbackData("🚀 Create My Company", "request_company_creation") }
+            };
+
+            var demoKeyboard = new InlineKeyboardMarkup(demoButtons);
+
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: "🎉 Welcome to the Demo Company!\n\nExplore how Online Book Set Bot works by trying a test booking.\n\n✨ Want your own booking bot? Click below!",
+                replyMarkup: demoKeyboard,
+                cancellationToken: cancellationToken);
+        }
+        else
+        {
+            // Normal Client Menu
+            var buttons = new[]
+            {
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BookAppointment"), "book_appointment") },
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "MyBookings"), "view_bookings") },
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
+                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeTimezone"), "change_timezone") }
+            };
+
+            var keyboard = new InlineKeyboardMarkup(buttons);
+
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "MainMenu"),
+                replyMarkup: keyboard,
+                cancellationToken: cancellationToken);
+        }
     }
 
     public async Task ShowCompanyMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)
