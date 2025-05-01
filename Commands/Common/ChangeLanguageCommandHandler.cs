@@ -50,8 +50,8 @@ public class ChangeLanguageCommandHandler : ICallbackCommand, IChangeLanguageCom
     {
         var languageKeyboard = new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("English", "set_language:EN") },
-            new[] { InlineKeyboardButton.WithCallbackData("Українська", "set_language:UA") }
+            new[] { InlineKeyboardButton.WithCallbackData("🇺🇸 English", "set_language:EN") },
+            new[] { InlineKeyboardButton.WithCallbackData("🇺🇦 Українська", "set_language:UA") }
         });
 
         await _botClient.SendMessage(
