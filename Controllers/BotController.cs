@@ -78,6 +78,10 @@ public class BotController : ControllerBase
                     await _companyUpdateHandler.HandleUpdateAsync(update, cancellationToken);
                 else if (userRole == UserRole.Client)
                     await _clientUpdateHandler.HandleUpdateAsync(update, cancellationToken);
+                else if (userRole == UserRole.Both)
+                {
+                    await _mainMenuHandler.ShowMainMenuAsync(chatId.Value, cancellationToken);
+                }
             }
         }
 

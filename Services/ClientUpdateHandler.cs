@@ -71,10 +71,7 @@ public class ClientUpdateHandler
 
     private async Task BotOnMessageReceived(Message message, CancellationToken cancellationToken)
     {
-        var messageText = string.IsNullOrEmpty(message.Text) 
-            ? message.Contact?.PhoneNumber
-            : message.Text;
-        if (string.IsNullOrEmpty(messageText))
+        if (message == null)
             return;
 
         var chatId = message.Chat.Id;
@@ -83,7 +80,7 @@ public class ClientUpdateHandler
         var handler = _stateHandlers.FirstOrDefault(h => h.CanHandle(conversationState));
         if (handler != null)
         {
-            await handler.HandleAsync(chatId, conversationState, messageText, cancellationToken);
+            await handler.HandleAsync(chatId, conversationState, message, cancellationToken);
             return;
         }
 

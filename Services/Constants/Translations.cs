@@ -145,8 +145,8 @@ public static class Translations
             ["BookingPendingConfirmation"] = "Your booking request has been sent to the company for confirmation:\nService: {0}\nEmployee: {1}\nDate: {2}\nTime ({3}): {4}\n\nYou will be notified once the company confirms your booking.",
             ["BookingConfirmed"] = "Booking has been confirmed.",
             ["BookingRejected"] = "Booking has been rejected.",
-            ["BookingConfirmedByCompany"] = "Your booking has been confirmed\nService: {0}\nEmployee: {1}\nDate: {2}\nTime ({3}): {4}",
-            ["BookingRejectedByCompany"] = "Your booking has been rejected by the company:\nService: {0}\nEmployee: {1}\nDate: {2}\nTime: {3}",
+            ["BookingConfirmedByCompany"] = "✅ Your booking is confirmed!\n\n📌 *Service*: {0}\n👤 *Employee*: {1}\n📅 *Date*: {2}\n🕒 *Time* ({3}): {4}",
+            ["BookingRejectedByCompany"] = "❌ Your booking has been rejected by the company.\n\n📌 *Service*: {0}\n👤 *Employee*: {1}\n📅 *Date*: {2}\n🕒 *Time*: {3}",
             ["Reject"] = "❌ Reject",
             ["SetupWorkTime"] = "🕒 Setup Work Time",
             ["EnterDefaultStartTime"] = "Please enter the default start time for all working days (format: HH:mm):",
@@ -175,7 +175,8 @@ public static class Translations
             ["AddService"] = "Add New Service",
             ["ChooseCurrency"] = "Choose service price currency:",
             ["LocationRequired"] = "Enter a valid location name:",
-            ["SendLocation"] = "Send your company location:",
+            ["ShareLocation"] = "📍 Share My Location",
+            ["SendLocation"] = "📍 Please share your location using the button below *or* type your address manually (e.g. \"Rua da Prata 250, Lisbon\").",
             ["LocationSaved"] = "✅ Location saved successfully!",
             ["AddLocation"] = "📍 Add Location",
             ["Location"] = "📍 Location: {0}",
@@ -198,7 +199,8 @@ public static class Translations
             ["SharePhonePrompt"] = "Please tap the button below to share your phone number:",
             ["ContinueAsClient"] = "Continue as Client",
             ["ContinueAsCompany"] = "Continue as Company",
-            ["ChooseYourRole"] = "Please choose your role:"
+            ["ChooseYourRole"] = "Please choose your role:",
+            ["ContactInfoRequired"] = "Please provide your contact information to proceed:"
         },
         ["UA"] = new Dictionary<string, string>
         {
@@ -343,8 +345,8 @@ public static class Translations
             ["BookingPendingConfirmation"] = "Ваш запит на бронювання надіслано компанії для підтвердження:\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас ({3}): {4}\n\nВи отримаєте сповіщення після підтвердження бронювання компанією.",
             ["BookingConfirmed"] = "Бронювання підтверджено.",
             ["BookingRejected"] = "Бронювання відхилено.",
-            ["BookingConfirmedByCompany"] = "Ваше бронювання підтверджено\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас ({3}): {4}",
-            ["BookingRejectedByCompany"] = "Ваше бронювання відхилено компанією:\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас: {3}",
+            ["BookingConfirmedByCompany"] = "✅ Ваше бронювання підтвердженоd!\n\n📌 *Послуга*: {0}\n👤 *Співробітник*: {1}\n📅 *Дата*: {2}\n🕒 *Час* ({3}): {4}",
+            ["BookingRejectedByCompany"] = "❌ Ваше бронювання відхилено компанією.\n\n📌 *Послуга*: {0}\n👤 *Співробітник*: {1}\n📅 *Дата*: {2}\n🕒 *Час*: {3}",
             ["Reject"] = "❌ Відхилити",
             ["ManageBreaks"] = "⏳ Керування Перервами",
             ["EnterDefaultStartTime"] = "Будь ласка, введіть стандартний час початку роботи для всіх робочих днів (формат: ГГ:хв):",
@@ -377,7 +379,8 @@ public static class Translations
             ["AddService"] = "Додати нову послугу",
             ["ChooseCurrency"] = "Оберіть валюту ціни послуги:",
             ["LocationRequired"] = "Введіть локацію:",
-            ["SendLocation"] = "Відправте локацію вашої компанії:",
+            ["SendLocation"] = "📍 Поділіться своїм місцезнаходженням за допомогою кнопки нижче *або* введіть адресу вручну (наприклад: \"вул. Прорізна 15, Київ\").",
+            ["ShareLocation"] = "📍 Надіслати моє місцезнаходження",
             ["LocationSaved"] = "✅ Локація збережена успішно!",
             ["AddLocation"] = "📍 Додати локацію",
             ["Location"] = "📍 Локація: {0}",
@@ -401,7 +404,8 @@ public static class Translations
             ["ContactOptions"] = "Як ви хочете, щоб ми з вами зв'язалися?",
             ["ContinueAsClient"] = "Продовжити як Клієнт",
             ["ContinueAsCompany"] = "Продовжити як Компанія",
-            ["ChooseYourRole"] = "Будь ласка, виберіть свою роль:"
+            ["ChooseYourRole"] = "Будь ласка, виберіть свою роль:",
+            ["ContactInfoRequired"] = "Будь ласка, надайте свою контактну інформацію для продовження:"
         }
     };
 

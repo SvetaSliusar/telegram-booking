@@ -3,6 +3,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
+using Telegram.Bot.Types.Enums;
 
 namespace Telegram.Bot.Commands.Company
 {
@@ -72,6 +73,7 @@ namespace Telegram.Bot.Commands.Company
                     booking.Service.Employee.Name,
                     localBookingTime.ToString("dddd, MMMM d, yyyy"),
                     localBookingTime.ToString("hh:mm")),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
         }
     }

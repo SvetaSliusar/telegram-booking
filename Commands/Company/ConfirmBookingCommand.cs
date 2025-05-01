@@ -3,6 +3,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Services;
+using Telegram.Bot.Types.Enums;
 
 namespace Telegram.Bot.Commands.Company
 {
@@ -73,12 +74,17 @@ namespace Telegram.Bot.Commands.Company
                     localBookingTime.ToString("dddd, MMMM d, yyyy"),
                     clientTimeZoneId,
                     localBookingTime.ToString("HH:mm")),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
 
-            await _botClient.SendMessage(
-                chatId: booking.Client.ChatId,
-                text: Translations.GetMessage(clientLanguage, "Location", booking.Company.Location),
-                cancellationToken: cancellationToken);
+            if (booking.Company.Latitude.HasValue && booking.Company.Longitude.HasValue)
+            {
+                await _botClient.SendLocation(
+                    chatId: booking.Client.ChatId,
+                    latitude: booking.Company.Latitude.Value,
+                    longitude: booking.Company.Longitude.Value,
+                    cancellationToken: cancellationToken);
+            }
         }
 
     }

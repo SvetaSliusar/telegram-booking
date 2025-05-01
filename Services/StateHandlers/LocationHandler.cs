@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Services.Constants;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
 
@@ -22,10 +24,10 @@ public class LocationHandler : BaseStateHandler
         return state == StateNames[0];
     }
 
-    public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
+    public override async Task HandleAsync(long chatId, string state, Message message, CancellationToken cancellationToken)
     {
         var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
-        if (string.IsNullOrWhiteSpace(message))
+        if (message.Location == null)
         {
             await BotClient.SendMessage(
                 chatId: chatId,
@@ -40,14 +42,21 @@ public class LocationHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: Translations.GetMessage(language, "NoCompanyFound"),
+                replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
             return;
         }
 
-        company.Location = message;
+        company.Latitude = message.Location.Latitude;
+        company.Longitude = message.Location.Longitude;
         await DbContext.SaveChangesAsync(cancellationToken);
 
         UserStateService.RemoveConversation(chatId);
-        await SendMessage(chatId, "LocationSaved", cancellationToken);
+        
+        await BotClient.SendMessage(
+            chatId: chatId,
+            text: Translations.GetMessage(language, "LocationSaved"),
+            replyMarkup: new ReplyKeyboardRemove(),
+            cancellationToken: cancellationToken);
     }
 } 

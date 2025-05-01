@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -22,16 +23,17 @@ public class InitialCompanyDataHandler : BaseStateHandler
     {
     }
 
-    public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
+    public override async Task HandleAsync(long chatId, string state, Message message, CancellationToken cancellationToken)
     {
+        var messageText = message.Text ?? "";
         var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         switch (state)
         {
             case "WaitingForCompanyName":
-                CompanyCreationStateService.SetCompanyName(chatId, message);
-                if (IsEnglish(message))
+                CompanyCreationStateService.SetCompanyName(chatId, messageText);
+                if (IsEnglish(messageText))
                 {
-                    CompanyCreationStateService.SetCompanyAlias(chatId, GenerateCompanyAlias(message));
+                    CompanyCreationStateService.SetCompanyAlias(chatId, GenerateCompanyAlias(messageText));
                     UserStateService.SetConversation(chatId, "WaitingForEmployeeName");
 
                     await BotClient.SendMessage(
@@ -51,7 +53,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                 }
                 break;
             case "WaitingForCompanyAlias":
-                if (string.IsNullOrWhiteSpace(message) || !IsEnglish(message))
+                if (string.IsNullOrWhiteSpace(messageText) || !IsEnglish(messageText))
                 {
                     await BotClient.SendMessage(
                         chatId: chatId,
@@ -60,7 +62,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                     return;
                 }
 
-                if (await DbContext.Companies.AnyAsync(c => c.Alias == message))
+                if (await DbContext.Companies.AnyAsync(c => c.Alias == messageText))
                 {
                     await BotClient.SendMessage(
                         chatId: chatId,
@@ -69,7 +71,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                     return;
                 }
 
-                CompanyCreationStateService.SetCompanyAlias(chatId, message);
+                CompanyCreationStateService.SetCompanyAlias(chatId, messageText);
                 UserStateService.SetConversation(chatId, "WaitingForEmployeeName");
 
                 await BotClient.SendMessage(
@@ -81,7 +83,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
             case "WaitingForEmployeeName":
                 CompanyCreationStateService.AddEmployee(chatId, new EmployeeCreationData
                 {
-                    Name = message,
+                    Name = messageText,
                     Services = new List<int>(),
                     WorkingDays = new List<DayOfWeek>(),
                     WorkingHours = new List<WorkingHoursData>()

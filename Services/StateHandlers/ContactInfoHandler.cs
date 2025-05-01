@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Services.Constants;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -18,8 +19,17 @@ public class ContactInfoHandler : BaseStateHandler
     {
     }
 
-    public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
+    public override async Task HandleAsync(long chatId, string state, Message message, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrEmpty(message.Text))
+        {
+            await BotClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(await UserStateService.GetLanguageAsync(chatId, cancellationToken), "ContactInfoRequired"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
         var adminChatId = await DbContext.Companies
             .Where(c => c.Alias == "demo")
             .Select(c => c.Token.ChatId)
@@ -27,7 +37,7 @@ public class ContactInfoHandler : BaseStateHandler
             
         await BotClient.SendMessage(
             chatId: adminChatId,
-            text: $"📩 New company creation request!\n\nFrom user ID: {chatId}\nContact: {message}",
+            text: $"📩 New company creation request!\n\nFrom user ID: {chatId}\nContact: {message.Text}",
             cancellationToken: cancellationToken);
 
         await BotClient.SendMessage(

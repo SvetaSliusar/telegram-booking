@@ -7,6 +7,8 @@ namespace Telegram.Bot.Models
         public int Id { get; set; }
         public required string Name { get; set; }
         public string Location { get; set; } = string.Empty;
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
         public required string Alias { get; set; } // URL-friendly version of the name without spaces
         public virtual List<Employee> Employees { get; set; } = new();
         public int TokenId { get; set; }

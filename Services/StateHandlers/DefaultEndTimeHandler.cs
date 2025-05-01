@@ -4,6 +4,7 @@ using Telegram.Bot.Commands.Helpers;
 using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -27,11 +28,11 @@ public class DefaultEndTimeHandler : BaseStateHandler
         return state.StartsWith(StateNames[0]);
     }
 
-    public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
+    public override async Task HandleAsync(long chatId, string state, Message message, CancellationToken cancellationToken)
     {
         var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         
-        if (!TimeSpan.TryParseExact(message, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan endTime))
+        if (!TimeSpan.TryParseExact(message.Text, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan endTime))
         {
             await BotClient.SendMessage(
                 chatId: chatId,

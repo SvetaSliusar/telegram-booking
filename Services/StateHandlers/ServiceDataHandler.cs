@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -20,9 +21,19 @@ public class ServiceDataHandler : BaseStateHandler
     {
     }
 
-    public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
+    public override async Task HandleAsync(long chatId, string state, Message message, CancellationToken cancellationToken)
     {
         var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
+        var messageText = message.Text;
+        if (string.IsNullOrWhiteSpace(messageText))
+        {
+            await BotClient.SendMessage(
+                chatId: chatId,
+                text: Translations.GetMessage(language, "InvalidInput"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
         var creationState = CompanyCreationStateService.GetState(chatId);
         switch (state)
         {
@@ -37,7 +48,7 @@ public class ServiceDataHandler : BaseStateHandler
                     return;
                 }
 
-                service.Name = message;
+                service.Name = messageText;
                 CompanyCreationStateService.UpdateService(chatId, service);
                 UserStateService.SetConversation(chatId, "WaitingFoServiceDescription");
                     await BotClient.SendMessage(
@@ -56,17 +67,17 @@ public class ServiceDataHandler : BaseStateHandler
                         return;
                 }
 
-                service.Description = message;
+                service.Description = messageText;
                 CompanyCreationStateService.UpdateService(chatId, service);
                 await ShowPriceCurrency(chatId, cancellationToken);
                 break;
 
             case "WaitingForServicePrice":
-                await HandleServicePriceInput(chatId, message, cancellationToken);
+                await HandleServicePriceInput(chatId, messageText, cancellationToken);
                 break;
 
             case "WaitingForCustomDuration":
-                if (!int.TryParse(message, out var customDuration) || customDuration <= 0)
+                if (!int.TryParse(messageText, out var customDuration) || customDuration <= 0)
                 {
                     await BotClient.SendMessage(
                         chatId: chatId,

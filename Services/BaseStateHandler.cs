@@ -32,7 +32,7 @@ public abstract class BaseStateHandler : IStateHandler
         return StateNames.Contains(state);
     }
 
-    public abstract Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken);
+    public abstract Task HandleAsync(long chatId, string state, Message message, CancellationToken cancellationToken);
 
     protected async Task SendMessage(long chatId, string messageKey, CancellationToken cancellationToken, params object[] args)
     {

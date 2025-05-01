@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Services.Constants;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -24,7 +25,7 @@ public class BreakStartTimeHandler : BaseStateHandler
         return state.StartsWith(StateNames[0]);
     }
 
-    public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
+    public override async Task HandleAsync(long chatId, string state, Message message, CancellationToken cancellationToken)
     {
         var parts = state.Split('_');
         var employeeId = int.Parse(parts[1]);
@@ -32,7 +33,7 @@ public class BreakStartTimeHandler : BaseStateHandler
 
         var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         
-        if (!TimeSpan.TryParseExact(message, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan startTime))
+        if (!TimeSpan.TryParseExact(message.Text, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan startTime))
         {
             await BotClient.SendMessage(
                 chatId: chatId,

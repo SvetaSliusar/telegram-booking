@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -19,10 +20,10 @@ public class FeedbackPromptHanlder : BaseStateHandler
     {
     }
 
-    public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
+    public override async Task HandleAsync(long chatId, string state, Message message, CancellationToken cancellationToken)
     {
         var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
-        if (message.Length > 1000)
+        if (message.Text?.Length > 1000)
         {
             await BotClient.SendMessage(
                 chatId: chatId,
@@ -41,10 +42,10 @@ public class FeedbackPromptHanlder : BaseStateHandler
                 cancellationToken: cancellationToken);
             return;
         }
-        await SaveFeedbackAsync(message, company.Id);
+        await SaveFeedbackAsync(message.Text ?? "", company.Id);
         try
         {
-            await SaveFeedbackAsync(message, company.Id);
+            await SaveFeedbackAsync(message.Text ?? "", company.Id);
             UserStateService.RemoveConversation(chatId);
             await BotClient.SendMessage(
                 chatId: chatId,

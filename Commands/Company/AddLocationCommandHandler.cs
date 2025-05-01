@@ -4,6 +4,7 @@ using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Command.Company;
 
@@ -35,10 +36,21 @@ public class AddLocationCommandHandler : ICallbackCommand
         var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         _userStateService.SetConversation(chatId, "WaitingForLocation");
 
+        var replyKeyboard = new ReplyKeyboardMarkup(new[]
+        {
+            new[] { new KeyboardButton(Translations.GetMessage(language, "ShareLocation")) { RequestLocation = true } }
+        })
+        {
+            ResizeKeyboard = true,
+            OneTimeKeyboard = true
+        };
+
         await _botClient.SendMessage(
             chatId: chatId,
             text: Translations.GetMessage(language, "SendLocation"),
+            replyMarkup: replyKeyboard,
             parseMode: ParseMode.Markdown,
             cancellationToken: cancellationToken);
     }
+
 }

@@ -6,5 +6,5 @@ public interface IStateHandler
 {
     List<string> StateNames { get; }
     bool CanHandle(string state);
-    Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken);
+    Task HandleAsync(long chatId, string state, Message message, CancellationToken cancellationToken);
 } 
