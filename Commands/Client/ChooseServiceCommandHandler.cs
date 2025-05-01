@@ -39,7 +39,7 @@ public class ChooseServiceCommandHandler : ICallbackCommand
         {
            await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(_userStateService.GetLanguage(chatId), "InvalidCompanySelection"),
+                text: Translations.GetMessage(await _userStateService.GetLanguageAsync(chatId, cancellationToken), "InvalidCompanySelection"),
                 cancellationToken: cancellationToken);
             return;
         }

@@ -24,7 +24,7 @@ public class LocationHandler : BaseStateHandler
 
     public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
     {
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         if (string.IsNullOrWhiteSpace(message))
         {
             await BotClient.SendMessage(

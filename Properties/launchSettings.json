@@ -4,29 +4,53 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:45580",
-      "sslPort": 44364
+      "applicationUrl": "http://localhost:5000",
+      "sslPort": 5001
     }
   },
   "profiles": {
+    "Development": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "https://localhost:5001;http://localhost:5000",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:5001;http://localhost:5000",
+        "TELEGRAM_BOT_TOKEN": "",
+        "TELEGRAM_WEBHOOK_URL": "https://localhost:5001/api/webhook",
+        "ALLOWED_UPDATES": "message,callback_query",
+        "LOG_LEVEL": "Debug"
+      }
+    },
+    "Production": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:5001;http://localhost:5000",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Production",
+        "ASPNETCORE_URLS": "https://localhost:5001;http://localhost:5000",
+        "TELEGRAM_BOT_TOKEN": "",
+        "TELEGRAM_WEBHOOK_URL": "https://your-domain.com/api/webhook",
+        "ALLOWED_UPDATES": "message,callback_query",
+        "LOG_LEVEL": "Information"
+      }
+    },
     "http": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "applicationUrl": "http://localhost:5218",
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:5001;http://localhost:5000",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
-    "https": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "applicationUrl": "https://localhost:7109;http://localhost:5218",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:5001;http://localhost:5000",
+        "TELEGRAM_BOT_TOKEN": "",
+        "TELEGRAM_WEBHOOK_URL": "https://localhost:5001/api/webhook",
+        "ALLOWED_UPDATES": "message,callback_query",
+        "LOG_LEVEL": "Debug",
+        "ENABLE_CONSOLE_LOGGING": "true"
       }
     },
     "IIS Express": {
@@ -34,7 +58,11 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "TELEGRAM_BOT_TOKEN": "",
+        "TELEGRAM_WEBHOOK_URL": "https://localhost:5001/api/webhook",
+        "ALLOWED_UPDATES": "message,callback_query",
+        "LOG_LEVEL": "Debug"
       }
     }
   }

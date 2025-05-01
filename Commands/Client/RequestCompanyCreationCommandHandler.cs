@@ -50,7 +50,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
 
     private async Task HandlePhoneRequestAsync(Message message, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(message.Chat.Id);
+        var language = await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken);
         if (message.Contact != null)
         {
             var phoneNumber = message.Contact.PhoneNumber;
@@ -82,7 +82,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
     private async Task HandleUsernameRequestAsync(Message message, CancellationToken cancellationToken)
     {
         var username = message.Chat?.Username;
-        var language = _userStateService.GetLanguage(message.Chat.Id);
+        var language = await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken);
         if (!string.IsNullOrEmpty(username))
         {
             var adminChatId = await _dbContext.Companies
@@ -116,8 +116,8 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
     {
         await _botClient.SendMessage(
             chatId: message.Chat.Id,
-            text: Translations.GetMessage(_userStateService.GetLanguage(message.Chat.Id), "ManualContact"),
-            parseMode: Telegram.Bot.Types.Enums.ParseMode.Markdown,
+            text: Translations.GetMessage(await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken), "ManualContact"),
+            parseMode: Types.Enums.ParseMode.Markdown,
             replyMarkup: new ReplyKeyboardRemove(),
             cancellationToken: cancellationToken);
         
@@ -126,7 +126,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
 
     private async Task HandleRequestContactAsync(Message message, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(message.Chat.Id);
+        var language = await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken);
         _userStateService.SetConversation(message.Chat.Id, "WaitingForContactInfo");
         // Reply Keyboard for phone sharing (RequestContact = true)
         var replyKeyboard = new ReplyKeyboardMarkup(new[]

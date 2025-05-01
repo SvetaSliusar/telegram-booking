@@ -30,7 +30,7 @@ namespace Telegram.Bot.Commands.Company
             if (data.Length < 2) return;
 
             var bookingId = int.Parse(data[1]);
-            var companyLanguage = _userStateService.GetLanguage(callbackQuery.From.Id);
+            var companyLanguage = await _userStateService.GetLanguageAsync(callbackQuery.From.Id, cancellationToken);
 
             var booking = await _dbContext.Bookings
                 .Include(b => b.Service)
@@ -63,7 +63,7 @@ namespace Telegram.Bot.Commands.Company
             var localBookingTime = TimeZoneInfo.ConvertTimeFromUtc(booking.BookingTime, clientTimezone);
 
             // Get client language (safe fallback to English if needed)
-            var clientLanguage = _userStateService.GetLanguage(booking.Client.ChatId);
+            var clientLanguage = await _userStateService.GetLanguageAsync(booking.Client.ChatId, cancellationToken);
 
             await _botClient.SendMessage(
                 chatId: booking.Client.ChatId,

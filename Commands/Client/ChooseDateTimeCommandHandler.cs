@@ -54,7 +54,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
 
     public async Task ShowPreviousMonth(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var isParsed = DateTime.TryParse(data, out var parsedDate);
         
         if (!isParsed)
@@ -77,7 +77,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
     public async Task ShowNextMonth(long chatId, string data, CancellationToken cancellationToken)
     {
         var isParsed = DateTime.TryParse(data, out var parsedDate);
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         if (!isParsed)
         {
             await _botClient.SendMessage(
@@ -123,7 +123,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         }
 
         var state = _userStateService.GetConversation(chatId);
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         if (!state.StartsWith("WaitingForDate_"))
         {
             await _botClient.SendMessage(
@@ -279,7 +279,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
    private async Task HandleDateSelectionAsync(long chatId, string data, CancellationToken cancellationToken)
     {
         var state = _userStateService.GetConversation(chatId);
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
         if (string.IsNullOrEmpty(state))
         {
@@ -437,7 +437,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         DateTime selectedLocalDate = DateTime.Parse(parts[2]);
         string timezoneId = parts[3];
 
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
         var service = await _dbContext.Services
             .Include(s => s.Employee)
@@ -506,7 +506,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         var companyOwnerChatId = service.Employee.Company.Token.ChatId;
         if (companyOwnerChatId.HasValue)
         {
-            var companyOwnerLanguage = _userStateService.GetLanguage(companyOwnerChatId.Value);
+            var companyOwnerLanguage = await _userStateService.GetLanguageAsync(companyOwnerChatId.Value, cancellationToken);
             var localCompanyTime = TimeZoneInfo.ConvertTimeFromUtc(bookingTimeUtc, companyTimezone);
 
             var keyboard = new InlineKeyboardMarkup(new[]

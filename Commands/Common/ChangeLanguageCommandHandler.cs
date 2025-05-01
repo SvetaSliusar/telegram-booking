@@ -63,7 +63,7 @@ public class ChangeLanguageCommandHandler : ICallbackCommand, IChangeLanguageCom
 
     public async Task HandleSetLanguageCommandAsync(long chatId, string messageText, CancellationToken cancellationToken)
     {
-        _userStateService.SetLanguage(chatId, messageText);
+        await _userStateService.SetLanguageAsync(chatId, messageText, cancellationToken);
         await _botClient.SendMessage(
             chatId: chatId,
             text: Translations.GetMessage(messageText, "LanguageSet", messageText),

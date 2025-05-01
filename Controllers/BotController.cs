@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Telegram.Bot.Commands.Common;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types;
@@ -37,11 +38,11 @@ public class BotController : ControllerBase
     {
         if (update == null)
         {
-            _logger.LogWarning("🚨 Received empty update.");
+            _logger.LogWarning("Received empty update.");
             return BadRequest("Update is null.");
         }
 
-        _logger.LogInformation("✅ Received update: {update}", update);
+        _logger.LogInformation("Received update: {Update}", update);
         long? chatId = default;
 
         if (update?.Message != null)
@@ -63,17 +64,21 @@ public class BotController : ControllerBase
             }
         }
 
-        if (update.Message != null || update.CallbackQuery != null)
+        if (update.Message != null || update?.CallbackQuery != null)
         {
             if (update.CallbackQuery != null)
             {
                 chatId = update.CallbackQuery.Message.Chat.Id;
-            }   
+            } 
 
-            if (chatId.HasValue && _companyUpdateHandler.GetMode(chatId.Value) == Mode.Company)
-                await _companyUpdateHandler.HandleUpdateAsync(update, cancellationToken);
-            else if (chatId.HasValue && _companyUpdateHandler.GetMode(chatId.Value) == Mode.Client)
-                await _clientUpdateHandler.HandleUpdateAsync(update, cancellationToken);
+            if (chatId.HasValue)
+            {
+                var userRole = await _companyUpdateHandler.GetModeAsync(chatId.Value, cancellationToken);
+                if (userRole == UserRole.Company)
+                    await _companyUpdateHandler.HandleUpdateAsync(update, cancellationToken);
+                else if (userRole == UserRole.Client)
+                    await _clientUpdateHandler.HandleUpdateAsync(update, cancellationToken);
+            }
         }
 
         return Ok();

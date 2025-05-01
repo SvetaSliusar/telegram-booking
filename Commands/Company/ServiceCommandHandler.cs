@@ -60,7 +60,7 @@ public class ServiceCommandHandler : ICallbackCommand
     {
         var state = _companyCreationStateService.GetState(chatId);
         var service = state.Services.FirstOrDefault(s => s.Id == state.CurrentServiceIndex);
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         if (service == null)
         {
             await HandleServiceCreationAsync(language, chatId, cancellationToken);
@@ -83,7 +83,7 @@ public class ServiceCommandHandler : ICallbackCommand
         var durationValue = data;
         var state = _companyCreationStateService.GetState(chatId);
         var service = state.Services.FirstOrDefault(s => s.Id == state.CurrentServiceIndex);
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         if (service == null)
         {
             await HandleServiceCreationAsync(language, chatId, cancellationToken);
@@ -128,7 +128,7 @@ public class ServiceCommandHandler : ICallbackCommand
 
     private async Task HandleAddServiceAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
         var serviceId = _companyCreationStateService.AddService(chatId, new ServiceCreationData
         {
@@ -151,7 +151,7 @@ public class ServiceCommandHandler : ICallbackCommand
 
     private async Task HandleListServicesAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
                 .ThenInclude(e => e.Services)
@@ -194,7 +194,7 @@ public class ServiceCommandHandler : ICallbackCommand
 
     private async Task SaveNewService(long chatId, ServiceCreationData serviceCreationData, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
         // Handle adding service to existing employee
         var company = await _dbContext.Companies

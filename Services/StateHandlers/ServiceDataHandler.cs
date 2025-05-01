@@ -22,7 +22,7 @@ public class ServiceDataHandler : BaseStateHandler
 
     public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
     {
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         var creationState = CompanyCreationStateService.GetState(chatId);
         switch (state)
         {
@@ -95,7 +95,7 @@ public class ServiceDataHandler : BaseStateHandler
 
      private async Task SaveNewService(long chatId, CancellationToken cancellationToken)
     {
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         var creationData = CompanyCreationStateService.GetState(chatId);
         if (creationData == null)
         {
@@ -173,7 +173,7 @@ public class ServiceDataHandler : BaseStateHandler
 
     private async Task ShowPriceCurrency(long chatId, CancellationToken cancellationToken)
     {
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         var state = CompanyCreationStateService.GetState(chatId);
         var service = state.Services.FirstOrDefault(s => s.Id == state.CurrentServiceIndex);
         if (service == null)

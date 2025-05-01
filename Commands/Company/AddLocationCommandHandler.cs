@@ -32,7 +32,7 @@ public class AddLocationCommandHandler : ICallbackCommand
 
     private async Task ShowLocationInput(long chatId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         _userStateService.SetConversation(chatId, "WaitingForLocation");
 
         await _botClient.SendMessage(

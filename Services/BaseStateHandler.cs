@@ -36,7 +36,7 @@ public abstract class BaseStateHandler : IStateHandler
 
     protected async Task SendMessage(long chatId, string messageKey, CancellationToken cancellationToken, params object[] args)
     {
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         await BotClient.SendMessage(
             chatId: chatId,
             text: Translations.GetMessage(language, messageKey, args),

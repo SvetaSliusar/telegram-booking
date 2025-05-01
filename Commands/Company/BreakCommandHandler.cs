@@ -60,7 +60,7 @@ public class BreakCommandHandler : ICallbackCommand
 
     private async Task HandleAddBreakAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
                 .ThenInclude(e => e.WorkingHours)
@@ -93,7 +93,7 @@ public class BreakCommandHandler : ICallbackCommand
     private async Task HandleRemoveBreakAsync(long chatId, string data, CancellationToken cancellationToken)
     {
         var (employerId, day) = ParseEmployerIdAndDayFromData(data);
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         
         // Get working hours for this day
         var workingHours = await _dbContext.WorkingHours
@@ -140,7 +140,7 @@ public class BreakCommandHandler : ICallbackCommand
     private async Task HandleDaySelectionForBreaksAsync(long chatId, string data, CancellationToken cancellationToken)
     {
         var (employerId, day) = ParseEmployerIdAndDayFromData(data);
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var employee = await _dbContext.Employees
             .Include(e => e.WorkingHours)
                 .ThenInclude(wh => wh.Breaks)
@@ -217,7 +217,7 @@ public class BreakCommandHandler : ICallbackCommand
     {
         var (day, startTime) = ParseDayAndTimeFromData(data);
 
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         
         var workingHours = await _dbContext.WorkingHours
             .Include(wh => wh.Breaks)
@@ -268,7 +268,7 @@ public class BreakCommandHandler : ICallbackCommand
     {
         var (day, startTime, endTime) = ParseDayStartEndTimeFromData(data);
 
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         
         // Get working hours for this day
         var workingHours = await _dbContext.WorkingHours
@@ -323,7 +323,7 @@ public class BreakCommandHandler : ICallbackCommand
     {
         var (day, breakId) = ParseDayAndIdFromData(data);
 
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         
         // Get working hours for this day
         var workingHours = await _dbContext.WorkingHours
@@ -381,7 +381,7 @@ public class BreakCommandHandler : ICallbackCommand
 
     private async Task HandleManageBreaksAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
                 .ThenInclude(e => e.WorkingHours)
@@ -435,7 +435,7 @@ public class BreakCommandHandler : ICallbackCommand
 
     private async Task HandleWorkingHoursSelection(long chatId, DayOfWeek day, TimeSpan startTime, TimeSpan endTime, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         
         // Get the company for this chat ID
         var company = await _dbContext.Companies

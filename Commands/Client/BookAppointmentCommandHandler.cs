@@ -34,7 +34,7 @@ public class BookAppointmentCommandHandler : ICallbackCommand
 
     private async Task ShowCompaniesSelection(long chatId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var companies = await _dbContext
             .ClientCompanyInvites
             .Include(c => c.Client)

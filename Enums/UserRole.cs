@@ -4,6 +4,7 @@ namespace Telegram.Bot.Enums
     {
         Unknown,
         Client,
-        Company
+        Company,
+        Both = Client | Company
     }
 }

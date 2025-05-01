@@ -30,7 +30,7 @@ public class WorkEndTimeHandler : BaseStateHandler
         var day = (DayOfWeek)int.Parse(parts[2]);
         var startTime = TimeSpan.Parse(parts[3]);
 
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         
         if (!TimeSpan.TryParseExact(message, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan endTime))
         {

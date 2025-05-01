@@ -36,7 +36,7 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
 
     private async Task HandleViewBookings(long chatId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var client = await _dbContext.Clients
             .FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
 

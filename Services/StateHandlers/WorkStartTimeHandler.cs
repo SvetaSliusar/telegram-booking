@@ -29,7 +29,7 @@ public class WorkStartTimeHandler : BaseStateHandler
         var parts = state.Split('_');
         var employeeId = int.Parse(parts[1]);
         var day = (DayOfWeek)int.Parse(parts[2]);
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         
         if (!TimeSpan.TryParseExact(message, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan startTime))
         {

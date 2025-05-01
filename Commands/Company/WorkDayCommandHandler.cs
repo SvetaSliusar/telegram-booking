@@ -59,7 +59,7 @@ public class WorkDayCommandHandler : ICallbackCommand
 
     public async Task HandleSetupWorkDaysAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
@@ -108,10 +108,10 @@ public class WorkDayCommandHandler : ICallbackCommand
 
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup(new[]
         {
-            CreateDayRow(new List<DayOfWeek> { DayOfWeek.Monday, DayOfWeek.Tuesday }, workingDays),
-            CreateDayRow(new List<DayOfWeek> { DayOfWeek.Wednesday, DayOfWeek.Thursday  }, workingDays),
-            CreateDayRow(new List<DayOfWeek> { DayOfWeek.Friday, DayOfWeek.Saturday }, workingDays),
-            CreateDayRow(new List<DayOfWeek> { DayOfWeek.Sunday }, workingDays),
+            CreateDayRow(new List<DayOfWeek> { DayOfWeek.Monday, DayOfWeek.Tuesday }, workingDays, language),
+            CreateDayRow(new List<DayOfWeek> { DayOfWeek.Wednesday, DayOfWeek.Thursday  }, workingDays, language),
+            CreateDayRow(new List<DayOfWeek> { DayOfWeek.Friday, DayOfWeek.Saturday }, workingDays, language),
+            CreateDayRow(new List<DayOfWeek> { DayOfWeek.Sunday }, workingDays, language),
             new []
             {
                 InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Confirm"), "workingdays_confirm"),
@@ -131,19 +131,20 @@ public class WorkDayCommandHandler : ICallbackCommand
         _userStateService.SetLastMessageId(chatId, sentMessage.MessageId);
     }
 
-    private static InlineKeyboardButton[] CreateDayRow(List<DayOfWeek> days, List<DayOfWeek> selectedDays)
+    private static InlineKeyboardButton[] CreateDayRow(List<DayOfWeek> days, List<DayOfWeek> selectedDays, string language)
     {
         return days.Select(day =>
         {
             bool isSelected = selectedDays.Contains(day);
-            string buttonText = isSelected ? $"{day} ✅" : day.ToString();
+            string dayLabel = Translations.GetMessage(language, $"{day}");
+            string buttonText = isSelected ? $"{dayLabel} ✅" : dayLabel;
             return InlineKeyboardButton.WithCallbackData(buttonText, $"workingdays:{day}");
         }).ToArray();
     }
 
     public async Task HandleAddWorkingDayAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var day = Enum.Parse<DayOfWeek>(data);
 
         var state = _companyCreationStateService.GetState(chatId);
@@ -155,7 +156,7 @@ public class WorkDayCommandHandler : ICallbackCommand
 
     public async Task HandleConfirmWorkingDaysAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var state = _companyCreationStateService.GetState(chatId);
         var selectedDays = state.Employees.FirstOrDefault(e => e.Id == state.CurrentEmployeeIndex)?.WorkingDays;
         if (selectedDays == null || !selectedDays.Any())
@@ -177,7 +178,7 @@ public class WorkDayCommandHandler : ICallbackCommand
 
     public async Task HandleClearSelectionAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var state = _companyCreationStateService.GetState(chatId);
         var employeeId = state.CurrentEmployeeIndex;
         _companyCreationStateService.ClearWorkingDays(chatId, employeeId);

@@ -195,7 +195,10 @@ public static class Translations
             ["SharePhone"] = "📱 Share Phone",
             ["UseTelegramUsername"] = "📨 Use Telegram Username",
             ["TypeContact"] = "✍️ Type Email or Contact Info",
-            ["SharePhonePrompt"] = "Please tap the button below to share your phone number:"
+            ["SharePhonePrompt"] = "Please tap the button below to share your phone number:",
+            ["ContinueAsClient"] = "Continue as Client",
+            ["ContinueAsCompany"] = "Continue as Company",
+            ["ChooseYourRole"] = "Please choose your role:"
         },
         ["UA"] = new Dictionary<string, string>
         {
@@ -329,7 +332,7 @@ public static class Translations
             ["SelectBreakToAdd"] = "Оберіть перерву для додавання:",
             ["BreakAdded"] = "✅ Перерву успішно додано",
             ["BreakNotFound"] = "❌ Перерву не знайдено.",
-            ["SelectTime"] = "Будь ласка, виберіть час для запису {(0})",
+            ["SelectTime"] = "Будь ласка, виберіть час для запису ({0})",
             ["NoAvailableTimes"] = "❌ Немає доступних годин для цієї послуги.",
             ["InvalidWorkTime"] = "❌ Невірний робочий час. Будь ласка, введіть коректний час.",
             ["ChangeTimezone"] = "🌍 Змінити часовий пояс",
@@ -394,7 +397,11 @@ public static class Translations
             ["SharePhone"] = "📱 Поділитися телефоном",
             ["UseTelegramUsername"] = "📨 Використати ім'я користувача Telegram",
             ["TypeContact"] = "✍️ Введіть електронну пошту або контактний номер телефону",
-            ["SharePhonePrompt"] = "Будь ласка, натисніть кнопку нижче, щоб поділитися своїм номером телефону:"
+            ["SharePhonePrompt"] = "Будь ласка, натисніть кнопку нижче, щоб поділитися своїм номером телефону:",
+            ["ContactOptions"] = "Як ви хочете, щоб ми з вами зв'язалися?",
+            ["ContinueAsClient"] = "Продовжити як Клієнт",
+            ["ContinueAsCompany"] = "Продовжити як Компанія",
+            ["ChooseYourRole"] = "Будь ласка, виберіть свою роль:"
         }
     };
 

@@ -29,7 +29,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
 
     public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
     {
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         
         if (!TimeSpan.TryParseExact(message, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan endTime))
         {
@@ -62,7 +62,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
 
         var creationData = CompanyCreationStateService.GetState(chatId);
         var currentEmployee = creationData.Employees.FirstOrDefault(x => x.Id == creationData.CurrentEmployeeIndex);
-        var timezone = Enum.Parse<SupportedTimezone>(state.Split('_')[2]);
+        var timezone = Enum.Parse<SupportedTimezone>(state.Split('_', 3)[2]);
         
         if (currentEmployee?.WorkingDays != null && currentEmployee.WorkingDays?.Count > 0)
         {
@@ -113,7 +113,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
 
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "DefaultWorkTimeSet", timezone, startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
+                text: Translations.GetMessage(language, "DefaultWorkTimeSet", timezone.ToTimezoneId(), startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
                 cancellationToken: cancellationToken);
 
             var keyboard = new InlineKeyboardMarkup(new[]

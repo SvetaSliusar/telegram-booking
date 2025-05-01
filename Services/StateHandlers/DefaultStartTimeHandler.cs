@@ -25,7 +25,7 @@ public class DefaultStartTimeHandler : BaseStateHandler
 
     public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
     {
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         
         if (!TimeSpan.TryParseExact(message, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan startTime))
         {
@@ -36,7 +36,7 @@ public class DefaultStartTimeHandler : BaseStateHandler
             return;
         }
 
-        var timezone = state.Split('_')[1];
+        var timezone = state.Split('_', 2)[1];
         UserStateService.SetConversation(chatId, $"WaitingForDefaultEndTime_{startTime}_{timezone}");
 
         await BotClient.SendMessage(

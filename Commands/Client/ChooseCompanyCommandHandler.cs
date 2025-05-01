@@ -37,7 +37,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
         {
            await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(_userStateService.GetLanguage(chatId), "InvalidCompanySelection"),
+                text: Translations.GetMessage(await _userStateService.GetLanguageAsync(chatId, cancellationToken), "InvalidCompanySelection"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -47,7 +47,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
 
     public async Task HandleCompanySelection(long chatId, int companyId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .FirstOrDefaultAsync(c => c.Id == companyId, cancellationToken);
 
@@ -74,13 +74,15 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
             return;
         }
 
-        // Generate buttons for services
         var serviceButtons = services
             .Select(service => new[]
             {
-                InlineKeyboardButton.WithCallbackData(service.Name, $"choose_service:{service.Id}")
+                InlineKeyboardButton.WithCallbackData(
+                    $"{service.Name} - {service.Price:0.##} {service.Currency}", 
+                    $"choose_service:{service.Id}")
             })
             .ToArray();
+
 
         InlineKeyboardMarkup serviceKeyboard = new(serviceButtons);
 

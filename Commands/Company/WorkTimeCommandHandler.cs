@@ -68,12 +68,12 @@ public class WorkTimeCommandHandler : ICallbackCommand
         var state = _companyCreationStateService.GetState(chatId);
         var employeeId = state.CurrentEmployeeIndex;
         var timezone = Enum.Parse<SupportedTimezone>(data);
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         _companyCreationStateService.SetTimezone(chatId, employeeId, timezone);
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "TimezoneSet", timezone),
+            text: Translations.GetMessage(language, "TimezoneSet", timezone.ToTimezoneId()),
             cancellationToken: cancellationToken);
         
         _userStateService.SetConversation(chatId, $"WaitingForDefaultStartTime_{timezone}");
@@ -87,7 +87,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
     private async Task HandleSelectDayForWorkTimeAsync(long chatId, string data, CancellationToken cancellationToken)
     {
         var (employerId, day) = ParseEmployerIdAndDayFromData(data);
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
          _userStateService.SetConversation(chatId, $"WaitingForWorkStartTime_{employerId}_{(int)day}");
 
@@ -103,7 +103,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
 
     private async Task HandleChangeWorkTimeAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
                 .ThenInclude(e => e.WorkingHours)
@@ -269,11 +269,11 @@ public class WorkTimeCommandHandler : ICallbackCommand
         var timezoneButtons = Enum.GetValues(typeof(SupportedTimezone))
             .Cast<SupportedTimezone>()
             .Select(tz => new[] {
-                InlineKeyboardButton.WithCallbackData(tz.ToString().Replace('_', '/'), $"set_company_timezone:{tz.ToTimezoneId()}")
+                InlineKeyboardButton.WithCallbackData(tz.ToString().Replace('_', '/'), $"set_company_timezone:{tz}")
             })
             .ToArray();
 
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var keyboard = new InlineKeyboardMarkup(timezoneButtons);
 
         await _botClient.SendMessage(

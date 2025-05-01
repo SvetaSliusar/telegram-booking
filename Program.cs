@@ -180,7 +180,8 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
     );
     factory.RegisterCommand<MainMenuCommandHandler>(
         "menu",
-        "back_to_menu"
+        "back_to_menu",
+        "switch_role"
     );
     factory.RegisterCommand<EditCompanyCommandHandler>(
         "edit_company_menu"

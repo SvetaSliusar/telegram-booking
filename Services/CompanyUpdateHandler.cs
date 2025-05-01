@@ -37,10 +37,9 @@ public class CompanyUpdateHandler
         _stateHandlers = stateHandlers;
     }
 
-    public Mode GetMode(long chatId)
+    public async Task<UserRole> GetModeAsync(long chatId, CancellationToken cancellationToken)
     {
-        return _dbContext.Tokens.Any(t => t.ChatId == chatId) || 
-            (_userStateService.GetConversation(chatId) == "WaitingForToken") ? Mode.Company : Mode.Client;
+        return await _userStateService.GetUserRoleAsync(chatId, cancellationToken);
     }
 
     public async Task HandleUpdateAsync(Update update, CancellationToken cancellationToken)
@@ -66,7 +65,7 @@ public class CompanyUpdateHandler
             return;
 
         var chatId = message.Chat.Id;
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var conversationState = _userStateService.GetConversation(chatId);
 
         var handler = _stateHandlers.FirstOrDefault(h => h.CanHandle(conversationState));
@@ -158,7 +157,7 @@ public class CompanyUpdateHandler
 
     private async Task StartCompanyCreation(long chatId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
         _userStateService.SetConversation(chatId, "WaitingForCompanyName");
 
@@ -171,7 +170,7 @@ public class CompanyUpdateHandler
 
     private async Task ShowBookingCalendar(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var daysInMonth = DateTime.DaysInMonth(selectedDate.Year, selectedDate.Month);
         var firstDayOfMonth = new DateTime(selectedDate.Year, selectedDate.Month, 1);
         var currentDate = DateTime.UtcNow.Date;
@@ -280,7 +279,7 @@ public class CompanyUpdateHandler
 
     private async Task HandleBookingDateSelection(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
@@ -342,7 +341,7 @@ public class CompanyUpdateHandler
 
     private async Task HandleReminderSettings(long chatId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .Include(c => c.ReminderSettings)
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
@@ -389,7 +388,7 @@ public class CompanyUpdateHandler
     {
         if (callbackQuery?.Message == null) return;
         var chatId = callbackQuery.Message.Chat.Id;
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         string data = callbackQuery.Data ?? string.Empty;
         if (string.IsNullOrEmpty(data))
         {
@@ -454,7 +453,7 @@ public class CompanyUpdateHandler
 
     private async Task HandleDayBreaksSelection(long chatId, int employeeId, DayOfWeek day, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var employee = await _dbContext.Employees
             .Include(e => e.WorkingHours)
                 .ThenInclude(wh => wh.Breaks)

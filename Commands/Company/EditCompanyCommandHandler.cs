@@ -26,13 +26,16 @@ public class EditCompanyCommandHandler : ICallbackCommand
         var chatId = callbackQuery.Message.Chat.Id;
         var messageId = callbackQuery.Message.MessageId;
 
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
         var keyboard = new InlineKeyboardMarkup(new List<List<InlineKeyboardButton>>
         {
             new()
             {
                 InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "SetupWorkDays"), "setup_work_days"),
+            },
+            new()
+            {
                 InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeWorkTime"), "change_work_time")
             },
             new()
@@ -51,7 +54,7 @@ public class EditCompanyCommandHandler : ICallbackCommand
         await _botClient.EditMessageText(
             chatId: chatId,
             messageId: messageId,
-            text: Translations.GetMessage(language, "EditCompanyMenuTitle"),
+            text: Translations.GetMessage(language, "MainMenu"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }

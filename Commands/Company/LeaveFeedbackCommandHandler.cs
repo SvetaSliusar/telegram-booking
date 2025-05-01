@@ -34,7 +34,7 @@ public class LeaveFeedbbackCommandHanlder : ICallbackCommand
 
     private async Task RequestUserInputAsync(long chatId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         _userStateService.SetConversation(chatId, "WaitingForFeedback");
         await _botClient.SendMessage(
             chatId: chatId,

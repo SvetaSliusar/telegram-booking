@@ -33,7 +33,7 @@ public class GenerateClientLinkHandler : ICallbackCommand
 
     private async Task GenerateClientLink(long chatId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 

@@ -54,11 +54,11 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
         var timezoneButtons = Enum.GetValues(typeof(SupportedTimezone))
             .Cast<SupportedTimezone>()
             .Select(tz => new[] {
-                InlineKeyboardButton.WithCallbackData(tz.ToString().Replace('_', '/'), $"set_timezone:{tz.ToTimezoneId()}")
+                InlineKeyboardButton.WithCallbackData(tz.ToString().Replace('_', '/'), $"set_timezone:{tz}")
             })
             .ToArray();
 
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         
         var keyboard = new InlineKeyboardMarkup(timezoneButtons.Concat(new[] 
         { 
@@ -74,7 +74,7 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
 
     private async Task SetTimezone(long chatId, string timezone, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var client = await _dbContext.Clients.FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
 
         if (client == null)
@@ -88,8 +88,9 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
 
         try
         {
+            var parsedTimezone = Enum.Parse<SupportedTimezone>(timezone);
             // Validate timezone
-            TimeZoneInfo.FindSystemTimeZoneById(timezone);
+            TimeZoneInfo.FindSystemTimeZoneById(parsedTimezone.ToTimezoneId());
             
             client.TimeZoneId = timezone;
             await _dbContext.SaveChangesAsync(cancellationToken);

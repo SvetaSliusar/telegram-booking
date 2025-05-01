@@ -21,7 +21,7 @@ public class FeedbackPromptHanlder : BaseStateHandler
 
     public override async Task HandleAsync(long chatId, string state, string message, CancellationToken cancellationToken)
     {
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         if (message.Length > 1000)
         {
             await BotClient.SendMessage(

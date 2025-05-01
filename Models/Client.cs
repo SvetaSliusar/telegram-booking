@@ -13,7 +13,7 @@ public class Client
     public string Name { get; set; } = string.Empty;
 
     [Required]
-    public string TimeZoneId { get; set; } = "UTC";
+    public string TimeZoneId { get; set; } = "Europe/Lisbon";
 
     public string? Language { get; set; }
 

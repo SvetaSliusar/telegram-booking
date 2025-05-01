@@ -16,6 +16,8 @@ namespace Telegram.Bot
         public DbSet<Token> Tokens { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
 
+        public DbSet<UserState> UserStates { get; set; }
+
         public BookingDbContext(DbContextOptions<BookingDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

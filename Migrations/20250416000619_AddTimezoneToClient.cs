@@ -15,7 +15,7 @@ namespace TelegramBookingBot.Migrations
                 table: "Clients",
                 type: "text",
                 nullable: false,
-                defaultValue: "UTC");
+                defaultValue: "Europe/Lisbon");
         }
 
         /// <inheritdoc />

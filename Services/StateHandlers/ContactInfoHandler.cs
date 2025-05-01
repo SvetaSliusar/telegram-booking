@@ -32,7 +32,7 @@ public class ContactInfoHandler : BaseStateHandler
 
         await BotClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(UserStateService.GetLanguage(chatId), "NewContactThanks"),
+            text: Translations.GetMessage(await UserStateService.GetLanguageAsync(chatId, cancellationToken), "NewContactThanks"),
             replyMarkup: new ReplyKeyboardRemove(),
             cancellationToken: cancellationToken);
 

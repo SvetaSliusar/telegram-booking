@@ -1,4 +1,4 @@
-using Telegram.Bot.Models;
+using Telegram.Bot.Enums;
 
 namespace Telegram.Bot.Services;
 
@@ -8,10 +8,11 @@ public interface IUserStateService
     void SetConversation(long chatId, string conversation);
     void RemoveConversation(long chatId);
 
-    string GetLanguage(long chatId);
-    void SetLanguage(long chatId, string language);
-    ClientConversationState GetOrCreate(long chatId, int companyId);
+    Task<string> GetLanguageAsync(long chatId, CancellationToken cancellationToken);
+    Task SetLanguageAsync(long chatId, string language, CancellationToken cancellationToken);
     void SetLastMessageId(long chatId, int messageId);
     int? GetLastMessageId(long chatId);
     void RemoveLastMessageId(long chatId);
+    Task SetUserRoleAsync(long chatId, UserRole newRole, CancellationToken cancellationToken);
+    Task<UserRole> GetUserRoleAsync(long chatId, CancellationToken cancellationToken);
 }

@@ -29,7 +29,7 @@ namespace Telegram.Bot.Commands.Company
             if (data.Length < 2) return;
 
             var bookingId = int.Parse(data[1]);
-            var language = _userStateService.GetLanguage(callbackQuery.From.Id);
+            var language = await _userStateService.GetLanguageAsync(callbackQuery.From.Id, cancellationToken);
 
             if (callbackQuery.Message == null)
             {

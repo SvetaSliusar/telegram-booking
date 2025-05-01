@@ -33,7 +33,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         var day = (DayOfWeek)int.Parse(parts[2]);
         var startTime = TimeSpan.Parse(parts[3]);
 
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         
         if (!TimeSpan.TryParseExact(message, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan endTime))
         {
@@ -105,7 +105,7 @@ public class BreakEndTimeHandler : BaseStateHandler
 
     private async Task HandleDayBreaksSelection(long chatId, int employeeId, DayOfWeek day, CancellationToken cancellationToken)
     {
-        var language = UserStateService.GetLanguage(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         var employee = await DbContext.Employees
             .Include(e => e.WorkingHours)
                 .ThenInclude(wh => wh.Breaks)

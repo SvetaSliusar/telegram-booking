@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -16,6 +17,7 @@ public class StartCommandHandler : IStartCommandHandler
     private readonly BookingDbContext _dbContext;
     private readonly ICompanyService _companyService;
     private readonly ILogger<StartCommandHandler> _logger;
+    private readonly IUserStateService _userStateService;
     private readonly IMainMenuCommandHandler _mainMenuCommandHandler;
     private const string DefaultLanguage = "EN";
     private const string StartCommand = "/start";
@@ -27,13 +29,15 @@ public class StartCommandHandler : IStartCommandHandler
         BookingDbContext dbContext,
         ICompanyService companyService,
         ILogger<StartCommandHandler> logger,
-        IMainMenuCommandHandler mainMenuCommandHandler)
+        IMainMenuCommandHandler mainMenuCommandHandler,
+        IUserStateService userStateService)
     {
         _botClient = botClient;
         _dbContext = dbContext;
         _companyService = companyService;
         _logger = logger;
         _mainMenuCommandHandler = mainMenuCommandHandler;
+        _userStateService = userStateService;
     }
 
     public async Task<bool> HandleStartCommandAsync(string messageText, long chatId, CancellationToken cancellationToken)
@@ -62,6 +66,7 @@ public class StartCommandHandler : IStartCommandHandler
         var client = await _dbContext.Clients.FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
         if (client != null)
         {
+            await _userStateService.SetUserRoleAsync(chatId, UserRole.Client, cancellationToken);
             await _mainMenuCommandHandler.ShowClientMainMenuAsync(chatId, client.Language ?? DefaultLanguage, cancellationToken);
             return true;
         }
@@ -72,11 +77,13 @@ public class StartCommandHandler : IStartCommandHandler
 
         if (company != null)
         {
+            await _userStateService.SetUserRoleAsync(chatId, UserRole.Company, cancellationToken);
             await _mainMenuCommandHandler.ShowCompanyMainMenuAsync(chatId, company.Token.Language ?? DefaultLanguage, cancellationToken);
             return true;
         }
 
         await AddClientIfNotExists(chatId, DemoCompanyId, cancellationToken);
+        await _userStateService.SetUserRoleAsync(chatId, UserRole.Client, cancellationToken);
         await ShowInitialLanguageSelection(chatId, cancellationToken);
 
         return true;
@@ -96,7 +103,7 @@ public class StartCommandHandler : IStartCommandHandler
             token.ChatId = chatId;
             token.Used = true;
             await _dbContext.SaveChangesAsync(cancellationToken);
-
+            await _userStateService.SetUserRoleAsync(chatId, UserRole.Company, cancellationToken);
             await ShowInitialLanguageSelection(chatId, cancellationToken);
             return true;
         }
@@ -105,6 +112,7 @@ public class StartCommandHandler : IStartCommandHandler
         if (company != null)
         {
             await AddClientIfNotExists(chatId, company.Id, cancellationToken);
+            await _userStateService.SetUserRoleAsync(chatId, UserRole.Client, cancellationToken);
             await ShowInitialLanguageSelection(chatId, cancellationToken);
             return true;
         }
@@ -126,7 +134,7 @@ public class StartCommandHandler : IStartCommandHandler
             {
                 ChatId = chatId,
                 Name = "New Client",
-                TimeZoneId = "UTC"
+                TimeZoneId = "Europe/Lisbon"
             };
             _dbContext.Clients.Add(client);
             await _dbContext.SaveChangesAsync(cancellationToken);

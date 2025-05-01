@@ -32,7 +32,7 @@ public class ClientUpdateHandler
 
     public async Task StartClientFlow(long chatId, int companyId, CancellationToken cancellationToken)
     {
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .FirstOrDefaultAsync(c => c.Id == companyId, cancellationToken);
 
@@ -78,7 +78,7 @@ public class ClientUpdateHandler
             return;
 
         var chatId = message.Chat.Id;
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var conversationState = _userStateService.GetConversation(chatId);
         var handler = _stateHandlers.FirstOrDefault(h => h.CanHandle(conversationState));
         if (handler != null)
@@ -105,7 +105,7 @@ public class ClientUpdateHandler
             return;
         }
         var chatId = callbackQuery.Message.Chat.Id;
-        var language = _userStateService.GetLanguage(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
         await _botClient.SendMessage(
             chatId: chatId,
