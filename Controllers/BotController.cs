@@ -4,6 +4,7 @@ using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types;
+using static Telegram.Bot.Commands.Helpers.RoleHandler;
 
 namespace Telegram.Bot.Controllers;
 
@@ -32,9 +33,7 @@ public class BotController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Post(
-        [FromBody] Update? update,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Post([FromBody] Update? update, CancellationToken cancellationToken)
     {
         if (update == null)
         {
@@ -43,45 +42,40 @@ public class BotController : ControllerBase
         }
 
         _logger.LogInformation("Received update: {Update}", update);
-        long? chatId = default;
 
-        if (update?.Message != null)
+        var message = update.Message;
+        var callback = update.CallbackQuery;
+
+        var chatId = message?.Chat.Id ?? callback?.Message?.Chat.Id;
+
+        if (message != null)
         {
-            var messageText = update.Message.Text;
-            chatId = update.Message.Chat.Id;
+            var messageText = message.Text;
 
-            var result = await _startCommandHandler.HandleStartCommandAsync(messageText, chatId.Value, cancellationToken);
-
-            if (result)
-            {
+            // handle /start
+            if (await _startCommandHandler.HandleStartCommandAsync(messageText, message.Chat.Id, cancellationToken))
                 return Ok();
-            }
 
+            // handle /menu
             if (messageText == "/menu")
             {
-                await _mainMenuHandler.ShowMainMenuAsync(chatId.Value, cancellationToken);
+                await _mainMenuHandler.ShowMainMenuAsync(message.Chat.Id, cancellationToken);
                 return Ok();
             }
         }
 
-        if (update.Message != null || update?.CallbackQuery != null)
+        if (chatId.HasValue)
         {
-            if (update.CallbackQuery != null)
+            var activeRole = await _companyUpdateHandler.GetModeAsync(chatId.Value, cancellationToken);
+            
+            switch (activeRole)
             {
-                chatId = update.CallbackQuery.Message.Chat.Id;
-            } 
-
-            if (chatId.HasValue)
-            {
-                var userRole = await _companyUpdateHandler.GetModeAsync(chatId.Value, cancellationToken);
-                if (userRole == UserRole.Company)
+                case UserRole.Company:
                     await _companyUpdateHandler.HandleUpdateAsync(update, cancellationToken);
-                else if (userRole == UserRole.Client)
+                    break;
+                case UserRole.Client:
                     await _clientUpdateHandler.HandleUpdateAsync(update, cancellationToken);
-                else if (userRole == UserRole.Both)
-                {
-                    await _mainMenuHandler.ShowMainMenuAsync(chatId.Value, cancellationToken);
-                }
+                    break;
             }
         }
 

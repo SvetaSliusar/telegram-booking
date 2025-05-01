@@ -39,7 +39,7 @@ public class CompanyUpdateHandler
 
     public async Task<UserRole> GetModeAsync(long chatId, CancellationToken cancellationToken)
     {
-        return await _userStateService.GetUserRoleAsync(chatId, cancellationToken);
+        return await _userStateService.GetActiveRoleAsync(chatId, cancellationToken);
     }
 
     public async Task HandleUpdateAsync(Update update, CancellationToken cancellationToken)

@@ -7,5 +7,6 @@ public class UserState
     [Key]
     public long ChatId { get; set; }
     public UserRole Role { get; set; } = UserRole.Unknown;
+    public UserRole ActiveRole { get; set; } = UserRole.Unknown; 
     public string? Language { get; set; } = "EN";
 }

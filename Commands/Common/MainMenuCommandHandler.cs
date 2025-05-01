@@ -7,6 +7,7 @@ using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
+using static Telegram.Bot.Commands.Helpers.RoleHandler;
 
 namespace Telegram.Bot.Commands.Common;
 
@@ -52,6 +53,7 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         else if (commandKey == "switch_role")
         {
             await HandleSwitchRoleAsync(chatId, data, cancellationToken);
+            return;
         }
         else
         {
@@ -63,8 +65,14 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         await ShowMainMenuAsync(chatId, cancellationToken);
     }
 
+    public async Task HandleSwitchRoleAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
+    {
+        await ExecuteAsync(callbackQuery, cancellationToken);
+    }
+
     private async Task HandleSwitchRoleAsync(long chatId, string data, CancellationToken cancellationToken)
     {
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var newRole = data.ToLower() switch
         {
             "client" => UserRole.Client,
@@ -72,8 +80,19 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
             _ => UserRole.Unknown
         };
 
-        await _userStateService.SetUserRoleAsync(chatId, newRole, cancellationToken);
-        await ShowMainMenuAsync(chatId, cancellationToken);
+        if (newRole == UserRole.Unknown)
+            return;
+
+        await _userStateService.SetActiveRoleAsync(chatId, newRole, cancellationToken);
+
+        if (newRole == UserRole.Client)
+        {
+            await ShowClientMainMenuAsync(chatId, language, cancellationToken);
+        }
+        else if (newRole == UserRole.Company)
+        {
+            await ShowCompanyMainMenuAsync(chatId, language, cancellationToken);
+        }
     }
 
 
@@ -81,6 +100,7 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
     {
         var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var role = await _userStateService.GetUserRoleAsync(chatId, cancellationToken);
+
         switch (role)
         {
             case UserRole.Client:
@@ -89,14 +109,18 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
             case UserRole.Company:
                 await ShowCompanyMainMenuAsync(chatId, language, cancellationToken);
                 break;
-            case UserRole.Both:
-                await ShowRoleSelectionMenuAsync(chatId, language, cancellationToken);
-                break;
             default:
-                await _botClient.SendMessage(
-                    chatId: chatId,
-                    text: Translations.GetMessage(language, "UnknownRole"),
-                    cancellationToken: cancellationToken);
+                if (HasRole(role, UserRole.Client) && HasRole(role, UserRole.Company))
+                {
+                    await ShowRoleSelectionMenuAsync(chatId, language, cancellationToken);
+                }
+                else
+                {
+                    await _botClient.SendMessage(
+                        chatId: chatId,
+                        text: Translations.GetMessage(language, "UnknownRole"),
+                        cancellationToken: cancellationToken);
+                }
                 break;
         }
     }
@@ -124,23 +148,6 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
             text: Translations.GetMessage(language, "ChooseYourRole"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
-    }
-
-
-    private async Task<UserRole> GetUserRoleAsync(long chatId, CancellationToken cancellationToken)
-    {
-        var isClient = await _dbContext.Clients.AnyAsync(c => c.ChatId == chatId, cancellationToken);
-        var isCompany = await _dbContext.Tokens
-            .AnyAsync(t => t.ChatId == chatId, cancellationToken);
-
-        if (isClient && isCompany)
-            return UserRole.Both;
-        if (isCompany)
-            return UserRole.Company;
-        if (isClient)
-            return UserRole.Client;
-
-        return UserRole.Unknown;
     }
 
     public async Task ShowClientMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)

@@ -142,12 +142,8 @@ public static class Translations
             ["TimezoneSet"] = "✅ Timezone set to: {0}",
             ["InvalidTimezone"] = "❌ Invalid timezone. Please try again.",
             ["NoClientFound"] = "❌ Client not found. Please contact support.",
-            ["BookingPendingConfirmation"] = "Your booking request has been sent to the company for confirmation:\nService: {0}\nEmployee: {1}\nDate: {2}\nTime ({3}): {4}\n\nYou will be notified once the company confirms your booking.",
             ["BookingConfirmed"] = "Booking has been confirmed.",
             ["BookingRejected"] = "Booking has been rejected.",
-            ["BookingConfirmedByCompany"] = "✅ Your booking is confirmed!\n\n📌 *Service*: {0}\n👤 *Employee*: {1}\n📅 *Date*: {2}\n🕒 *Time* ({3}): {4}",
-            ["BookingRejectedByCompany"] = "❌ Your booking has been rejected by the company.\n\n📌 *Service*: {0}\n👤 *Employee*: {1}\n📅 *Date*: {2}\n🕒 *Time*: {3}",
-            ["Reject"] = "❌ Reject",
             ["SetupWorkTime"] = "🕒 Setup Work Time",
             ["EnterDefaultStartTime"] = "Please enter the default start time for all working days (format: HH:mm):",
             ["EnterDefaultEndTime"] = "Please enter the default end time for all working days (format: HH:mm):",
@@ -200,7 +196,31 @@ public static class Translations
             ["ContinueAsClient"] = "Continue as Client",
             ["ContinueAsCompany"] = "Continue as Company",
             ["ChooseYourRole"] = "Please choose your role:",
-            ["ContactInfoRequired"] = "Please provide your contact information to proceed:"
+            ["ContactInfoRequired"] = "Please provide your contact information to proceed:",
+            ["BookingPendingConfirmation"] = 
+                @"📩 *Booking request sent\!*
+
+            📌 *Service*: {0}
+            👤 *Employee*: {1}
+            📅 *Date*: {2}
+            🕒 *Time* \({3}\): {4}
+
+            ⏳ Please wait — you\'ll be notified once the company confirms your booking\.",
+            ["BookingConfirmedByCompany"] =
+                @"✅ *Your booking is confirmed\!*
+
+            📌 *Service*: {0}
+            👤 *Employee*: {1}
+            📅 *Date*: {2}
+            🕒 *Time* \({3}\): {4}",
+            ["BookingRejectedByCompany"] =
+                 @"❌ *Your booking has been rejected by the company\.*
+
+            📌 *Service*: {0}
+            👤 *Employee*: {1}
+            📅 *Date*: {2}
+            🕒 *Time*: {3}"
+
         },
         ["UA"] = new Dictionary<string, string>
         {
@@ -342,11 +362,8 @@ public static class Translations
             ["TimezoneSet"] = "✅ Часовий пояс встановлено: {0}",
             ["InvalidTimezone"] = "❌ Невірний часовий пояс. Будь ласка, спробуйте ще раз.",
             ["NoClientFound"] = "❌ Клієнта не знайдено. Будь ласка, зверність в підтримку.",
-            ["BookingPendingConfirmation"] = "Ваш запит на бронювання надіслано компанії для підтвердження:\nПослуга: {0}\nСпівробітник: {1}\nДата: {2}\nЧас ({3}): {4}\n\nВи отримаєте сповіщення після підтвердження бронювання компанією.",
             ["BookingConfirmed"] = "Бронювання підтверджено.",
             ["BookingRejected"] = "Бронювання відхилено.",
-            ["BookingConfirmedByCompany"] = "✅ Ваше бронювання підтвердженоd!\n\n📌 *Послуга*: {0}\n👤 *Співробітник*: {1}\n📅 *Дата*: {2}\n🕒 *Час* ({3}): {4}",
-            ["BookingRejectedByCompany"] = "❌ Ваше бронювання відхилено компанією.\n\n📌 *Послуга*: {0}\n👤 *Співробітник*: {1}\n📅 *Дата*: {2}\n🕒 *Час*: {3}",
             ["Reject"] = "❌ Відхилити",
             ["ManageBreaks"] = "⏳ Керування Перервами",
             ["EnterDefaultStartTime"] = "Будь ласка, введіть стандартний час початку роботи для всіх робочих днів (формат: ГГ:хв):",
@@ -405,7 +422,30 @@ public static class Translations
             ["ContinueAsClient"] = "Продовжити як Клієнт",
             ["ContinueAsCompany"] = "Продовжити як Компанія",
             ["ChooseYourRole"] = "Будь ласка, виберіть свою роль:",
-            ["ContactInfoRequired"] = "Будь ласка, надайте свою контактну інформацію для продовження:"
+            ["ContactInfoRequired"] = "Будь ласка, надайте свою контактну інформацію для продовження:",
+            ["BookingPendingConfirmation"] = 
+                @"📩 *Запит на бронювання надіслано\!*
+
+            📌 *Послуга*: {0}
+            👤 *Співробітник*: {1}
+            📅 *Дата*: {2}
+            🕒 *Час* \({3}\): {4}
+
+            ⏳ Очікуйте — ви отримаєте повідомлення, щойно компанія підтвердить ваше бронювання\.",
+            ["BookingConfirmedByCompany"] =
+                @"✅ *Ваше бронювання підтверджено\!*
+
+            📌 *Послуга*: {0}
+            👤 *Співробітник*: {1}
+            📅 *Дата*: {2}
+            🕒 *Час* \({3}\): {4}",
+            ["BookingRejectedByCompany"] =
+                @"❌ *Компанія відхилила ваше бронювання\.*
+
+            📌 *Послуга*: {0}
+            👤 *Співробітник*: {1}
+            📅 *Дата*: {2}
+            🕒 *Час*: {3}"
         }
     };
 

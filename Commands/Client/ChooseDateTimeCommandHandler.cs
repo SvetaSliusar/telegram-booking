@@ -5,6 +5,7 @@ using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 
@@ -500,6 +501,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
                 localClientTime.ToString("dddd, MMMM d, yyyy"),
                 clientTimezoneId,
                 localClientTime.ToString("HH:mm")),
+            parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
 
         // Send notification to Company Owner

@@ -14,5 +14,8 @@ public interface IUserStateService
     int? GetLastMessageId(long chatId);
     void RemoveLastMessageId(long chatId);
     Task SetUserRoleAsync(long chatId, UserRole newRole, CancellationToken cancellationToken);
+    Task<UserRole> GetActiveRoleAsync(long chatId, CancellationToken cancellationToken);
+    Task SetActiveRoleAsync(long chatId, UserRole activeRole, CancellationToken cancellationToken);
     Task<UserRole> GetUserRoleAsync(long chatId, CancellationToken cancellationToken);
+    Task AddOrUpdateUserRolesAsync(long chatId, UserRole newRole, bool setActive, CancellationToken cancellationToken);
 }

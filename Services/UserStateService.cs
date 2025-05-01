@@ -21,6 +21,7 @@ public class UserStateService : IUserStateService
         _logger = logger;
     }
 
+    
     public async Task<UserRole> GetUserRoleAsync(long chatId, CancellationToken cancellationToken)
     {
         if (_roleCache.TryGetValue(chatId, out var cachedRole))
@@ -43,7 +44,50 @@ public class UserStateService : IUserStateService
         }
     }
 
+    public async Task<UserRole> GetActiveRoleAsync(long chatId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+
+            var state = await dbContext.UserStates.FindAsync(new object[] { chatId }, cancellationToken);
+            return state?.ActiveRole ?? UserRole.Unknown;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving active user role from DB for {ChatId}", chatId);
+            return UserRole.Unknown;
+        }
+    }
+
     public async Task SetUserRoleAsync(long chatId, UserRole newRole, CancellationToken cancellationToken)
+    {
+        await AddOrUpdateUserRolesAsync(chatId, newRole, setActive: false, cancellationToken);
+    }
+
+    public async Task SetActiveRoleAsync(long chatId, UserRole activeRole, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+
+            var state = await dbContext.UserStates.FindAsync(new object[] { chatId }, cancellationToken);
+            if (state != null)
+            {
+                state.ActiveRole = activeRole;
+                dbContext.UserStates.Update(state);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting active role for {ChatId}", chatId);
+        }
+    }
+
+    public async Task AddOrUpdateUserRolesAsync(long chatId, UserRole newRole, bool setActive, CancellationToken cancellationToken)
     {
         try
         {
@@ -53,13 +97,23 @@ public class UserStateService : IUserStateService
             var state = await dbContext.UserStates.FindAsync(new object[] { chatId }, cancellationToken);
             if (state == null)
             {
-                state = new UserState { ChatId = chatId, Role = newRole };
+                state = new UserState
+                {
+                    ChatId = chatId,
+                    Role = newRole,
+                    ActiveRole = setActive ? newRole : UserRole.Unknown
+                };
                 dbContext.UserStates.Add(state);
             }
             else
             {
-                // Combine roles using bitwise OR
                 state.Role |= newRole;
+
+                if (setActive)
+                {
+                    state.ActiveRole = newRole;
+                }
+
                 dbContext.UserStates.Update(state);
             }
 
@@ -68,7 +122,7 @@ public class UserStateService : IUserStateService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving user role to DB for {ChatId}", chatId);
+            _logger.LogError(ex, "Error updating roles for {ChatId}", chatId);
         }
     }
 

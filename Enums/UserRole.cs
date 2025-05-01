@@ -1,10 +1,10 @@
 namespace Telegram.Bot.Enums
 {
+    [Flags]
     public enum UserRole
     {
-        Unknown,
-        Client,
-        Company,
-        Both = Client | Company
+        Unknown = 0,
+        Client = 1,
+        Company = 2
     }
 }

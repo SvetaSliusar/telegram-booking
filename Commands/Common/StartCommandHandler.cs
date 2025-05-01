@@ -67,6 +67,7 @@ public class StartCommandHandler : IStartCommandHandler
         if (client != null)
         {
             await _userStateService.SetUserRoleAsync(chatId, UserRole.Client, cancellationToken);
+            await _userStateService.SetActiveRoleAsync(chatId, UserRole.Client, cancellationToken);
             await _mainMenuCommandHandler.ShowClientMainMenuAsync(chatId, client.Language ?? DefaultLanguage, cancellationToken);
             return true;
         }
@@ -77,13 +78,13 @@ public class StartCommandHandler : IStartCommandHandler
 
         if (company != null)
         {
-            await _userStateService.SetUserRoleAsync(chatId, UserRole.Company, cancellationToken);
+            await _userStateService.AddOrUpdateUserRolesAsync(chatId, UserRole.Company, setActive: true, cancellationToken);
             await _mainMenuCommandHandler.ShowCompanyMainMenuAsync(chatId, company.Token.Language ?? DefaultLanguage, cancellationToken);
             return true;
         }
 
         await AddClientIfNotExists(chatId, DemoCompanyId, cancellationToken);
-        await _userStateService.SetUserRoleAsync(chatId, UserRole.Client, cancellationToken);
+        await _userStateService.AddOrUpdateUserRolesAsync(chatId, UserRole.Client, setActive: true, cancellationToken);
         await ShowInitialLanguageSelection(chatId, cancellationToken);
 
         return true;
@@ -103,7 +104,7 @@ public class StartCommandHandler : IStartCommandHandler
             token.ChatId = chatId;
             token.Used = true;
             await _dbContext.SaveChangesAsync(cancellationToken);
-            await _userStateService.SetUserRoleAsync(chatId, UserRole.Company, cancellationToken);
+            await _userStateService.AddOrUpdateUserRolesAsync(chatId, UserRole.Company, setActive: true, cancellationToken);
             await ShowInitialLanguageSelection(chatId, cancellationToken);
             return true;
         }
@@ -112,7 +113,7 @@ public class StartCommandHandler : IStartCommandHandler
         if (company != null)
         {
             await AddClientIfNotExists(chatId, company.Id, cancellationToken);
-            await _userStateService.SetUserRoleAsync(chatId, UserRole.Client, cancellationToken);
+            await _userStateService.AddOrUpdateUserRolesAsync(chatId, UserRole.Client, setActive: true, cancellationToken);
             await ShowInitialLanguageSelection(chatId, cancellationToken);
             return true;
         }
