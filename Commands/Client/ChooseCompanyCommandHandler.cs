@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 
@@ -59,6 +60,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoCompanyFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -73,6 +75,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoServicesAvailable", company.Name),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -92,6 +95,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "CompanyServices", company.Name),
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: serviceKeyboard,
             cancellationToken: cancellationToken);
     }

@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace Telegram.Bot.Services.StateHandlers;
 
@@ -40,6 +41,7 @@ public class WorkEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "InvalidTimeFormat"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
                 return;
             }
@@ -53,6 +55,7 @@ public class WorkEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "NoWorkingHours"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -62,6 +65,7 @@ public class WorkEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "InvalidWorkTime"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }

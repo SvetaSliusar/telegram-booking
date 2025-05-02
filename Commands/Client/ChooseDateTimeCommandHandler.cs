@@ -66,6 +66,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "InvalidDaySelected"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -87,6 +88,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "InvalidDaySelected"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -133,6 +135,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId, 
                 text: _translationService.Get(language, "NoServiceSelected"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -262,20 +265,16 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
 
         calendarButtons.Add(new List<InlineKeyboardButton>
         {
-            InlineKeyboardButton.WithCallbackData("📆 This Month", $"choose_this_month:{currentDate:yyyy-MM-dd}"),
+            InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ThisMonth"), $"choose_this_month:{currentDate:yyyy-MM-dd}"),
             prevButton,
             nextButton
         });
 
         var keyboard = new InlineKeyboardMarkup(calendarButtons);
 
-        string messageText = $"📅 Select a date: {selectedDate:MMMM yyyy}\n" +
-                            "🔵 Today | ⚫ Fully booked | 🚫 Day off\n" +
-                            "You can book appointments only for this and next month.";
-
         await _botClient.SendMessage(
             chatId: chatId, 
-            text: messageText, 
+            text: _translationService.Get(language, "BookingSelectDateHeader", selectedDate),
             replyMarkup: keyboard, 
             cancellationToken: cancellationToken);
     }
@@ -290,6 +289,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoServiceSelected"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -309,6 +309,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoServiceFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -318,6 +319,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "InvalidDaySelected"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -332,6 +334,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NotWorkingOnDay"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -414,6 +417,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoAvailableTimes"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -426,6 +430,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "SelectTime", timezoneId),
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: new InlineKeyboardMarkup(timeSlots),
             cancellationToken: cancellationToken);
     }
@@ -454,6 +459,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoServiceFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }

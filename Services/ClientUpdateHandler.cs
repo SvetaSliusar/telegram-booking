@@ -3,6 +3,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Commands;
 using Telegram.Bot.Commands.Common;
+using Telegram.Bot.Types.Enums;
 
 namespace Telegram.Bot.Services;
 public class ClientUpdateHandler
@@ -43,6 +44,7 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;

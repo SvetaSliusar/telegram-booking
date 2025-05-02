@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -38,7 +39,8 @@ public class WorkStartTimeHandler : BaseStateHandler
         {
                 await BotClient.SendMessage(
                     chatId: chatId,
-                text: TranslationService.Get(language, "InvalidTimeFormat"),
+                    text: TranslationService.Get(language, "InvalidTimeFormat"),
+                    parseMode: ParseMode.MarkdownV2,
                     cancellationToken: cancellationToken);
             return;
         }
@@ -55,6 +57,7 @@ public class WorkStartTimeHandler : BaseStateHandler
             {
                 new[] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "Back"), $"change_work_time") }
             }),
+            parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
     }
 } 

@@ -55,7 +55,7 @@ public class GenerateClientLinkHandler : ICallbackCommand
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "ClientLink", clientLink),
-            parseMode: ParseMode.Markdown,
+            parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
     }
 }

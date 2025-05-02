@@ -4,6 +4,7 @@ using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 
@@ -128,6 +129,7 @@ public class WorkDayCommandHandler : ICallbackCommand
         var sentMessage = await _botClient.SendMessage(
             chatId: chatId,
             text: messageBuilder.ToString(),
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: inlineKeyboardMarkup,
             cancellationToken: cancellationToken);
 

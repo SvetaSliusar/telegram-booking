@@ -6,6 +6,7 @@ using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Models;
 using System.Text;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
+using Telegram.Bot.Types.Enums;
 
 namespace Telegram.Bot.Commands.Company;
 
@@ -72,7 +73,11 @@ public class BreakCommandHandler : ICallbackCommand
         var employee = company?.Employees.FirstOrDefault();
         if (employee == null)
         {
-            await _botClient.SendMessage(chatId, _translationService.Get(language, "NoEmployeeSelected"), cancellationToken: cancellationToken);
+            await _botClient.SendMessage(
+                chatId, 
+                _translationService.Get(language, "NoEmployeeSelected"),
+                parseMode: ParseMode.MarkdownV2,
+                 cancellationToken: cancellationToken);
             return;
         }
 
@@ -154,6 +159,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoEmployeeFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -164,6 +170,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoWorkingHoursForDay"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -211,6 +218,7 @@ public class BreakCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
+            parseMode: ParseMode.MarkdownV2,
             text: messageBuilder.ToString(),
             replyMarkup: new InlineKeyboardMarkup(buttons),
             cancellationToken: cancellationToken);
@@ -233,6 +241,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoWorkingHoursSet"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -285,6 +294,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoWorkingHoursSet"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -298,6 +308,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "BreakOverlap"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -314,6 +325,7 @@ public class BreakCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
+            parseMode: ParseMode.MarkdownV2,
             text: _translationService.Get(language, "BreakAdded", 
                 startTime.ToString(@"hh\:mm"), 
                 endTime.ToString(@"hh\:mm")),
@@ -340,6 +352,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoWorkingHoursSet"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -350,6 +363,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "BreakNotFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -360,6 +374,7 @@ public class BreakCommandHandler : ICallbackCommand
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "BreakRemoved"),
+            parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
 
         // Show updated breaks list
@@ -396,6 +411,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoCompanyFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -406,6 +422,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoEmployeeFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -451,6 +468,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoCompanyFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -461,6 +479,7 @@ public class BreakCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoEmployeeFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }

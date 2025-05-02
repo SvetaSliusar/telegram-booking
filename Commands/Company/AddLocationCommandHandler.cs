@@ -51,7 +51,7 @@ public class AddLocationCommandHandler : ICallbackCommand
             chatId: chatId,
             text: _translationService.Get(language, "SendLocation"),
             replyMarkup: replyKeyboard,
-            parseMode: ParseMode.Markdown,
+            parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
     }
 

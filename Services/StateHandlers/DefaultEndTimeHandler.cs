@@ -5,6 +5,7 @@ using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -37,6 +38,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
             return;
@@ -46,6 +48,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "InvalidState"),
                 cancellationToken: cancellationToken);
             return;
@@ -57,6 +60,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "InvalidWorkTime"),
                 cancellationToken: cancellationToken);
             return;
@@ -115,6 +119,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
 
             await BotClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "DefaultWorkTimeSet", timezone.ToTimezoneId(), startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
                 cancellationToken: cancellationToken);
 
@@ -129,7 +134,8 @@ public class DefaultEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: "❌ No working hours selected. Please select working hours first.",
+                parseMode: ParseMode.MarkdownV2,
+                text: TranslationService.Get(language, "NoWorkingHours"),
                 cancellationToken: cancellationToken);
         }
     }

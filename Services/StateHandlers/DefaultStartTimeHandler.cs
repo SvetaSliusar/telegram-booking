@@ -2,6 +2,7 @@ using System.Globalization;
 using Telegram.Bot.Enums;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace Telegram.Bot.Services.StateHandlers;
 
@@ -33,6 +34,7 @@ public class DefaultStartTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
             return;

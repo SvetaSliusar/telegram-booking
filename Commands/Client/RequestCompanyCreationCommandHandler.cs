@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 
@@ -69,6 +70,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
                 text: _translationService.Get(language, "NewContactThanks"),
+                parseMode: ParseMode.MarkdownV2,
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
             _userStateService.RemoveConversation(message.Chat.Id);
@@ -78,6 +80,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
                 text: _translationService.Get(language, "NoContactAccess"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
         }
     }
@@ -101,6 +104,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
                 text: _translationService.Get(language, "ContactRequestSent", username),
+                parseMode: ParseMode.MarkdownV2,
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
              _userStateService.RemoveConversation(message.Chat.Id);
@@ -110,6 +114,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
                 text: _translationService.Get(language, "NoUsername"),
+                parseMode: ParseMode.MarkdownV2,
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
         }
@@ -151,12 +156,14 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
         await _botClient.SendMessage(
             chatId: message.Chat.Id,
             text: _translationService.Get(language, "SharePhonePrompt"),
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: replyKeyboard,
             cancellationToken: cancellationToken);
 
         await _botClient.SendMessage(
             chatId: message.Chat.Id,
             text: _translationService.Get(language, "ContactOptions"),
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: inlineKeyboard,
             cancellationToken: cancellationToken);
     }

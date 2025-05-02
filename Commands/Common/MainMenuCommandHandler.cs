@@ -4,6 +4,7 @@ using Telegram.Bot.Enums;
 using Telegram.Bot.Infrastructure.Configs;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 using static Telegram.Bot.Commands.Helpers.RoleHandler;
@@ -87,6 +88,7 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
                     await _botClient.SendMessage(
                         chatId: chatId,
                         text: _translationService.Get(language, "UnknownRole"),
+                        parseMode: ParseMode.MarkdownV2,
                         cancellationToken: cancellationToken);
                 }
                 break;
@@ -154,6 +156,7 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "ChooseYourRole"),
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
@@ -259,6 +262,7 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         await _botClient.SendMessage(
             chatId: chatId,
             text: welcomeMessage,
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }

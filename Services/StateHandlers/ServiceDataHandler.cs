@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -31,6 +32,7 @@ public class ServiceDataHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "InvalidInput"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -45,6 +47,7 @@ public class ServiceDataHandler : BaseStateHandler
                     await BotClient.SendMessage(
                         chatId: chatId,
                         text: TranslationService.Get(language, "SessionExpired"),
+                        parseMode: ParseMode.MarkdownV2,
                         cancellationToken: cancellationToken);
                     return;
                 }
@@ -54,7 +57,8 @@ public class ServiceDataHandler : BaseStateHandler
                 UserStateService.SetConversation(chatId, "WaitingFoServiceDescription");
                     await BotClient.SendMessage(
                         chatId: chatId,
-                    text: TranslationService.Get(language, "EnterServiceDescription"),
+                        text: TranslationService.Get(language, "EnterServiceDescription"),
+                        parseMode: ParseMode.MarkdownV2,
                         cancellationToken: cancellationToken);
                 break;
             case "WaitingFoServiceDescription":
@@ -114,6 +118,7 @@ public class ServiceDataHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "SessionExpired"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -127,7 +132,8 @@ public class ServiceDataHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                    text: TranslationService.Get(language, "NoCompanyFound"),
+                text: TranslationService.Get(language, "NoCompanyFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
                 return;
         }
@@ -140,7 +146,8 @@ public class ServiceDataHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                    text: TranslationService.Get(language, "NoEmployeeFound"),
+                text: TranslationService.Get(language, "NoEmployeeFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
                 return;
         }
@@ -156,6 +163,7 @@ public class ServiceDataHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "SessionExpired"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -177,6 +185,7 @@ public class ServiceDataHandler : BaseStateHandler
         await BotClient.SendMessage(
             chatId: chatId,
             text: TranslationService.Get(language, "ServiceAddedForEmployee", service.Name, employee.Name),
+            parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
         
         CompanyCreationStateService.RemoveService(chatId, serviceCreationData.Id);
@@ -193,6 +202,7 @@ public class ServiceDataHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "SessionExpired"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -207,6 +217,7 @@ public class ServiceDataHandler : BaseStateHandler
         await BotClient.SendMessage(
             chatId: chatId,
             text: TranslationService.Get(language, "ChooseCurrency"),
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: currencyKeyboard,
             cancellationToken: cancellationToken);
     }
@@ -220,6 +231,7 @@ public class ServiceDataHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "InvalidPrice"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -231,6 +243,7 @@ public class ServiceDataHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "SessionExpired"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -250,6 +263,7 @@ public class ServiceDataHandler : BaseStateHandler
         await BotClient.SendMessage(
             chatId: chatId,
             text: TranslationService.Get(language, "ChooseDuration"),
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: predefinedDurations,
             cancellationToken: cancellationToken);
     }
@@ -265,6 +279,7 @@ public class ServiceDataHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "TheNextStep"),
+                parseMode: ParseMode.MarkdownV2,
                 replyMarkup: keyboard,
                 cancellationToken: cancellationToken);
         }

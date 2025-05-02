@@ -5,6 +5,7 @@ using Telegram.Bot.Enums;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 
@@ -71,6 +72,7 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "SelectTimezone"),
+            parseMode: ParseMode.Markdown,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
@@ -85,6 +87,7 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoClientFound"),
+                parseMode: ParseMode.Markdown,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -108,6 +111,7 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "InvalidTimezone"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
         }
     }

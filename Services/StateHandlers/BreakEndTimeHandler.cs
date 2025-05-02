@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -43,6 +44,7 @@ public class BreakEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "InvalidTimeFormat"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -57,6 +59,7 @@ public class BreakEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "NoWorkingHours"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
         return;
     }
@@ -67,6 +70,7 @@ public class BreakEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "InvalidBreakTime"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
         return;
     }
@@ -80,6 +84,7 @@ public class BreakEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "BreakOverlap"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
         return;
     }
@@ -100,6 +105,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         await BotClient.SendMessage(
             chatId: chatId,
             text: TranslationService.Get(language, "BreakAdded"),
+            parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
 
         // Return to day breaks selection
@@ -119,6 +125,7 @@ public class BreakEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "NoEmployeeFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -129,6 +136,7 @@ public class BreakEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "NoWorkingHoursForDay"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }

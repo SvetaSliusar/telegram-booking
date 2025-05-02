@@ -6,6 +6,7 @@ using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 
@@ -117,6 +118,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
@@ -127,6 +129,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: _translationService.Get(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;

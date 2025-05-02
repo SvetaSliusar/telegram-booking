@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Services.StateHandlers;
@@ -38,6 +39,7 @@ public class BreakStartTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
             return;
@@ -52,6 +54,7 @@ public class BreakStartTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "NoWorkingHours"),
                 cancellationToken: cancellationToken);
                 return;
@@ -62,6 +65,7 @@ public class BreakStartTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
+                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "InvalidBreakTime"),
                 cancellationToken: cancellationToken);
             return;

@@ -49,7 +49,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                     await BotClient.SendMessage(
                         chatId: chatId,
                         text: TranslationService.Get(language, "SendCompanyAlias"),
-                        parseMode: ParseMode.Markdown,
+                        parseMode: ParseMode.MarkdownV2,
                         cancellationToken: cancellationToken);
                 }
                 break;
@@ -59,6 +59,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                     await BotClient.SendMessage(
                         chatId: chatId,
                         text: TranslationService.Get(language, "AliasRequired"),
+                        parseMode: ParseMode.MarkdownV2,
                         cancellationToken: cancellationToken);
                     return;
                 }
@@ -68,6 +69,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                     await BotClient.SendMessage(
                         chatId: chatId,
                         text: TranslationService.Get(language, "AliasAlreadyExists"),
+                        parseMode: ParseMode.MarkdownV2,
                         cancellationToken: cancellationToken);
                     return;
                 }
@@ -96,6 +98,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
 
                 await BotClient.SendMessage(
                     chatId: chatId,
+                    parseMode: ParseMode.MarkdownV2,
                     text: TranslationService.Get(language, "DataSaved"),
                     cancellationToken: cancellationToken);
                 var keyboard = new InlineKeyboardMarkup(new[]

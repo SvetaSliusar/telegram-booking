@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Commands.Client;
@@ -50,6 +51,7 @@ public class BookAppointmentCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoCompaniesAvailable"),
+                parseMode: ParseMode.Markdown,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -62,6 +64,7 @@ public class BookAppointmentCommandHandler : ICallbackCommand
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "SelectCompany"),
+            parseMode: ParseMode.Markdown,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }

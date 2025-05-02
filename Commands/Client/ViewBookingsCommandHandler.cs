@@ -5,6 +5,7 @@ using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Telegram.Bot.Commands.Client;
@@ -48,6 +49,7 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoBookingsFound"),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -98,6 +100,7 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
         await _botClient.SendMessage(
             chatId: chatId,
             text: message,
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: new InlineKeyboardMarkup(new[] 
             { 
                 new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu") }

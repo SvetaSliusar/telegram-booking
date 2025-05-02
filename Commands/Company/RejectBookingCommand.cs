@@ -51,6 +51,7 @@ namespace Telegram.Bot.Commands.Company
             {
                 await _botClient.SendMessage(
                     chatId: callbackQuery.Message.Chat.Id,
+                    parseMode: ParseMode.MarkdownV2,
                     text: _translationService.Get(language, "BookingNotFound"),
                     cancellationToken: cancellationToken);
                 return;
@@ -62,6 +63,7 @@ namespace Telegram.Bot.Commands.Company
             // Notify company
             await _botClient.SendMessage(
                 chatId: callbackQuery.Message.Chat.Id,
+                parseMode: ParseMode.MarkdownV2,
                 text: _translationService.Get(language, "BookingRejected"),
                 cancellationToken: cancellationToken);
 
