@@ -87,8 +87,7 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
                 {
                     await _botClient.SendMessage(
                         chatId: chatId,
-                        text: _translationService.Get(language, "UnknownRole"),
-                        parseMode: ParseMode.MarkdownV2,
+                        text: _translationService.Get(language, "UnknownRole"), 
                         cancellationToken: cancellationToken);
                 }
                 break;
@@ -155,8 +154,7 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: _translationService.Get(language, "ChooseYourRole"),
-            parseMode: ParseMode.MarkdownV2,
+            text: _translationService.Get(language, "ChooseYourRole"),  
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
@@ -262,7 +260,6 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         await _botClient.SendMessage(
             chatId: chatId,
             text: welcomeMessage,
-            parseMode: ParseMode.MarkdownV2,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }

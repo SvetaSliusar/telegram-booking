@@ -38,8 +38,7 @@ public class BreakStartTimeHandler : BaseStateHandler
         if (!TimeSpan.TryParseExact(message.Text, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan startTime))
         {
             await BotClient.SendMessage(
-                chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
+                chatId: chatId,  
                 text: TranslationService.Get(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
             return;
@@ -54,7 +53,6 @@ public class BreakStartTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "NoWorkingHours"),
                 cancellationToken: cancellationToken);
                 return;
@@ -64,8 +62,7 @@ public class BreakStartTimeHandler : BaseStateHandler
         if (startTime < workingHours.StartTime || startTime >= workingHours.EndTime)
         {
             await BotClient.SendMessage(
-                chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
+                chatId: chatId, 
                 text: TranslationService.Get(language, "InvalidBreakTime"),
                 cancellationToken: cancellationToken);
             return;

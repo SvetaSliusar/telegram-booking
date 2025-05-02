@@ -117,8 +117,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
         if (company == null)
         {
             await _botClient.SendMessage(
-                chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
+                chatId: chatId, 
                 text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
@@ -128,8 +127,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
         if (employee == null)
         {
             await _botClient.SendMessage(
-                chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
+                chatId: chatId, 
                 text: _translationService.Get(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;

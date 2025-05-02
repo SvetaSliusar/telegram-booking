@@ -23,7 +23,6 @@ namespace Telegram.Bot.Commands.Company
             _dbContext = dbContext;
             _botClient = botClient;
             _userStateService = userStateService;
-            _translationService = translationService;
         }
 
         public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -77,8 +76,8 @@ namespace Telegram.Bot.Commands.Company
                     localBookingTime.ToString("dddd, MMMM d, yyyy"),
                     clientTimeZoneId,
                     localBookingTime.ToString("HH:mm")),
-                parseMode: ParseMode.MarkdownV2,
-                cancellationToken: cancellationToken);
+                    parseMode: ParseMode.MarkdownV2,
+                    cancellationToken: cancellationToken);
 
             if (booking.Company.Latitude.HasValue && booking.Company.Longitude.HasValue)
             {

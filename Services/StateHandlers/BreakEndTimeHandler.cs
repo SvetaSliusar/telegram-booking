@@ -43,8 +43,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: TranslationService.Get(language, "InvalidTimeFormat"),
-                parseMode: ParseMode.MarkdownV2,
+                text: TranslationService.Get(language, "InvalidTimeFormat"), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -58,8 +57,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: TranslationService.Get(language, "NoWorkingHours"),
-                parseMode: ParseMode.MarkdownV2,
+                text: TranslationService.Get(language, "NoWorkingHours"), 
                 cancellationToken: cancellationToken);
         return;
     }
@@ -69,11 +67,10 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: TranslationService.Get(language, "InvalidBreakTime"),
-                parseMode: ParseMode.MarkdownV2,
+                text: TranslationService.Get(language, "InvalidBreakTime"), 
                 cancellationToken: cancellationToken);
-        return;
-    }
+            return;
+        }
 
         // Check for overlapping breaks
         if (workingHours.Breaks.Any(b => 
@@ -83,11 +80,10 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: TranslationService.Get(language, "BreakOverlap"),
-                parseMode: ParseMode.MarkdownV2,
+                text: TranslationService.Get(language, "BreakOverlap"), 
                 cancellationToken: cancellationToken);
-        return;
-    }
+            return;
+        }
 
         // Add the break
         workingHours.Breaks.Add(new Break
@@ -104,8 +100,7 @@ public class BreakEndTimeHandler : BaseStateHandler
 
         await BotClient.SendMessage(
             chatId: chatId,
-            text: TranslationService.Get(language, "BreakAdded"),
-            parseMode: ParseMode.MarkdownV2,
+            text: TranslationService.Get(language, "BreakAdded"), 
             cancellationToken: cancellationToken);
 
         // Return to day breaks selection
@@ -125,7 +120,6 @@ public class BreakEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "NoEmployeeFound"),
-                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -135,8 +129,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: TranslationService.Get(language, "NoWorkingHoursForDay"),
-                parseMode: ParseMode.MarkdownV2,
+                text: TranslationService.Get(language, "NoWorkingHoursForDay"), 
                 cancellationToken: cancellationToken);
             return;
         }

@@ -28,7 +28,6 @@ public class FeedbackPromptHanlder : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "FeedbackTooLong"),
                 cancellationToken: cancellationToken);
             return;
@@ -39,8 +38,7 @@ public class FeedbackPromptHanlder : BaseStateHandler
         if (company == null)
         {
             await BotClient.SendMessage(
-                chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
+                chatId: chatId, 
                 text: TranslationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
@@ -53,7 +51,7 @@ public class FeedbackPromptHanlder : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "FeedbackThankYou"),
-                parseMode: ParseMode.MarkdownV2,
+                 
                 cancellationToken: cancellationToken);
         }
         catch (Exception ex)
@@ -61,7 +59,6 @@ public class FeedbackPromptHanlder : BaseStateHandler
             Logger.LogError(ex, "Error saving feedback");
             await BotClient.SendMessage(
                 chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "FeedbackError"),
                 cancellationToken: cancellationToken);
         }

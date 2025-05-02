@@ -148,8 +148,7 @@ public class ServiceCommandHandler : ICallbackCommand
         _userStateService.SetConversation(chatId, "WaitingForServiceName");
 
         await _botClient.SendMessage(
-            chatId: chatId,
-            parseMode: ParseMode.MarkdownV2,
+            chatId: chatId, 
             text: _translationService.Get(language, "NewService"),
             cancellationToken: cancellationToken);
     }
@@ -165,8 +164,7 @@ public class ServiceCommandHandler : ICallbackCommand
         if (company == null || !company.Employees.Any())
         {
             await _botClient.SendMessage(
-                chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
+                chatId: chatId, 
                 text: _translationService.Get(language, "NoServices"),
                 cancellationToken: cancellationToken);
             return;
@@ -211,7 +209,6 @@ public class ServiceCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
                 text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
@@ -222,7 +219,6 @@ public class ServiceCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
                 text: _translationService.Get(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
@@ -249,7 +245,6 @@ public class ServiceCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            parseMode: ParseMode.MarkdownV2,
             text: _translationService.Get(language, "ServiceAddedForEmployee", service.Name, employee.Name),
             cancellationToken: cancellationToken);
 

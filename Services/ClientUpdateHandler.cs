@@ -44,7 +44,6 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
                 text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;

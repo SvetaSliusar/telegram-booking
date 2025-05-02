@@ -59,8 +59,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "NoCompanyFound"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NoCompanyFound"), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -74,8 +73,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "NoServicesAvailable", company.Name),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NoServicesAvailable", company.Name), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -95,7 +93,6 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "CompanyServices", company.Name),
-            parseMode: ParseMode.MarkdownV2,
             replyMarkup: serviceKeyboard,
             cancellationToken: cancellationToken);
     }

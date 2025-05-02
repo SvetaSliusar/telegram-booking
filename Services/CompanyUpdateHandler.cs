@@ -272,7 +272,6 @@ public class CompanyUpdateHandler
         await _botClient.SendMessage(
             chatId: chatId,
             text: messageText,
-            parseMode: ParseMode.MarkdownV2,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
@@ -350,7 +349,6 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
                 text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
@@ -396,7 +394,6 @@ public class CompanyUpdateHandler
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "InvalidReminderTime"),
-                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -409,7 +406,6 @@ public class CompanyUpdateHandler
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "InvalidReminderTime"),
-                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -445,8 +441,7 @@ public class CompanyUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: _translationService.Get(language, "ReminderTimeUpdated", hours),
-            parseMode: ParseMode.MarkdownV2,
+            text: _translationService.Get(language, "ReminderTimeUpdated", hours), 
             cancellationToken: cancellationToken);
         
         await _botClient.SendMessage(
@@ -467,8 +462,7 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "NoEmployeeFound"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NoEmployeeFound"), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -478,8 +472,7 @@ public class CompanyUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "NoWorkingHoursForDay"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NoWorkingHoursForDay"), 
                 cancellationToken: cancellationToken);
             return;
         }

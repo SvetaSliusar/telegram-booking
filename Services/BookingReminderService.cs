@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace Telegram.Bot.Services;
 
@@ -74,6 +75,7 @@ public class BookingReminderService : BackgroundService
                             await _botClient.SendMessage(
                                 chatId: booking.ClientId,
                                 text: message,
+                                parseMode: ParseMode.MarkdownV2,
                                 cancellationToken: stoppingToken);
 
                             booking.ReminderSent = true;

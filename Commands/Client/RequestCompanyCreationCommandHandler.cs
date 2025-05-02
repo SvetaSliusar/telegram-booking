@@ -69,8 +69,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
                 cancellationToken: cancellationToken);
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
-                text: _translationService.Get(language, "NewContactThanks"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NewContactThanks"), 
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
             _userStateService.RemoveConversation(message.Chat.Id);
@@ -80,7 +79,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
                 text: _translationService.Get(language, "NoContactAccess"),
-                parseMode: ParseMode.MarkdownV2,
+                 
                 cancellationToken: cancellationToken);
         }
     }
@@ -103,8 +102,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
 
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
-                text: _translationService.Get(language, "ContactRequestSent", username),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "ContactRequestSent", username), 
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
              _userStateService.RemoveConversation(message.Chat.Id);
@@ -113,8 +111,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
-                text: _translationService.Get(language, "NoUsername"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NoUsername"), 
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
         }
@@ -124,8 +121,8 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
     {
         await _botClient.SendMessage(
             chatId: message.Chat.Id,
-            text: _translationService.Get(await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken), "ManualContact"),
-            parseMode: Types.Enums.ParseMode.Markdown,
+            parseMode: ParseMode.MarkdownV2,
+            text: _translationService.Get(await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken), "ManualContact"), 
             replyMarkup: new ReplyKeyboardRemove(),
             cancellationToken: cancellationToken);
         
@@ -155,15 +152,13 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: message.Chat.Id,
-            text: _translationService.Get(language, "SharePhonePrompt"),
-            parseMode: ParseMode.MarkdownV2,
+            text: _translationService.Get(language, "SharePhonePrompt"), 
             replyMarkup: replyKeyboard,
             cancellationToken: cancellationToken);
 
         await _botClient.SendMessage(
             chatId: message.Chat.Id,
-            text: _translationService.Get(language, "ContactOptions"),
-            parseMode: ParseMode.MarkdownV2,
+            text: _translationService.Get(language, "ContactOptions"), 
             replyMarkup: inlineKeyboard,
             cancellationToken: cancellationToken);
     }

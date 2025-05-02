@@ -37,8 +37,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
         if (!TimeSpan.TryParseExact(message.Text, "hh\\:mm", CultureInfo.InvariantCulture, out TimeSpan endTime))
         {
             await BotClient.SendMessage(
-                chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
+                chatId: chatId, 
                 text: TranslationService.Get(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
             return;
@@ -48,7 +47,6 @@ public class DefaultEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
                 text: TranslationService.Get(language, "InvalidState"),
                 cancellationToken: cancellationToken);
             return;
@@ -59,8 +57,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
         if (endTime <= startTime)
         {
             await BotClient.SendMessage(
-                chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
+                chatId: chatId, 
                 text: TranslationService.Get(language, "InvalidWorkTime"),
                 cancellationToken: cancellationToken);
             return;
@@ -118,9 +115,9 @@ public class DefaultEndTimeHandler : BaseStateHandler
             UserStateService.RemoveConversation(chatId);
 
             await BotClient.SendMessage(
-                chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
+                chatId: chatId, 
                 text: TranslationService.Get(language, "DefaultWorkTimeSet", timezone.ToTimezoneId(), startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
 
             var keyboard = new InlineKeyboardMarkup(new[]
@@ -133,8 +130,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
         else
         {
             await BotClient.SendMessage(
-                chatId: chatId,
-                parseMode: ParseMode.MarkdownV2,
+                chatId: chatId, 
                 text: TranslationService.Get(language, "NoWorkingHours"),
                 cancellationToken: cancellationToken);
         }

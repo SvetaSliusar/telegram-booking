@@ -39,8 +39,7 @@ public class WorkStartTimeHandler : BaseStateHandler
         {
                 await BotClient.SendMessage(
                     chatId: chatId,
-                    text: TranslationService.Get(language, "InvalidTimeFormat"),
-                    parseMode: ParseMode.MarkdownV2,
+                    text: TranslationService.Get(language, "InvalidTimeFormat"), 
                     cancellationToken: cancellationToken);
             return;
         }
@@ -56,8 +55,7 @@ public class WorkStartTimeHandler : BaseStateHandler
             replyMarkup: new InlineKeyboardMarkup(new[]
             {
                 new[] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "Back"), $"change_work_time") }
-            }),
-            parseMode: ParseMode.MarkdownV2,
+            }), 
             cancellationToken: cancellationToken);
     }
 } 

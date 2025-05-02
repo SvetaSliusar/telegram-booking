@@ -48,8 +48,7 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "NoBookingsFound"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NoBookingsFound"), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -99,8 +98,7 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: message,
-            parseMode: ParseMode.MarkdownV2,
+            text: message, 
             replyMarkup: new InlineKeyboardMarkup(new[] 
             { 
                 new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu") }

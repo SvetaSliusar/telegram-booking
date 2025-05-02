@@ -65,8 +65,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "InvalidDaySelected"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "InvalidDaySelected"), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -87,8 +86,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "InvalidDaySelected"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "InvalidDaySelected"), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -134,8 +132,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId, 
-                text: _translationService.Get(language, "NoServiceSelected"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NoServiceSelected"), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -275,7 +272,8 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         await _botClient.SendMessage(
             chatId: chatId, 
             text: _translationService.Get(language, "BookingSelectDateHeader", selectedDate),
-            replyMarkup: keyboard, 
+            replyMarkup: keyboard,
+            parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
     }
 
@@ -288,8 +286,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "NoServiceSelected"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NoServiceSelected"), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -308,8 +305,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "NoServiceFound"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NoServiceFound"), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -318,8 +314,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "InvalidDaySelected"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "InvalidDaySelected"), 
                 cancellationToken: cancellationToken);
             return;
         }
@@ -334,7 +329,6 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NotWorkingOnDay"),
-                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -416,8 +410,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             _userStateService.SetConversation(chatId, $"WaitingForDate_{serviceId}");
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "NoAvailableTimes"),
-                parseMode: ParseMode.MarkdownV2,
+                text: _translationService.Get(language, "NoAvailableTimes"),  
                 cancellationToken: cancellationToken);
             return;
         }
@@ -429,8 +422,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: _translationService.Get(language, "SelectTime", timezoneId),
-            parseMode: ParseMode.MarkdownV2,
+            text: _translationService.Get(language, "SelectTime", timezoneId), 
             replyMarkup: new InlineKeyboardMarkup(timeSlots),
             cancellationToken: cancellationToken);
     }
@@ -459,7 +451,6 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoServiceFound"),
-                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -504,13 +495,14 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
 
         await _botClient.SendMessage(
             chatId: chatId,
+            parseMode: ParseMode.MarkdownV2,
             text: _translationService.Get(language, "BookingPendingConfirmation",
                 service.Name,
                 service.Employee.Name,
                 localClientTime.ToString("dddd, MMMM d, yyyy"),
                 clientTimezoneId,
                 localClientTime.ToString("HH:mm")),
-            parseMode: ParseMode.MarkdownV2,
+             
             cancellationToken: cancellationToken);
 
         // Send notification to Company Owner
@@ -538,6 +530,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
                     localCompanyTime.ToString("HH:mm"),
                     timezoneId),
                 replyMarkup: keyboard,
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
         }
     }

@@ -40,8 +40,7 @@ public class WorkEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: TranslationService.Get(language, "InvalidTimeFormat"),
-                parseMode: ParseMode.MarkdownV2,
+                text: TranslationService.Get(language, "InvalidTimeFormat"), 
                 cancellationToken: cancellationToken);
                 return;
             }
@@ -55,7 +54,6 @@ public class WorkEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "NoWorkingHours"),
-                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -65,7 +63,6 @@ public class WorkEndTimeHandler : BaseStateHandler
             await BotClient.SendMessage(
                 chatId: chatId,
                 text: TranslationService.Get(language, "InvalidWorkTime"),
-                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }

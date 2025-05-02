@@ -50,8 +50,8 @@ public class AddLocationCommandHandler : ICallbackCommand
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "SendLocation"),
-            replyMarkup: replyKeyboard,
             parseMode: ParseMode.MarkdownV2,
+            replyMarkup: replyKeyboard, 
             cancellationToken: cancellationToken);
     }
 

@@ -50,8 +50,7 @@ namespace Telegram.Bot.Commands.Company
             if (booking == null)
             {
                 await _botClient.SendMessage(
-                    chatId: callbackQuery.Message.Chat.Id,
-                    parseMode: ParseMode.MarkdownV2,
+                    chatId: callbackQuery.Message.Chat.Id,  
                     text: _translationService.Get(language, "BookingNotFound"),
                     cancellationToken: cancellationToken);
                 return;
@@ -63,7 +62,6 @@ namespace Telegram.Bot.Commands.Company
             // Notify company
             await _botClient.SendMessage(
                 chatId: callbackQuery.Message.Chat.Id,
-                parseMode: ParseMode.MarkdownV2,
                 text: _translationService.Get(language, "BookingRejected"),
                 cancellationToken: cancellationToken);
 
@@ -77,7 +75,7 @@ namespace Telegram.Bot.Commands.Company
                     booking.Service.Name,
                     booking.Service.Employee.Name,
                     localBookingTime.ToString("dddd, MMMM d, yyyy"),
-                    localBookingTime.ToString("hh:mm")),
+                    localBookingTime.ToString("hh:mm")), 
                 parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
         }

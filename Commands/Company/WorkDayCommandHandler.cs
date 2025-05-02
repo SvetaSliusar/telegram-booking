@@ -129,7 +129,6 @@ public class WorkDayCommandHandler : ICallbackCommand
         var sentMessage = await _botClient.SendMessage(
             chatId: chatId,
             text: messageBuilder.ToString(),
-            parseMode: ParseMode.MarkdownV2,
             replyMarkup: inlineKeyboardMarkup,
             cancellationToken: cancellationToken);
 
