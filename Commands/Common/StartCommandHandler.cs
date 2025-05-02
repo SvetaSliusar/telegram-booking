@@ -163,7 +163,7 @@ public class StartCommandHandler : IStartCommandHandler
         var languageKeyboard = new InlineKeyboardMarkup(new[]
         {
             new[] { InlineKeyboardButton.WithCallbackData("🇺🇸 English", "set_language:EN") },
-            new[] { InlineKeyboardButton.WithCallbackData("🇺🇦 Українська", "set_language:UA") }
+            new[] { InlineKeyboardButton.WithCallbackData("🇺🇦 Українська", "set_language:UK") }
         });
 
         await _botClient.SendMessage(
