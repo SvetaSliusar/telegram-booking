@@ -51,7 +51,7 @@ public class BookAppointmentCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoCompaniesAvailable"),
-                parseMode: ParseMode.Markdown,
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -64,7 +64,7 @@ public class BookAppointmentCommandHandler : ICallbackCommand
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "SelectCompany"),
-            parseMode: ParseMode.Markdown,
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }

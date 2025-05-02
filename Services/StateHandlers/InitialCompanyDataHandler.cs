@@ -40,7 +40,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                     await BotClient.SendMessage(
                         chatId: chatId,
                         text: TranslationService.Get(language, "EnterYourName"),
-                        parseMode: ParseMode.Markdown,
+                        parseMode: ParseMode.MarkdownV2,
                         cancellationToken: cancellationToken);
                 }
                 else

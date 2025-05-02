@@ -72,7 +72,7 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "SelectTimezone"),
-            parseMode: ParseMode.Markdown,
+            parseMode: ParseMode.MarkdownV2,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
@@ -87,7 +87,7 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoClientFound"),
-                parseMode: ParseMode.Markdown,
+                parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
             return;
         }
