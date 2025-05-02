@@ -23,6 +23,7 @@ namespace Telegram.Bot.Commands.Company
             _dbContext = dbContext;
             _botClient = botClient;
             _userStateService = userStateService;
+            _translationService = translationService;
         }
 
         public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
