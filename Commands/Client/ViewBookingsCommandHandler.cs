@@ -14,15 +14,18 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
+    private readonly ITranslationService _translationService;
 
     public ViewBookingsCommandHanlder(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        BookingDbContext dbContext)
+        BookingDbContext dbContext,
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _userStateService = userStateService;
         _dbContext = dbContext;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -44,7 +47,7 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoBookingsFound"),
+                text: _translationService.Get(language, "NoBookingsFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -61,17 +64,17 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoUpcomingBookings"),
+                text: _translationService.Get(language, "NoUpcomingBookings"),
                 replyMarkup: new InlineKeyboardMarkup(new[] 
                 { 
-                    new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+                    new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu") }
                 }),
                 cancellationToken: cancellationToken);
             return;
         }
 
         var messageBuilder = new StringBuilder();
-        messageBuilder.AppendLine(Translations.GetMessage(language, "UpcomingBookings"));
+        messageBuilder.AppendLine(_translationService.Get(language, "UpcomingBookings"));
         messageBuilder.AppendLine();
 
         var clientTimezoneId = client.TimeZoneId ?? "Europe/Lisbon";
@@ -80,7 +83,7 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
         foreach (var booking in bookings)
         {
             var localTime = TimeZoneInfo.ConvertTimeFromUtc(booking.BookingTime, clientTimeZone);
-            messageBuilder.AppendLine(Translations.GetMessage(language, "BookingDetails",
+            messageBuilder.AppendLine(_translationService.Get(language, "BookingDetails",
                 booking.Company.Name,
                 booking.Service.Name, 
                 booking.Service.Employee.Name,
@@ -97,7 +100,7 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
             text: message,
             replyMarkup: new InlineKeyboardMarkup(new[] 
             { 
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu") }
             }),
             cancellationToken: cancellationToken);
     }

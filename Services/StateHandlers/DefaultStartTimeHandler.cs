@@ -14,8 +14,9 @@ public class DefaultStartTimeHandler : BaseStateHandler
         IUserStateService userStateService,
         ILogger<DefaultStartTimeHandler> logger,
         BookingDbContext dbContext,
-        ICompanyCreationStateService companyCreationStateService)
-        : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        ITranslationService translationService)
+        : base(botClient, userStateService, logger, dbContext, companyCreationStateService, translationService)
     {
     }
 
@@ -32,7 +33,7 @@ public class DefaultStartTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
+                text: TranslationService.Get(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -42,7 +43,7 @@ public class DefaultStartTimeHandler : BaseStateHandler
 
         await BotClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "EnterDefaultEndTime"),
+            text: TranslationService.Get(language, "EnterDefaultEndTime"),
             cancellationToken: cancellationToken);
     }
 } 

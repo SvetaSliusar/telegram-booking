@@ -11,15 +11,18 @@ public class GenerateClientLinkHandler : ICallbackCommand
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
+    private readonly ITranslationService _translationService;
 
     public GenerateClientLinkHandler(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        BookingDbContext dbContext)
+        BookingDbContext dbContext,
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _userStateService = userStateService;
         _dbContext = dbContext;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -51,7 +54,7 @@ public class GenerateClientLinkHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "ClientLink", clientLink),
+            text: _translationService.Get(language, "ClientLink", clientLink),
             parseMode: ParseMode.Markdown,
             cancellationToken: cancellationToken);
     }

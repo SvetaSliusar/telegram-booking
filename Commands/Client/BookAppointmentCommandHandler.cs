@@ -12,15 +12,18 @@ public class BookAppointmentCommandHandler : ICallbackCommand
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
+    private readonly ITranslationService _translationService;
 
     public BookAppointmentCommandHandler(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        BookingDbContext dbContext)
+        BookingDbContext dbContext,
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _userStateService = userStateService;
         _dbContext = dbContext;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -46,7 +49,7 @@ public class BookAppointmentCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompaniesAvailable"),
+                text: _translationService.Get(language, "NoCompaniesAvailable"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -58,7 +61,7 @@ public class BookAppointmentCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "SelectCompany"),
+            text: _translationService.Get(language, "SelectCompany"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }

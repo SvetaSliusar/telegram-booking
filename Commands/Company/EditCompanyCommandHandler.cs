@@ -9,13 +9,16 @@ public class EditCompanyCommandHandler : ICallbackCommand
 {
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
+    private readonly ITranslationService _translationService;
 
     public EditCompanyCommandHandler(
         IUserStateService userStateService,
-        ITelegramBotClient botClient)
+        ITelegramBotClient botClient,
+        ITranslationService translationService)
     {
         _userStateService = userStateService;
         _botClient = botClient;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -32,29 +35,29 @@ public class EditCompanyCommandHandler : ICallbackCommand
         {
             new()
             {
-                InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "SetupWorkDays"), "setup_work_days"),
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "SetupWorkDays"), "setup_work_days"),
             },
             new()
             {
-                InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeWorkTime"), "change_work_time")
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeWorkTime"), "change_work_time")
             },
             new()
             {
-                InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ManageBreaks"), "manage_breaks")
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ManageBreaks"), "manage_breaks")
             },
-            new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") },
-            new () { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddLocation"), "add_location") },
-            new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ReminderSettings"), "reminder_settings") },
+            new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "AddService"), "add_service") },
+            new () { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "AddLocation"), "add_location") },
+            new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ReminderSettings"), "reminder_settings") },
             new()
             {
-                InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMainMenu"), "back_to_menu")
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMainMenu"), "back_to_menu")
             }
         });
 
         await _botClient.EditMessageText(
             chatId: chatId,
             messageId: messageId,
-            text: Translations.GetMessage(language, "MainMenu"),
+            text: _translationService.Get(language, "MainMenu"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }

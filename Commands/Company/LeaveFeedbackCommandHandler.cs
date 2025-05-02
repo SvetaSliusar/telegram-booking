@@ -11,16 +11,16 @@ public class LeaveFeedbbackCommandHanlder : ICallbackCommand
 {
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
-    private readonly BookingDbContext _dbContext;
+    private readonly ITranslationService _translationService;
 
     public LeaveFeedbbackCommandHanlder(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        BookingDbContext dbContext)
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _userStateService = userStateService;
-        _dbContext = dbContext;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -38,7 +38,7 @@ public class LeaveFeedbbackCommandHanlder : ICallbackCommand
         _userStateService.SetConversation(chatId, "WaitingForFeedback");
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "FeedbackPrompt"),
+            text: _translationService.Get(language, "FeedbackPrompt"),
             replyMarkup: new ReplyKeyboardRemove(),
             parseMode: ParseMode.Markdown,
             cancellationToken: cancellationToken);

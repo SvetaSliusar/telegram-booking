@@ -10,15 +10,18 @@ public class ChangeLanguageCommandHandler : ICallbackCommand, IChangeLanguageCom
     private readonly IUserStateService _userStateService;
     private readonly ITelegramBotClient _botClient;
     private readonly IMainMenuCommandHandler _mainMenuHandler;
+    private readonly ITranslationService _translationService;
 
     public ChangeLanguageCommandHandler(
         IUserStateService userStateService,
         ITelegramBotClient botClient,
-        IMainMenuCommandHandler mainMenuHandler)
+        IMainMenuCommandHandler mainMenuHandler,
+        ITranslationService translationService)
     {
         _userStateService = userStateService;
         _botClient = botClient;
         _mainMenuHandler = mainMenuHandler;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -66,9 +69,9 @@ public class ChangeLanguageCommandHandler : ICallbackCommand, IChangeLanguageCom
         await _userStateService.SetLanguageAsync(chatId, messageText, cancellationToken);
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(messageText, "LanguageSet", messageText),
+            text: _translationService.Get(messageText, "LanguageSet", messageText),
             cancellationToken: cancellationToken);
 
-        await _mainMenuHandler.ShowMainMenuAsync(chatId, cancellationToken);
+        await _mainMenuHandler.ShowActiveMainMenuAsync(chatId, cancellationToken);
     }
 }

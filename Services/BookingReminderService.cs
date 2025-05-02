@@ -11,15 +11,18 @@ public class BookingReminderService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ITelegramBotClient _botClient;
     private readonly ILogger<BookingReminderService> _logger;
+    private readonly ITranslationService _translationService;
 
     public BookingReminderService(
         IServiceProvider serviceProvider,
         ITelegramBotClient botClient,
-        ILogger<BookingReminderService> logger)
+        ILogger<BookingReminderService> logger,
+        ITranslationService translationService)
     {
         _serviceProvider = serviceProvider;
         _botClient = botClient;
         _logger = logger;
+        _translationService = translationService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -60,7 +63,7 @@ public class BookingReminderService : BackgroundService
                         var language = (await dbContext.Clients.FirstOrDefaultAsync(c => c.Id == booking.ClientId))?.Language ?? "EN";
                         var localTime = booking.BookingTime.ToLocalTime();
 
-                        var message = Translations.GetMessage(language, "ReminderMessage",
+                        var message = _translationService.Get(language, "ReminderMessage",
                             booking.Service.Name,
                             company.Name,
                             localTime.ToString("dddd, MMMM d, yyyy"),

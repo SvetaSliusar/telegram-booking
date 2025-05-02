@@ -17,8 +17,9 @@ public class BreakEndTimeHandler : BaseStateHandler
         IUserStateService userStateService,
         ILogger<BreakEndTimeHandler> logger,
         BookingDbContext dbContext,
+        ITranslationService translationService,
         ICompanyCreationStateService companyCreationStateService)
-        : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
+        : base(botClient, userStateService, logger, dbContext, companyCreationStateService, translationService)
     {
     }
 
@@ -41,7 +42,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
+                text: TranslationService.Get(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -55,7 +56,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHours"),
+                text: TranslationService.Get(language, "NoWorkingHours"),
                 cancellationToken: cancellationToken);
         return;
     }
@@ -65,7 +66,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidBreakTime"),
+                text: TranslationService.Get(language, "InvalidBreakTime"),
                 cancellationToken: cancellationToken);
         return;
     }
@@ -78,7 +79,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "BreakOverlap"),
+                text: TranslationService.Get(language, "BreakOverlap"),
                 cancellationToken: cancellationToken);
         return;
     }
@@ -98,7 +99,7 @@ public class BreakEndTimeHandler : BaseStateHandler
 
         await BotClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "BreakAdded"),
+            text: TranslationService.Get(language, "BreakAdded"),
             cancellationToken: cancellationToken);
 
         // Return to day breaks selection
@@ -117,7 +118,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoEmployeeFound"),
+                text: TranslationService.Get(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -127,20 +128,20 @@ public class BreakEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHoursForDay"),
+                text: TranslationService.Get(language, "NoWorkingHoursForDay"),
                 cancellationToken: cancellationToken);
             return;
         }
 
         // Show current breaks and options
         var messageBuilder = new StringBuilder();
-        messageBuilder.AppendLine(Translations.GetMessage(language, "CurrentBreaks"));
+        messageBuilder.AppendLine(TranslationService.Get(language, "CurrentBreaks"));
         
         if (workingHours.Breaks.Any())
         {
             foreach (var breakTime in workingHours.Breaks.OrderBy(b => b.StartTime))
             {
-                var breakText = string.Format(Translations.GetMessage(language, "BreakFormat",
+                var breakText = string.Format(TranslationService.Get(language, "BreakFormat",
                     breakTime.StartTime.ToString(@"hh\:mm"),
                     breakTime.EndTime.ToString(@"hh\:mm")));
                 messageBuilder.AppendLine(breakText);
@@ -148,7 +149,7 @@ public class BreakEndTimeHandler : BaseStateHandler
         }
         else
         {
-            messageBuilder.AppendLine(Translations.GetMessage(language, "NoBreaks"));
+            messageBuilder.AppendLine(TranslationService.Get(language, "NoBreaks"));
         }
 
         var buttons = new List<InlineKeyboardButton[]>
@@ -156,7 +157,7 @@ public class BreakEndTimeHandler : BaseStateHandler
             new[]
             {
                 InlineKeyboardButton.WithCallbackData(
-                    Translations.GetMessage(language, "AddBreak"),
+                    TranslationService.Get(language, "AddBreak"),
                     $"add_break:{employeeId}_{(int)day}")
             }
         };
@@ -166,12 +167,12 @@ public class BreakEndTimeHandler : BaseStateHandler
             buttons.Add(new[]
             {
                 InlineKeyboardButton.WithCallbackData(
-                    Translations.GetMessage(language, "RemoveBreak"),
+                    TranslationService.Get(language, "RemoveBreak"),
                     $"remove_break:{employeeId}_{(int)day}")
             });
         }
 
-        buttons.Add(new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), "manage_breaks") });
+        buttons.Add(new[] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "Back"), "manage_breaks") });
 
         await BotClient.SendMessage(
             chatId: chatId,

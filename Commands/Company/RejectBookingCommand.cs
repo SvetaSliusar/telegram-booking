@@ -12,15 +12,18 @@ namespace Telegram.Bot.Commands.Company
         private readonly BookingDbContext _dbContext;
         private readonly ITelegramBotClient _botClient;
         private readonly IUserStateService _userStateService;
+        private readonly ITranslationService _translationService;
 
         public RejectBookingCommand(
             BookingDbContext dbContext,
             ITelegramBotClient botClient,
-            IUserStateService userStateService)
+            IUserStateService userStateService,
+            ITranslationService translationService)
         {
             _dbContext = dbContext;
             _botClient = botClient;
             _userStateService = userStateService;
+            _translationService = translationService;
         }
 
         public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -48,7 +51,7 @@ namespace Telegram.Bot.Commands.Company
             {
                 await _botClient.SendMessage(
                     chatId: callbackQuery.Message.Chat.Id,
-                    text: Translations.GetMessage(language, "BookingNotFound"),
+                    text: _translationService.Get(language, "BookingNotFound"),
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -59,7 +62,7 @@ namespace Telegram.Bot.Commands.Company
             // Notify company
             await _botClient.SendMessage(
                 chatId: callbackQuery.Message.Chat.Id,
-                text: Translations.GetMessage(language, "BookingRejected"),
+                text: _translationService.Get(language, "BookingRejected"),
                 cancellationToken: cancellationToken);
 
             // Notify client
@@ -68,7 +71,7 @@ namespace Telegram.Bot.Commands.Company
 
             await _botClient.SendMessage(
                 chatId: booking.Client.ChatId,
-                text: Translations.GetMessage(language, "BookingRejectedByCompany",
+                text: _translationService.Get(language, "BookingRejectedByCompany",
                     booking.Service.Name,
                     booking.Service.Employee.Name,
                     localBookingTime.ToString("dddd, MMMM d, yyyy"),

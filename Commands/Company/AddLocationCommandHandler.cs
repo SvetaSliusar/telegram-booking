@@ -12,14 +12,16 @@ public class AddLocationCommandHandler : ICallbackCommand
 {
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
+    private readonly ITranslationService _translationService;
 
     public AddLocationCommandHandler(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        BookingDbContext dbContext)
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _userStateService = userStateService;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -38,7 +40,7 @@ public class AddLocationCommandHandler : ICallbackCommand
 
         var replyKeyboard = new ReplyKeyboardMarkup(new[]
         {
-            new[] { new KeyboardButton(Translations.GetMessage(language, "ShareLocation")) { RequestLocation = true } }
+            new[] { new KeyboardButton(_translationService.Get(language, "ShareLocation")) { RequestLocation = true } }
         })
         {
             ResizeKeyboard = true,
@@ -47,7 +49,7 @@ public class AddLocationCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "SendLocation"),
+            text: _translationService.Get(language, "SendLocation"),
             replyMarkup: replyKeyboard,
             parseMode: ParseMode.Markdown,
             cancellationToken: cancellationToken);

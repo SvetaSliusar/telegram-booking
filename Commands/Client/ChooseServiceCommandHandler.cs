@@ -14,16 +14,20 @@ public class ChooseServiceCommandHandler : ICallbackCommand
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
     private readonly ICalendarService _calendarService;
+    private readonly ITranslationService _translationService;
+
     public ChooseServiceCommandHandler(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
         BookingDbContext dbContext,
-        ICalendarService calendarService)
+        ICalendarService calendarService,
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _userStateService = userStateService;
         _dbContext = dbContext;
         _calendarService = calendarService;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -39,7 +43,7 @@ public class ChooseServiceCommandHandler : ICallbackCommand
         {
            await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(await _userStateService.GetLanguageAsync(chatId, cancellationToken), "InvalidCompanySelection"),
+                text: _translationService.Get(await _userStateService.GetLanguageAsync(chatId, cancellationToken), "InvalidCompanySelection"),
                 cancellationToken: cancellationToken);
             return;
         }

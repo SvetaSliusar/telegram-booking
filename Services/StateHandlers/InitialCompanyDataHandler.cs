@@ -18,8 +18,9 @@ public class InitialCompanyDataHandler : BaseStateHandler
         IUserStateService userStateService,
         ILogger<InitialCompanyDataHandler> logger,
         BookingDbContext dbContext,
-        ICompanyCreationStateService companyCreationStateService)
-        : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        ITranslationService translationService)
+        : base(botClient, userStateService, logger, dbContext, companyCreationStateService, translationService)
     {
     }
 
@@ -38,7 +39,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
 
                     await BotClient.SendMessage(
                         chatId: chatId,
-                        text: Translations.GetMessage(language, "EnterYourName"),
+                        text: TranslationService.Get(language, "EnterYourName"),
                         parseMode: ParseMode.Markdown,
                         cancellationToken: cancellationToken);
                 }
@@ -47,7 +48,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                     UserStateService.SetConversation(chatId, "WaitingForCompanyAlias");
                     await BotClient.SendMessage(
                         chatId: chatId,
-                        text: Translations.GetMessage(language, "SendCompanyAlias"),
+                        text: TranslationService.Get(language, "SendCompanyAlias"),
                         parseMode: ParseMode.Markdown,
                         cancellationToken: cancellationToken);
                 }
@@ -57,7 +58,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                 {
                     await BotClient.SendMessage(
                         chatId: chatId,
-                        text: Translations.GetMessage(language, "AliasRequired"),
+                        text: TranslationService.Get(language, "AliasRequired"),
                         cancellationToken: cancellationToken);
                     return;
                 }
@@ -66,7 +67,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
                 {
                     await BotClient.SendMessage(
                         chatId: chatId,
-                        text: Translations.GetMessage(language, "AliasAlreadyExists"),
+                        text: TranslationService.Get(language, "AliasAlreadyExists"),
                         cancellationToken: cancellationToken);
                     return;
                 }
@@ -76,7 +77,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
 
                 await BotClient.SendMessage(
                     chatId: chatId,
-                    text: Translations.GetMessage(language, "EnterYourName"),
+                    text: TranslationService.Get(language, "EnterYourName"),
                     parseMode: ParseMode.Markdown,
                     cancellationToken: cancellationToken);
                break;
@@ -95,14 +96,14 @@ public class InitialCompanyDataHandler : BaseStateHandler
 
                 await BotClient.SendMessage(
                     chatId: chatId,
-                    text: Translations.GetMessage(language, "DataSaved"),
+                    text: TranslationService.Get(language, "DataSaved"),
                     cancellationToken: cancellationToken);
                 var keyboard = new InlineKeyboardMarkup(new[]
                 {
-                    new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "SetupWorkDays"), "setup_work_days") }
+                    new[] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "SetupWorkDays"), "setup_work_days") }
                 });
 
-               await BotClient.SendMessage(chatId, Translations.GetMessage(language, "TheNextStep"), replyMarkup: keyboard, cancellationToken: cancellationToken);
+               await BotClient.SendMessage(chatId, TranslationService.Get(language, "TheNextStep"), replyMarkup: keyboard, cancellationToken: cancellationToken);
                break;
         }
     }

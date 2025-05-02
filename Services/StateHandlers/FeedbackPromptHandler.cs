@@ -15,8 +15,9 @@ public class FeedbackPromptHanlder : BaseStateHandler
         IUserStateService userStateService,
         ILogger<FeedbackPromptHanlder> logger,
         BookingDbContext dbContext,
-        ICompanyCreationStateService companyCreationStateService)
-        : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        ITranslationService translationService)
+        : base(botClient, userStateService, logger, dbContext, companyCreationStateService, translationService)
     {
     }
 
@@ -27,7 +28,7 @@ public class FeedbackPromptHanlder : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "FeedbackTooLong"),
+                text: TranslationService.Get(language, "FeedbackTooLong"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -38,7 +39,7 @@ public class FeedbackPromptHanlder : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
+                text: TranslationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -49,7 +50,7 @@ public class FeedbackPromptHanlder : BaseStateHandler
             UserStateService.RemoveConversation(chatId);
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "FeedbackThankYou"),
+                text: TranslationService.Get(language, "FeedbackThankYou"),
                 parseMode: ParseMode.Markdown,
                 cancellationToken: cancellationToken);
         }
@@ -58,7 +59,7 @@ public class FeedbackPromptHanlder : BaseStateHandler
             Logger.LogError(ex, "Error saving feedback");
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "FeedbackError"),
+                text: TranslationService.Get(language, "FeedbackError"),
                 cancellationToken: cancellationToken);
         }
     }

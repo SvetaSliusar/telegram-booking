@@ -14,8 +14,9 @@ public class LocationHandler : BaseStateHandler
         IUserStateService userStateService,
         ILogger<LocationHandler> logger,
         BookingDbContext dbContext,
-        ICompanyCreationStateService companyCreationStateService)
-        : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        ITranslationService translationService)
+        : base(botClient, userStateService, logger, dbContext, companyCreationStateService, translationService)
     {
     }
 
@@ -31,7 +32,7 @@ public class LocationHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "LocationRequired"),
+                text: TranslationService.Get(language, "LocationRequired"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -41,7 +42,7 @@ public class LocationHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
+                text: TranslationService.Get(language, "NoCompanyFound"),
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
             return;
@@ -55,7 +56,7 @@ public class LocationHandler : BaseStateHandler
         
         await BotClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "LocationSaved"),
+            text: TranslationService.Get(language, "LocationSaved"),
             replyMarkup: new ReplyKeyboardRemove(),
             cancellationToken: cancellationToken);
     }

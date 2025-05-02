@@ -15,15 +15,18 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
+    private readonly ITranslationService _translationService;
 
     public ChangeTimezoneCommandHandler(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        BookingDbContext dbContext)
+        BookingDbContext dbContext,
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _userStateService = userStateService;
         _dbContext = dbContext;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -62,12 +65,12 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
         
         var keyboard = new InlineKeyboardMarkup(timezoneButtons.Concat(new[] 
         { 
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu") }
         }));
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "SelectTimezone"),
+            text: _translationService.Get(language, "SelectTimezone"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
@@ -81,7 +84,7 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoClientFound"),
+                text: _translationService.Get(language, "NoClientFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -97,14 +100,14 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
 
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "TimezoneSet", timezone),
+                text: _translationService.Get(language, "TimezoneSet", timezone),
                 cancellationToken: cancellationToken);
         }
         catch (TimeZoneNotFoundException)
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimezone"),
+                text: _translationService.Get(language, "InvalidTimezone"),
                 cancellationToken: cancellationToken);
         }
     }

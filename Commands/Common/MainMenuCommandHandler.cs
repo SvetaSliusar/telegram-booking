@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using Telegram.Bot.Enums;
 using Telegram.Bot.Infrastructure.Configs;
 using Telegram.Bot.Services;
-using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
@@ -17,13 +16,16 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
     private readonly BotConfiguration _botConfig = new BotConfiguration();
+    private readonly ITranslationService _translationService;
 
     public MainMenuCommandHandler(
         IUserStateService userStateService, 
         BookingDbContext dbContext,
         ITelegramBotClient botClient,
-        IOptions<BotConfiguration> botOptions)
+        IOptions<BotConfiguration> botOptions,
+        ITranslationService translationService)
     {
+        _translationService = translationService;
         _userStateService = userStateService;
         _dbContext = dbContext;
         _botClient = botClient;
@@ -42,7 +44,7 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         var commandHandlers = new Dictionary<string, Func<long, CancellationToken, Task>>(StringComparer.OrdinalIgnoreCase)
         {
             { "menu", ShowMainMenuAsync },
-            { "back_to_menu", ShowMainMenuAsync }
+            { "back_to_menu", ShowActiveMainMenuAsync }
         };
 
         var (commandKey, data) = SplitCommandData(callbackQuery.Data);
@@ -53,22 +55,58 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         else if (commandKey == "switch_role")
         {
             await HandleSwitchRoleAsync(chatId, data, cancellationToken);
-            return;
         }
         else
         {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: "❌ Unknown command.",
-                cancellationToken: cancellationToken);
+            await ShowMainMenuAsync(chatId, cancellationToken);
         }
-        await ShowMainMenuAsync(chatId, cancellationToken);
     }
 
     public async Task HandleSwitchRoleAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
     {
         await ExecuteAsync(callbackQuery, cancellationToken);
     }
+
+    private async Task ShowMenuByRoleAsync(long chatId, UserRole role, string language, CancellationToken cancellationToken)
+    {
+        switch (role)
+        {
+            case UserRole.Client:
+                await ShowClientMainMenuAsync(chatId, language, cancellationToken);
+                break;
+            case UserRole.Company:
+                await ShowCompanyMainMenuAsync(chatId, language, cancellationToken);
+                break;
+            default:
+                if (HasRole(role, UserRole.Client) && HasRole(role, UserRole.Company))
+                {
+                    await ShowRoleSelectionMenuAsync(chatId, language, cancellationToken);
+                }
+                else
+                {
+                    await _botClient.SendMessage(
+                        chatId: chatId,
+                        text: _translationService.Get(language, "UnknownRole"),
+                        cancellationToken: cancellationToken);
+                }
+                break;
+        }
+    }
+
+    public async Task ShowActiveMainMenuAsync(long chatId, CancellationToken cancellationToken)
+    {
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
+        var activeRole = await _userStateService.GetActiveRoleAsync(chatId, cancellationToken);
+        await ShowMenuByRoleAsync(chatId, activeRole, language, cancellationToken);
+    }
+
+    public async Task ShowMainMenuAsync(long chatId, CancellationToken cancellationToken)
+    {
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
+        var role = await _userStateService.GetUserRoleAsync(chatId, cancellationToken);
+        await ShowMenuByRoleAsync(chatId, role, language, cancellationToken);
+    }
+
 
     private async Task HandleSwitchRoleAsync(long chatId, string data, CancellationToken cancellationToken)
     {
@@ -95,36 +133,6 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         }
     }
 
-
-    public async Task ShowMainMenuAsync(long chatId, CancellationToken cancellationToken)
-    {
-        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
-        var role = await _userStateService.GetUserRoleAsync(chatId, cancellationToken);
-
-        switch (role)
-        {
-            case UserRole.Client:
-                await ShowClientMainMenuAsync(chatId, language, cancellationToken);
-                break;
-            case UserRole.Company:
-                await ShowCompanyMainMenuAsync(chatId, language, cancellationToken);
-                break;
-            default:
-                if (HasRole(role, UserRole.Client) && HasRole(role, UserRole.Company))
-                {
-                    await ShowRoleSelectionMenuAsync(chatId, language, cancellationToken);
-                }
-                else
-                {
-                    await _botClient.SendMessage(
-                        chatId: chatId,
-                        text: Translations.GetMessage(language, "UnknownRole"),
-                        cancellationToken: cancellationToken);
-                }
-                break;
-        }
-    }
-
     private async Task ShowRoleSelectionMenuAsync(long chatId, string language, CancellationToken cancellationToken)
     {
         var keyboard = new InlineKeyboardMarkup(new[]
@@ -132,20 +140,20 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
             new[]
             {
                 InlineKeyboardButton.WithCallbackData(
-                    Translations.GetMessage(language, "ContinueAsClient"),
+                    _translationService.Get(language, "ContinueAsClient"),
                     "switch_role:client")
             },
             new[]
             {
                 InlineKeyboardButton.WithCallbackData(
-                    Translations.GetMessage(language, "ContinueAsCompany"),
+                    _translationService.Get(language, "ContinueAsCompany"),
                     "switch_role:company")
             }
         });
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "ChooseYourRole"),
+            text: _translationService.Get(language, "ChooseYourRole"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
@@ -194,17 +202,17 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
             // Normal Client Menu
             var buttons = new[]
             {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BookAppointment"), "book_appointment") },
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "MyBookings"), "view_bookings") },
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeTimezone"), "change_timezone") }
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BookAppointment"), "book_appointment") },
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "MyBookings"), "view_bookings") },
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeTimezone"), "change_timezone") }
             };
 
             var keyboard = new InlineKeyboardMarkup(buttons);
 
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "MainMenu"),
+                text: _translationService.Get(language, "MainMenu"),
                 replyMarkup: keyboard,
                 cancellationToken: cancellationToken);
         }
@@ -222,30 +230,30 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
 
         var keyboardButtons = new List<List<InlineKeyboardButton>>
             {
-                new(){ InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "EditCompany"), "edit_company_menu") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ListServices"), "list_services") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "GetClientLink"), "get_client_link") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ViewDailyBookings"), "view_daily_bookings") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "ChangeLanguage"), "change_language") },
-                new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "LeaveFeedback"), "leave_feedback") },
+                new(){ InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "EditCompany"), "edit_company_menu") },
+                new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ListServices"), "list_services") },
+                new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "GetClientLink"), "get_client_link") },
+                new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ViewDailyBookings"), "view_daily_bookings") },
+                new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), "change_language") },
+                new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "LeaveFeedback"), "leave_feedback") },
             };
 
         var keyboard = new InlineKeyboardMarkup(keyboardButtons);
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "MainMenu"),
+            text: _translationService.Get(language, "MainMenu"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
 
     private async Task ShowEmptyCompanyStateAsync(long chatId, string language, CancellationToken cancellationToken)
     {
-        var welcomeMessage = Translations.GetMessage(language, "WelcomeNoCompany");
+        var welcomeMessage = _translationService.Get(language, "WelcomeNoCompany");
         
         var keyboard = new InlineKeyboardMarkup(new List<List<InlineKeyboardButton>>
         {
-            new() { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "CreateCompany"), "create_company") }
+            new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "CreateCompany"), "create_company") }
         });
 
         await _botClient.SendMessage(

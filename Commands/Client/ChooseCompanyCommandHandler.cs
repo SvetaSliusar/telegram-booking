@@ -13,15 +13,18 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
+    private readonly ITranslationService _translationService;
 
     public ChooseCompanyCommandHandler(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        BookingDbContext dbContext)
+        BookingDbContext dbContext,
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _userStateService = userStateService;
         _dbContext = dbContext;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -37,7 +40,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
         {
            await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(await _userStateService.GetLanguageAsync(chatId, cancellationToken), "InvalidCompanySelection"),
+                text: _translationService.Get(await _userStateService.GetLanguageAsync(chatId, cancellationToken), "InvalidCompanySelection"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -55,7 +58,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
+                text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -69,7 +72,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoServicesAvailable", company.Name),
+                text: _translationService.Get(language, "NoServicesAvailable", company.Name),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -88,7 +91,7 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "CompanyServices", company.Name),
+            text: _translationService.Get(language, "CompanyServices", company.Name),
             replyMarkup: serviceKeyboard,
             cancellationToken: cancellationToken);
     }

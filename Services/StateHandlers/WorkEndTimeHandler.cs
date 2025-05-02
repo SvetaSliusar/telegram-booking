@@ -14,8 +14,9 @@ public class WorkEndTimeHandler : BaseStateHandler
         IUserStateService userStateService,
         ILogger<WorkEndTimeHandler> logger,
         BookingDbContext dbContext,
-        ICompanyCreationStateService companyCreationStateService)
-        : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        ITranslationService translationService)
+        : base(botClient, userStateService, logger, dbContext, companyCreationStateService, translationService)
     {
     }
 
@@ -38,7 +39,7 @@ public class WorkEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
+                text: TranslationService.Get(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
                 return;
             }
@@ -51,7 +52,7 @@ public class WorkEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHours"),
+                text: TranslationService.Get(language, "NoWorkingHours"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -60,7 +61,7 @@ public class WorkEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidWorkTime"),
+                text: TranslationService.Get(language, "InvalidWorkTime"),
                 cancellationToken: cancellationToken);
             return;
         }

@@ -15,19 +15,22 @@ public class ServiceCommandHandler : ICallbackCommand
     private readonly ICompanyCreationStateService _companyCreationStateService;
     private readonly BookingDbContext _dbContext;
     private readonly ILogger<ServiceCommandHandler> _logger;
+    private readonly ITranslationService _translationService;
 
     public ServiceCommandHandler(
         IUserStateService userStateService, 
         BookingDbContext dbContext,
         ITelegramBotClient botClient,
         ICompanyCreationStateService companyCreationStateService,
-        ILogger<ServiceCommandHandler> logger)
+        ILogger<ServiceCommandHandler> logger,
+        ITranslationService translationService)
     {
         _userStateService = userStateService;
         _dbContext = dbContext;
         _botClient = botClient;
         _companyCreationStateService = companyCreationStateService;
         _logger = logger;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -73,7 +76,7 @@ public class ServiceCommandHandler : ICallbackCommand
         _userStateService.SetConversation(chatId, "WaitingForServicePrice");
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "EnterServicePrice", parsedCurrency),
+            text: _translationService.Get(language, "EnterServicePrice", parsedCurrency),
             cancellationToken: cancellationToken);
     }
 
@@ -96,7 +99,7 @@ public class ServiceCommandHandler : ICallbackCommand
 
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "EnterCustomDuration"),
+                text: _translationService.Get(language, "EnterCustomDuration"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -115,13 +118,13 @@ public class ServiceCommandHandler : ICallbackCommand
     {
         var keyboard = new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "AddService"), "add_service") },
+            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu") }
         });
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "TheNextStep"),
+            text: _translationService.Get(language, "TheNextStep"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
@@ -145,7 +148,7 @@ public class ServiceCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "NewService"),
+            text: _translationService.Get(language, "NewService"),
             cancellationToken: cancellationToken);
     }
 
@@ -161,13 +164,13 @@ public class ServiceCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoServices"),
+                text: _translationService.Get(language, "NoServices"),
                 cancellationToken: cancellationToken);
             return;
         }
 
         var messageBuilder = new System.Text.StringBuilder();
-        messageBuilder.AppendLine(Translations.GetMessage(language, "ListServices"));
+        messageBuilder.AppendLine(_translationService.Get(language, "ListServices"));
 
         foreach (var employee in company.Employees)
         {
@@ -182,7 +185,7 @@ public class ServiceCommandHandler : ICallbackCommand
 
         var keyboard = new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu") }
         });
 
         await _botClient.SendMessage(
@@ -205,7 +208,7 @@ public class ServiceCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
+                text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -215,7 +218,7 @@ public class ServiceCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoEmployeeFound"),
+                text: _translationService.Get(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -241,7 +244,7 @@ public class ServiceCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "ServiceAddedForEmployee", service.Name, employee.Name),
+            text: _translationService.Get(language, "ServiceAddedForEmployee", service.Name, employee.Name),
             cancellationToken: cancellationToken);
 
         _companyCreationStateService.RemoveService(chatId, serviceCreationData.Id);

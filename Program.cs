@@ -69,6 +69,9 @@ builder.Services.AddHttpClient("telegram_bot_client")
 builder.Services.AddDbContext<BookingDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("BookingDatabase")));
 
+builder.Services.AddSingleton<ITranslationService>(sp =>
+    new JsonTranslationService(Path.Combine(Directory.GetCurrentDirectory(), "Resources")));
+
 // ✅ Dependency Injection for Services
 builder.Services.AddScoped<ClientUpdateHandler>();
 builder.Services.AddScoped<CompanyUpdateHandler>();

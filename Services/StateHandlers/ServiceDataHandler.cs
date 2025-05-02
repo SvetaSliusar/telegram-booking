@@ -16,8 +16,9 @@ public class ServiceDataHandler : BaseStateHandler
         IUserStateService userStateService,
         ILogger<ServiceDataHandler> logger,
         BookingDbContext dbContext,
-        ICompanyCreationStateService companyCreationStateService)
-        : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        ITranslationService translationService)
+        : base(botClient, userStateService, logger, dbContext, companyCreationStateService, translationService)
     {
     }
 
@@ -29,7 +30,7 @@ public class ServiceDataHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidInput"),
+                text: TranslationService.Get(language, "InvalidInput"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -43,7 +44,7 @@ public class ServiceDataHandler : BaseStateHandler
                 {
                     await BotClient.SendMessage(
                         chatId: chatId,
-                        text: Translations.GetMessage(language, "SessionExpired"),
+                        text: TranslationService.Get(language, "SessionExpired"),
                         cancellationToken: cancellationToken);
                     return;
                 }
@@ -53,7 +54,7 @@ public class ServiceDataHandler : BaseStateHandler
                 UserStateService.SetConversation(chatId, "WaitingFoServiceDescription");
                     await BotClient.SendMessage(
                         chatId: chatId,
-                    text: Translations.GetMessage(language, "EnterServiceDescription"),
+                    text: TranslationService.Get(language, "EnterServiceDescription"),
                         cancellationToken: cancellationToken);
                 break;
             case "WaitingFoServiceDescription":
@@ -62,7 +63,7 @@ public class ServiceDataHandler : BaseStateHandler
                 {
                     await BotClient.SendMessage(
                         chatId: chatId,
-                            text: Translations.GetMessage(language, "SessionExpired"),
+                            text: TranslationService.Get(language, "SessionExpired"),
                         cancellationToken: cancellationToken);
                         return;
                 }
@@ -81,7 +82,7 @@ public class ServiceDataHandler : BaseStateHandler
                 {
                     await BotClient.SendMessage(
                         chatId: chatId,
-                        text:Translations.GetMessage(language, "InvalidDuration"),
+                        text:TranslationService.Get(language, "InvalidDuration"),
                         cancellationToken: cancellationToken);
                     return;
                 }
@@ -91,7 +92,7 @@ public class ServiceDataHandler : BaseStateHandler
                 {
                     await BotClient.SendMessage(
                         chatId: chatId,
-                            text: Translations.GetMessage(language, "SessionExpired"),
+                            text: TranslationService.Get(language, "SessionExpired"),
                         cancellationToken: cancellationToken);
                     return;
                 }
@@ -112,7 +113,7 @@ public class ServiceDataHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "SessionExpired"),
+                text: TranslationService.Get(language, "SessionExpired"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -126,7 +127,7 @@ public class ServiceDataHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                    text: Translations.GetMessage(language, "NoCompanyFound"),
+                    text: TranslationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
                 return;
         }
@@ -139,7 +140,7 @@ public class ServiceDataHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                    text: Translations.GetMessage(language, "NoEmployeeFound"),
+                    text: TranslationService.Get(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
                 return;
         }
@@ -154,7 +155,7 @@ public class ServiceDataHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "SessionExpired"),
+                text: TranslationService.Get(language, "SessionExpired"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -175,7 +176,7 @@ public class ServiceDataHandler : BaseStateHandler
 
         await BotClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "ServiceAddedForEmployee", service.Name, employee.Name),
+            text: TranslationService.Get(language, "ServiceAddedForEmployee", service.Name, employee.Name),
             cancellationToken: cancellationToken);
         
         CompanyCreationStateService.RemoveService(chatId, serviceCreationData.Id);
@@ -191,7 +192,7 @@ public class ServiceDataHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "SessionExpired"),
+                text: TranslationService.Get(language, "SessionExpired"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -205,7 +206,7 @@ public class ServiceDataHandler : BaseStateHandler
 
         await BotClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "ChooseCurrency"),
+            text: TranslationService.Get(language, "ChooseCurrency"),
             replyMarkup: currencyKeyboard,
             cancellationToken: cancellationToken);
     }
@@ -218,7 +219,7 @@ public class ServiceDataHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidPrice"),
+                text: TranslationService.Get(language, "InvalidPrice"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -229,7 +230,7 @@ public class ServiceDataHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "SessionExpired"),
+                text: TranslationService.Get(language, "SessionExpired"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -239,16 +240,16 @@ public class ServiceDataHandler : BaseStateHandler
 
         var predefinedDurations = new InlineKeyboardMarkup(new[]
         {
-            new [] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "10min"), "service_duration:10"), 
-                     InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "15min"), "service_duration:15") },
-            new [] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "30min"), "service_duration:30"), 
-                     InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "45min"), "service_duration:45") },
-            new [] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Custom"), "service_duration:custom") }
+            new [] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "10min"), "service_duration:10"), 
+                     InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "15min"), "service_duration:15") },
+            new [] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "30min"), "service_duration:30"), 
+                     InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "45min"), "service_duration:45") },
+            new [] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "Custom"), "service_duration:custom") }
         });
 
         await BotClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "ChooseDuration"),
+            text: TranslationService.Get(language, "ChooseDuration"),
             replyMarkup: predefinedDurations,
             cancellationToken: cancellationToken);
     }
@@ -257,13 +258,13 @@ public class ServiceDataHandler : BaseStateHandler
         {
             var keyboard = new InlineKeyboardMarkup(new[]
             {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") },
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "BackToMenu"), "back_to_menu") }
+                new[] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "AddService"), "add_service") },
+                new[] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "BackToMenu"), "back_to_menu") }
             });
 
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "TheNextStep"),
+                text: TranslationService.Get(language, "TheNextStep"),
                 replyMarkup: keyboard,
                 cancellationToken: cancellationToken);
         }

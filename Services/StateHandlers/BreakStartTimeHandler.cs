@@ -15,8 +15,9 @@ public class BreakStartTimeHandler : BaseStateHandler
         IUserStateService userStateService,
         ILogger<BreakStartTimeHandler> logger,
         BookingDbContext dbContext,
-        ICompanyCreationStateService companyCreationStateService)
-        : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        ITranslationService translationService)
+        : base(botClient, userStateService, logger, dbContext, companyCreationStateService, translationService)
     {
     }
 
@@ -37,7 +38,7 @@ public class BreakStartTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
+                text: TranslationService.Get(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -51,7 +52,7 @@ public class BreakStartTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHours"),
+                text: TranslationService.Get(language, "NoWorkingHours"),
                 cancellationToken: cancellationToken);
                 return;
             }
@@ -61,7 +62,7 @@ public class BreakStartTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidBreakTime"),
+                text: TranslationService.Get(language, "InvalidBreakTime"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -69,10 +70,10 @@ public class BreakStartTimeHandler : BaseStateHandler
 
         await BotClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "BreakEndTime"),
+            text: TranslationService.Get(language, "BreakEndTime"),
             replyMarkup: new InlineKeyboardMarkup(new[]
             {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), $"waiting_for_break_start:{employeeId}_{(int)day}") }
+                new[] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "Back"), $"waiting_for_break_start:{employeeId}_{(int)day}") }
             }),
             cancellationToken: cancellationToken);
     }

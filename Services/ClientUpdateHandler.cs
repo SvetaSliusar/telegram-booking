@@ -13,6 +13,7 @@ public class ClientUpdateHandler
     private readonly IMainMenuCommandHandler _mainMenuHandler;
     private readonly ICallbackCommandFactory _commandFactory;
     private readonly IEnumerable<IStateHandler> _stateHandlers;
+    private readonly ITranslationService _translationService;
 
     public ClientUpdateHandler(
         ITelegramBotClient botClient,
@@ -20,7 +21,8 @@ public class ClientUpdateHandler
         IUserStateService userStateService,
         IMainMenuCommandHandler mainMenuHandler,
         ICallbackCommandFactory commandFactory,
-        IEnumerable<IStateHandler> stateHandlers)
+        IEnumerable<IStateHandler> stateHandlers,
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _dbContext = dbContext;
@@ -28,6 +30,7 @@ public class ClientUpdateHandler
         _mainMenuHandler = mainMenuHandler;
         _commandFactory = commandFactory;
         _stateHandlers = stateHandlers;
+        _translationService = translationService;
     }
 
     public async Task StartClientFlow(long chatId, int companyId, CancellationToken cancellationToken)
@@ -40,7 +43,7 @@ public class ClientUpdateHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
+                text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -51,7 +54,7 @@ public class ClientUpdateHandler
 
     private async Task ShowMainMenu(long chatId, CancellationToken cancellationToken)
     {
-        await _mainMenuHandler.ShowMainMenuAsync(chatId, cancellationToken);
+        await _mainMenuHandler.ShowActiveMainMenuAsync(chatId, cancellationToken);
     }
 
     public async Task HandleUpdateAsync(Update update, CancellationToken cancellationToken)
@@ -86,7 +89,7 @@ public class ClientUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "UseMenuButton"),
+            text: _translationService.Get(language, "UseMenuButton"),
             cancellationToken: cancellationToken);
     }
 
@@ -106,7 +109,7 @@ public class ClientUpdateHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "UseMenuButton"),
+            text: _translationService.Get(language, "UseMenuButton"),
             cancellationToken: cancellationToken);
     }
 }

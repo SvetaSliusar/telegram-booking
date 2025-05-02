@@ -12,15 +12,18 @@ namespace Telegram.Bot.Commands.Company
         private readonly BookingDbContext _dbContext;
         private readonly ITelegramBotClient _botClient;
         private readonly IUserStateService _userStateService;
+        private readonly ITranslationService _translationService;
 
         public ConfirmBookingCommand(
             BookingDbContext dbContext,
             ITelegramBotClient botClient,
-            IUserStateService userStateService)
+            IUserStateService userStateService,
+            ITranslationService translationService)
         {
             _dbContext = dbContext;
             _botClient = botClient;
             _userStateService = userStateService;
+            _translationService = translationService;
         }
 
         public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -44,7 +47,7 @@ namespace Telegram.Bot.Commands.Company
             {
                 await _botClient.SendMessage(
                     chatId: callbackQuery.Message.Chat.Id,
-                    text: Translations.GetMessage(companyLanguage, "BookingNotFound"),
+                    text: _translationService.Get(companyLanguage, "BookingNotFound"),
                     cancellationToken: cancellationToken);
                 return;
             }
@@ -55,7 +58,7 @@ namespace Telegram.Bot.Commands.Company
             // Notify company (admin who confirmed)
             await _botClient.SendMessage(
                 chatId: callbackQuery.Message.Chat.Id,
-                text: Translations.GetMessage(companyLanguage, "BookingConfirmed"),
+                text: _translationService.Get(companyLanguage, "BookingConfirmed"),
                 cancellationToken: cancellationToken);
 
             // Notify client
@@ -68,7 +71,7 @@ namespace Telegram.Bot.Commands.Company
 
             await _botClient.SendMessage(
                 chatId: booking.Client.ChatId,
-                text: Translations.GetMessage(clientLanguage, "BookingConfirmedByCompany",
+                text: _translationService.Get(clientLanguage, "BookingConfirmedByCompany",
                     booking.Service.Name,
                     booking.Service.Employee.Name,
                     localBookingTime.ToString("dddd, MMMM d, yyyy"),

@@ -18,8 +18,9 @@ public class DefaultEndTimeHandler : BaseStateHandler
         IUserStateService userStateService,
         ILogger<DefaultEndTimeHandler> logger,
         BookingDbContext dbContext,
-        ICompanyCreationStateService companyCreationStateService)
-        : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        ITranslationService translationService)
+        : base(botClient, userStateService, logger, dbContext, companyCreationStateService, translationService)
     {
     }
 
@@ -36,7 +37,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidTimeFormat"),
+                text: TranslationService.Get(language, "InvalidTimeFormat"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -45,7 +46,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidState"),
+                text: TranslationService.Get(language, "InvalidState"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -56,7 +57,7 @@ public class DefaultEndTimeHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidWorkTime"),
+                text: TranslationService.Get(language, "InvalidWorkTime"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -114,15 +115,15 @@ public class DefaultEndTimeHandler : BaseStateHandler
 
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "DefaultWorkTimeSet", timezone.ToTimezoneId(), startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
+                text: TranslationService.Get(language, "DefaultWorkTimeSet", timezone.ToTimezoneId(), startTime.ToString(@"hh\:mm"), endTime.ToString(@"hh\:mm")),
                 cancellationToken: cancellationToken);
 
             var keyboard = new InlineKeyboardMarkup(new[]
             {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "AddService"), "add_service") }
+                new[] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "AddService"), "add_service") }
             });
 
-            await BotClient.SendMessage(chatId, Translations.GetMessage(language, "TheNextStep"), replyMarkup: keyboard, cancellationToken: cancellationToken);
+            await BotClient.SendMessage(chatId, TranslationService.Get(language, "TheNextStep"), replyMarkup: keyboard, cancellationToken: cancellationToken);
         }
         else
         {

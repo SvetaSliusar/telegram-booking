@@ -14,8 +14,9 @@ public class ContactInfoHandler : BaseStateHandler
         IUserStateService userStateService,
         ILogger<ContactInfoHandler> logger,
         BookingDbContext dbContext,
-        ICompanyCreationStateService companyCreationStateService)
-        : base(botClient, userStateService, logger, dbContext, companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        ITranslationService translationService)
+        : base(botClient, userStateService, logger, dbContext, companyCreationStateService, translationService)
     {
     }
 
@@ -25,7 +26,7 @@ public class ContactInfoHandler : BaseStateHandler
         {
             await BotClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(await UserStateService.GetLanguageAsync(chatId, cancellationToken), "ContactInfoRequired"),
+                text: TranslationService.Get(await UserStateService.GetLanguageAsync(chatId, cancellationToken), "ContactInfoRequired"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -42,7 +43,7 @@ public class ContactInfoHandler : BaseStateHandler
 
         await BotClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(await UserStateService.GetLanguageAsync(chatId, cancellationToken), "NewContactThanks"),
+            text: TranslationService.Get(await UserStateService.GetLanguageAsync(chatId, cancellationToken), "NewContactThanks"),
             replyMarkup: new ReplyKeyboardRemove(),
             cancellationToken: cancellationToken);
 

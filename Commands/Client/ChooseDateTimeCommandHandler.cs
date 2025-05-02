@@ -16,15 +16,18 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
+    private readonly ITranslationService _translationService;
 
     public ChooseDateTimeCommandHandler(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        BookingDbContext dbContext)
+        BookingDbContext dbContext,
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _userStateService = userStateService;
         _dbContext = dbContext;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -62,7 +65,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidDaySelected"),
+                text: _translationService.Get(language, "InvalidDaySelected"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -83,7 +86,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidDaySelected"),
+                text: _translationService.Get(language, "InvalidDaySelected"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -129,7 +132,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId, 
-                text: Translations.GetMessage(language, "NoServiceSelected"),
+                text: _translationService.Get(language, "NoServiceSelected"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -286,7 +289,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoServiceSelected"),
+                text: _translationService.Get(language, "NoServiceSelected"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -305,7 +308,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoServiceFound"),
+                text: _translationService.Get(language, "NoServiceFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -314,7 +317,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "InvalidDaySelected"),
+                text: _translationService.Get(language, "InvalidDaySelected"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -328,7 +331,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NotWorkingOnDay"),
+                text: _translationService.Get(language, "NotWorkingOnDay"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -410,19 +413,19 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             _userStateService.SetConversation(chatId, $"WaitingForDate_{serviceId}");
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoAvailableTimes"),
+                text: _translationService.Get(language, "NoAvailableTimes"),
                 cancellationToken: cancellationToken);
             return;
         }
 
         timeSlots.Add(new[]
         {
-            InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), "back_to_menu")
+            InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "Back"), "back_to_menu")
         });
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "SelectTime", timezoneId),
+            text: _translationService.Get(language, "SelectTime", timezoneId),
             replyMarkup: new InlineKeyboardMarkup(timeSlots),
             cancellationToken: cancellationToken);
     }
@@ -450,7 +453,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoServiceFound"),
+                text: _translationService.Get(language, "NoServiceFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -495,7 +498,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "BookingPendingConfirmation",
+            text: _translationService.Get(language, "BookingPendingConfirmation",
                 service.Name,
                 service.Employee.Name,
                 localClientTime.ToString("dddd, MMMM d, yyyy"),
@@ -515,14 +518,14 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             {
                 new[]
                 {
-                    InlineKeyboardButton.WithCallbackData(Translations.GetMessage(companyOwnerLanguage, "Confirm"), $"{CallbackResponses.ConfirmBooking}:{booking.Id}"),
-                    InlineKeyboardButton.WithCallbackData(Translations.GetMessage(companyOwnerLanguage, "Reject"), $"{CallbackResponses.RejectBooking}:{booking.Id}")
+                    InlineKeyboardButton.WithCallbackData(_translationService.Get(companyOwnerLanguage, "Confirm"), $"{CallbackResponses.ConfirmBooking}:{booking.Id}"),
+                    InlineKeyboardButton.WithCallbackData(_translationService.Get(companyOwnerLanguage, "Reject"), $"{CallbackResponses.RejectBooking}:{booking.Id}")
                 }
             });
 
             await _botClient.SendMessage(
                 chatId: companyOwnerChatId.Value,
-                text: Translations.GetMessage(companyOwnerLanguage, "NewBookingNotification",
+                text: _translationService.Get(companyOwnerLanguage, "NewBookingNotification",
                     service.Name,
                     client.Name,
                     localCompanyTime.ToString("dddd, MMMM d, yyyy"),

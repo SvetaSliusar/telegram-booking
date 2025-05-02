@@ -18,19 +18,22 @@ public class WorkTimeCommandHandler : ICallbackCommand
     private readonly ICompanyCreationStateService _companyCreationStateService;
     private readonly BookingDbContext _dbContext;
     private readonly ILogger<WorkTimeCommandHandler> _logger;
+    private readonly ITranslationService _translationService;
 
     public WorkTimeCommandHandler(
         IUserStateService userStateService, 
         BookingDbContext dbContext,
         ITelegramBotClient botClient,
         ICompanyCreationStateService companyCreationStateService,
-        ILogger<WorkTimeCommandHandler> logger)
+        ILogger<WorkTimeCommandHandler> logger,
+        ITranslationService translationService)
     {
         _userStateService = userStateService;
         _dbContext = dbContext;
         _botClient = botClient;
         _companyCreationStateService = companyCreationStateService;
         _logger = logger;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -73,14 +76,14 @@ public class WorkTimeCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "TimezoneSet", timezone.ToTimezoneId()),
+            text: _translationService.Get(language, "TimezoneSet", timezone.ToTimezoneId()),
             cancellationToken: cancellationToken);
         
         _userStateService.SetConversation(chatId, $"WaitingForDefaultStartTime_{timezone}");
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "EnterDefaultStartTime"),
+            text: _translationService.Get(language, "EnterDefaultStartTime"),
             cancellationToken: cancellationToken);
     }
     
@@ -93,10 +96,10 @@ public class WorkTimeCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "WorkStartTime"),
+            text: _translationService.Get(language, "WorkStartTime"),
             replyMarkup: new InlineKeyboardMarkup(new[]
             {
-                new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), "change_work_time") }
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "Back"), "change_work_time") }
             }),
         cancellationToken: cancellationToken);
     }
@@ -114,7 +117,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
+                text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -124,7 +127,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoEmployeeFound"),
+                text: _translationService.Get(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -136,7 +139,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
             var workingHours = employee.WorkingHours.FirstOrDefault(wh => wh.DayOfWeek == day);
             if (workingHours != null)
             {
-                var dayName = Translations.GetMessage(language, day.ToString());
+                var dayName = _translationService.Get(language, day.ToString());
                 dayButtons.Add(new[]
                 {
                     InlineKeyboardButton.WithCallbackData(
@@ -146,11 +149,11 @@ public class WorkTimeCommandHandler : ICallbackCommand
             }
         }
 
-        dayButtons.Add(new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), "back_to_menu") });
+        dayButtons.Add(new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "Back"), "back_to_menu") });
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "SelectDayForWorkTime"),
+            text: _translationService.Get(language, "SelectDayForWorkTime"),
             replyMarkup: new InlineKeyboardMarkup(dayButtons),
             cancellationToken: cancellationToken);
     }
@@ -278,7 +281,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "SelectTimezone"),
+            text: _translationService.Get(language, "SelectTimezone"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }

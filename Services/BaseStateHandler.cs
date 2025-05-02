@@ -10,19 +10,22 @@ public abstract class BaseStateHandler : IStateHandler
     protected readonly ILogger<BaseStateHandler> Logger;
     protected readonly BookingDbContext DbContext;
     protected readonly ICompanyCreationStateService CompanyCreationStateService;
+    protected readonly ITranslationService TranslationService;
 
     protected BaseStateHandler(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
         ILogger<BaseStateHandler> logger,
         BookingDbContext dbContext,
-        ICompanyCreationStateService companyCreationStateService)
+        ICompanyCreationStateService companyCreationStateService,
+        ITranslationService translationService)
     {
         BotClient = botClient;
         UserStateService = userStateService;
         Logger = logger;
         DbContext = dbContext;
         CompanyCreationStateService = companyCreationStateService;
+        TranslationService = translationService;
     }
 
     public abstract List<string> StateNames { get; }
@@ -39,7 +42,7 @@ public abstract class BaseStateHandler : IStateHandler
         var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         await BotClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, messageKey, args),
+            text: TranslationService.Get(language, messageKey, args),
             cancellationToken: cancellationToken);
     }
 

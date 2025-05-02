@@ -12,15 +12,18 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
     private readonly ITelegramBotClient _botClient;
     private readonly BookingDbContext _dbContext;
     private readonly IUserStateService _userStateService;
+    private readonly ITranslationService _translationService;
 
     public RequestCompanyCreationCommandHanlder(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
-        BookingDbContext dbContext)
+        BookingDbContext dbContext,
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _dbContext = dbContext;
         _userStateService = userStateService;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -65,7 +68,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
                 cancellationToken: cancellationToken);
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
-                text: Translations.GetMessage(language, "NewContactThanks"),
+                text: _translationService.Get(language, "NewContactThanks"),
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
             _userStateService.RemoveConversation(message.Chat.Id);
@@ -74,7 +77,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
-                text: Translations.GetMessage(language, "NoContactAccess"),
+                text: _translationService.Get(language, "NoContactAccess"),
                 cancellationToken: cancellationToken);
         }
     }
@@ -97,7 +100,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
 
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
-                text: Translations.GetMessage(language, "ContactRequestSent", username),
+                text: _translationService.Get(language, "ContactRequestSent", username),
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
              _userStateService.RemoveConversation(message.Chat.Id);
@@ -106,7 +109,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
-                text: Translations.GetMessage(language, "NoUsername"),
+                text: _translationService.Get(language, "NoUsername"),
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
         }
@@ -116,7 +119,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
     {
         await _botClient.SendMessage(
             chatId: message.Chat.Id,
-            text: Translations.GetMessage(await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken), "ManualContact"),
+            text: _translationService.Get(await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken), "ManualContact"),
             parseMode: Types.Enums.ParseMode.Markdown,
             replyMarkup: new ReplyKeyboardRemove(),
             cancellationToken: cancellationToken);
@@ -131,7 +134,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
         // Reply Keyboard for phone sharing (RequestContact = true)
         var replyKeyboard = new ReplyKeyboardMarkup(new[]
         {
-            new[] { new KeyboardButton(Translations.GetMessage(language, "SharePhone")) { RequestContact = true } }
+            new[] { new KeyboardButton(_translationService.Get(language, "SharePhone")) { RequestContact = true } }
         })
         {
             ResizeKeyboard = true,
@@ -141,19 +144,19 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
         // Inline keyboard for username or manual contact
         var inlineKeyboard = new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "UseTelegramUsername"), "share_username_request") },
-            new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "TypeContact"), "manual_contact_request") }
+            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "UseTelegramUsername"), "share_username_request") },
+            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "TypeContact"), "manual_contact_request") }
         });
 
         await _botClient.SendMessage(
             chatId: message.Chat.Id,
-            text: Translations.GetMessage(language, "SharePhonePrompt"),
+            text: _translationService.Get(language, "SharePhonePrompt"),
             replyMarkup: replyKeyboard,
             cancellationToken: cancellationToken);
 
         await _botClient.SendMessage(
             chatId: message.Chat.Id,
-            text: Translations.GetMessage(language, "ContactOptions"),
+            text: _translationService.Get(language, "ContactOptions"),
             replyMarkup: inlineKeyboard,
             cancellationToken: cancellationToken);
     }

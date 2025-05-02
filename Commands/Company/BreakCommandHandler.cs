@@ -15,17 +15,20 @@ public class BreakCommandHandler : ICallbackCommand
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
     private readonly ILogger<BreakCommandHandler> _logger;
+    private readonly ITranslationService _translationService;
 
     public BreakCommandHandler(
         IUserStateService userStateService, 
         BookingDbContext dbContext,
         ITelegramBotClient botClient,
-        ILogger<BreakCommandHandler> logger)
+        ILogger<BreakCommandHandler> logger,
+        ITranslationService translationService)
     {
         _userStateService = userStateService;
         _dbContext = dbContext;
         _botClient = botClient;
         _logger = logger;
+        _translationService = translationService;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -69,7 +72,7 @@ public class BreakCommandHandler : ICallbackCommand
         var employee = company?.Employees.FirstOrDefault();
         if (employee == null)
         {
-            await _botClient.SendMessage(chatId, Translations.GetMessage(language, "NoEmployeeSelected"), cancellationToken: cancellationToken);
+            await _botClient.SendMessage(chatId, _translationService.Get(language, "NoEmployeeSelected"), cancellationToken: cancellationToken);
             return;
         }
 
@@ -86,7 +89,7 @@ public class BreakCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "BreakAdded"),
+            text: _translationService.Get(language, "BreakAdded"),
             cancellationToken: cancellationToken);
     }
 
@@ -106,7 +109,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoBreaks"),
+                text: _translationService.Get(language, "NoBreaks"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -126,13 +129,13 @@ public class BreakCommandHandler : ICallbackCommand
         keyboard.Add(new[]
         {
             InlineKeyboardButton.WithCallbackData(
-                Translations.GetMessage(language, "Back"),
+                _translationService.Get(language, "Back"),
                 $"back_to_breaks:{day}")
         });
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "SelectBreakToRemove"),
+            text: _translationService.Get(language, "SelectBreakToRemove"),
             replyMarkup: new InlineKeyboardMarkup(keyboard),
             cancellationToken: cancellationToken);
     }
@@ -150,7 +153,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoEmployeeFound"),
+                text: _translationService.Get(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -160,20 +163,20 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHoursForDay"),
+                text: _translationService.Get(language, "NoWorkingHoursForDay"),
                 cancellationToken: cancellationToken);
             return;
         }
 
         // Show current breaks and options
         var messageBuilder = new StringBuilder();
-        messageBuilder.AppendLine(Translations.GetMessage(language, "CurrentBreaks"));
+        messageBuilder.AppendLine(_translationService.Get(language, "CurrentBreaks"));
         
         if (workingHours.Breaks.Any())
         {
             foreach (var breakTime in workingHours.Breaks.OrderBy(b => b.StartTime))
             {
-                var breakText = string.Format(Translations.GetMessage(language, "BreakFormat",
+                var breakText = string.Format(_translationService.Get(language, "BreakFormat",
                     breakTime.StartTime.ToString(@"hh\:mm"),
                     breakTime.EndTime.ToString(@"hh\:mm")));
                 messageBuilder.AppendLine(breakText);
@@ -181,7 +184,7 @@ public class BreakCommandHandler : ICallbackCommand
         }
         else
         {
-            messageBuilder.AppendLine(Translations.GetMessage(language, "NoBreaks"));
+            messageBuilder.AppendLine(_translationService.Get(language, "NoBreaks"));
         }
 
         var buttons = new List<InlineKeyboardButton[]>
@@ -189,7 +192,7 @@ public class BreakCommandHandler : ICallbackCommand
             new[]
             {
                 InlineKeyboardButton.WithCallbackData(
-                    Translations.GetMessage(language, "AddBreak"),
+                    _translationService.Get(language, "AddBreak"),
                     $"add_break:{employerId}_{(int)day}")
             }
         };
@@ -199,12 +202,12 @@ public class BreakCommandHandler : ICallbackCommand
             buttons.Add(new[]
             {
                 InlineKeyboardButton.WithCallbackData(
-                    Translations.GetMessage(language, "RemoveBreak"),
+                    _translationService.Get(language, "RemoveBreak"),
                     $"remove_break:{employerId}_{(int)day}")
             });
         }
 
-        buttons.Add(new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), "manage_breaks") });
+        buttons.Add(new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "Back"), "manage_breaks") });
 
         await _botClient.SendMessage(
             chatId: chatId,
@@ -229,7 +232,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHoursSet"),
+                text: _translationService.Get(language, "NoWorkingHoursSet"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -253,13 +256,13 @@ public class BreakCommandHandler : ICallbackCommand
         keyboard.Add(new[]
         {
             InlineKeyboardButton.WithCallbackData(
-                Translations.GetMessage(language, "Back"),
+                _translationService.Get(language, "Back"),
                 $"back_to_breaks:{day}")
         });
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "SelectBreakEndTime"),
+            text: _translationService.Get(language, "SelectBreakEndTime"),
             replyMarkup: new InlineKeyboardMarkup(keyboard),
             cancellationToken: cancellationToken);
     }
@@ -281,7 +284,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHoursSet"),
+                text: _translationService.Get(language, "NoWorkingHoursSet"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -294,7 +297,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "BreakOverlap"),
+                text: _translationService.Get(language, "BreakOverlap"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -311,7 +314,7 @@ public class BreakCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "BreakAdded", 
+            text: _translationService.Get(language, "BreakAdded", 
                 startTime.ToString(@"hh\:mm"), 
                 endTime.ToString(@"hh\:mm")),
             cancellationToken: cancellationToken);
@@ -336,7 +339,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoWorkingHoursSet"),
+                text: _translationService.Get(language, "NoWorkingHoursSet"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -346,7 +349,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "BreakNotFound"),
+                text: _translationService.Get(language, "BreakNotFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -356,7 +359,7 @@ public class BreakCommandHandler : ICallbackCommand
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "BreakRemoved"),
+            text: _translationService.Get(language, "BreakRemoved"),
             cancellationToken: cancellationToken);
 
         // Show updated breaks list
@@ -392,7 +395,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
+                text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -402,7 +405,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoEmployeeFound"),
+                text: _translationService.Get(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -414,7 +417,7 @@ public class BreakCommandHandler : ICallbackCommand
             var workingHours = employee.WorkingHours.FirstOrDefault(wh => wh.DayOfWeek == day);
             if (workingHours != null)
             {
-                var dayName = Translations.GetMessage(language, day.ToString());
+                var dayName = _translationService.Get(language, day.ToString());
                 dayButtons.Add(new[]
                 {
                     InlineKeyboardButton.WithCallbackData(
@@ -424,11 +427,11 @@ public class BreakCommandHandler : ICallbackCommand
             }
         }
 
-        dayButtons.Add(new[] { InlineKeyboardButton.WithCallbackData(Translations.GetMessage(language, "Back"), "back_to_menu") });
+        dayButtons.Add(new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "Back"), "back_to_menu") });
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: Translations.GetMessage(language, "SelectDay"),
+            text: _translationService.Get(language, "SelectDay"),
             replyMarkup: new InlineKeyboardMarkup(dayButtons),
             cancellationToken: cancellationToken);
     }
@@ -447,7 +450,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoCompanyFound"),
+                text: _translationService.Get(language, "NoCompanyFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -457,7 +460,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: Translations.GetMessage(language, "NoEmployeeFound"),
+                text: _translationService.Get(language, "NoEmployeeFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -486,25 +489,25 @@ public class BreakCommandHandler : ICallbackCommand
 
         // Show current breaks and options to add/remove breaks
         var messageBuilder = new StringBuilder();
-        messageBuilder.AppendLine(Translations.GetMessage(language, "WorkingHoursSet", 
+        messageBuilder.AppendLine(_translationService.Get(language, "WorkingHoursSet", 
             startTime.ToString(@"hh\:mm"), 
             endTime.ToString(@"hh\:mm")));
         
         messageBuilder.AppendLine();
-        messageBuilder.AppendLine(Translations.GetMessage(language, "CurrentBreaks"));
+        messageBuilder.AppendLine(_translationService.Get(language, "CurrentBreaks"));
 
         if (workingHours.Breaks.Any())
         {
             foreach (var breakTime in workingHours.Breaks.OrderBy(b => b.StartTime))
             {
-                messageBuilder.AppendLine(string.Format(Translations.GetMessage(language, "BreakFormat"),
+                messageBuilder.AppendLine(string.Format(_translationService.Get(language, "BreakFormat"),
                     breakTime.StartTime.ToString(@"hh\:mm"),
                     breakTime.EndTime.ToString(@"hh\:mm")));
             }
         }
         else
         {
-            messageBuilder.AppendLine(Translations.GetMessage(language, "NoBreaks"));
+            messageBuilder.AppendLine(_translationService.Get(language, "NoBreaks"));
         }
 
         var keyboard = new InlineKeyboardMarkup(new[]
@@ -512,19 +515,19 @@ public class BreakCommandHandler : ICallbackCommand
             new[]
             {
                 InlineKeyboardButton.WithCallbackData(
-                    Translations.GetMessage(language, "AddBreak"),
+                    _translationService.Get(language, "AddBreak"),
                     $"add_break:{day}")
             },
             new[]
             {
                 InlineKeyboardButton.WithCallbackData(
-                    Translations.GetMessage(language, "RemoveBreak"),
+                    _translationService.Get(language, "RemoveBreak"),
                     $"remove_break:{day}")
             },
             new[]
             {
                 InlineKeyboardButton.WithCallbackData(
-                    Translations.GetMessage(language, "Back"),
+                    _translationService.Get(language, "Back"),
                     "back_to_days")
             }
         });
