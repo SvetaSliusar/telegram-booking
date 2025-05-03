@@ -182,19 +182,19 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         {
             var demoButtons = new[]
             {
-                new[] { InlineKeyboardButton.WithCallbackData("📸 Book Appointment", "book_appointment") },
-                new[] { InlineKeyboardButton.WithCallbackData("📋 My Bookings", "view_bookings") },
-                new[] { InlineKeyboardButton.WithCallbackData("🌐 Change Language", CallbackResponses.ChangeLanguage) },
-                new[] { InlineKeyboardButton.WithCallbackData("🌎 Change Timezone", "change_timezone") },
-                new[] { InlineKeyboardButton.WithUrl("🌟 Learn More", _botConfig.LearMoreUrl) },
-                new[] { InlineKeyboardButton.WithCallbackData("🚀 Create My Company", "request_company_creation") }
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BookAppointment"), "book_appointment") },
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "MyBookings"), "view_bookings") },
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeTimezone"), "change_timezone") },
+                new[] { InlineKeyboardButton.WithUrl(_translationService.Get(language, "LearnMore"), _botConfig.LearMoreUrl) },
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "RequestCompany"), "request_company_creation") }
             };
 
             var demoKeyboard = new InlineKeyboardMarkup(demoButtons);
 
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "🎉 Welcome to the Demo Company!\n\nExplore how Online Book Set Bot works by trying a test booking.\n\n✨ Want your own booking bot? Click below!",
+                text: _translationService.Get(language, "DemoWelcome"),
                 replyMarkup: demoKeyboard,
                 cancellationToken: cancellationToken);
         }
