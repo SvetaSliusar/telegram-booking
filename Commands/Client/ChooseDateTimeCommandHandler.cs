@@ -521,11 +521,14 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
                 }
             });
 
+            var contactInfo = string.IsNullOrEmpty(client.PhoneNumber)
+                ? client.Username : client.PhoneNumber;
+
             await _botClient.SendMessage(
                 chatId: companyOwnerChatId.Value,
                 text: _translationService.Get(companyOwnerLanguage, "NewBookingNotification",
                     service.Name,
-                    client.Name,
+                    client.Name + " (" + contactInfo +")",
                     localCompanyTime.ToString("dddd, MMMM d, yyyy"),
                     localCompanyTime.ToString("HH:mm"),
                     timezoneId),

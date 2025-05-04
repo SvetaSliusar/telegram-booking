@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Options;
+using Telegram.Bot.Commands.Client;
 using Telegram.Bot.Enums;
 using Telegram.Bot.Infrastructure.Configs;
 using Telegram.Bot.Services;
@@ -18,18 +20,21 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
     private readonly BookingDbContext _dbContext;
     private readonly BotConfiguration _botConfig = new BotConfiguration();
     private readonly ITranslationService _translationService;
+    private readonly IShareContactHandler _shareContactHandler;
 
     public MainMenuCommandHandler(
         IUserStateService userStateService, 
         BookingDbContext dbContext,
         ITelegramBotClient botClient,
         IOptions<BotConfiguration> botOptions,
-        ITranslationService translationService)
+        ITranslationService translationService,
+        IShareContactHandler shareContactHandler)
     {
         _translationService = translationService;
         _userStateService = userStateService;
         _dbContext = dbContext;
         _botClient = botClient;
+        _shareContactHandler = shareContactHandler;
         if (botOptions != null)
             _botConfig = botOptions.Value;
     }
@@ -200,14 +205,23 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         }
         else
         {
-            // Normal Client Menu
-            var buttons = new[]
+            InlineKeyboardButton[][] buttons;
+            if (string.IsNullOrEmpty(client.PhoneNumber) && string.IsNullOrEmpty(client.Username))
             {
-                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BookAppointment"), "book_appointment") },
-                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "MyBookings"), "view_bookings") },
-                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
-                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeTimezone"), "change_timezone") }
-            };
+                await _shareContactHandler.HandleRequestContactAsync(chatId, cancellationToken);
+                return;
+            }
+            else
+            {
+            // Normal Client Menu
+                buttons = new[]
+                {
+                    new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BookAppointment"), "book_appointment") },
+                    new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "MyBookings"), "view_bookings") },
+                    new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
+                    new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeTimezone"), "change_timezone") }
+                };
+            }
 
             var keyboard = new InlineKeyboardMarkup(buttons);
 

@@ -14,6 +14,7 @@ using Telegram.Bot.Commands.Company;
 using Telegram.Bot.Commands.Common;
 using Telegram.Bot.Command.Company;
 using Telegram.Bot.Commands.Client;
+using Azure.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -106,6 +107,8 @@ builder.Services.AddTransient<AddLocationCommandHandler>();
 builder.Services.AddTransient<LeaveFeedbbackCommandHanlder>();
 #endregion Company Commands
 #region Client Commands
+builder.Services.AddTransient<RequestContactHandler>();
+builder.Services.AddTransient<IShareContactHandler>(provider => provider.GetRequiredService<RequestContactHandler>());
 builder.Services.AddTransient<ICalendarService>(provider => provider.GetRequiredService<ChooseDateTimeCommandHandler>());
 builder.Services.AddTransient<BookAppointmentCommandHandler>();
 builder.Services.AddTransient<ViewBookingsCommandHanlder>();
@@ -173,6 +176,12 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "select_day_for_work_time_start",
         "change_company_timezone",
         "set_company_timezone"
+    );
+
+    factory.RegisterCommand<RequestContactHandler>(
+        "share_contact_request",
+        "share_contact_phone",
+        "share_contact_username"
     );
 
     factory.RegisterCommand<ConfirmBookingCommand>(

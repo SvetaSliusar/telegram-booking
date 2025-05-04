@@ -53,7 +53,7 @@ public class BotController : ControllerBase
             var messageText = message.Text;
 
             // handle /start
-            if (await _startCommandHandler.HandleStartCommandAsync(messageText, message.Chat.Id, cancellationToken))
+            if (await _startCommandHandler.HandleStartCommandAsync(message, cancellationToken))
                 return Ok();
 
             // handle /menu

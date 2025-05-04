@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Services;
-using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -78,8 +77,7 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId: message.Chat.Id,
-                text: _translationService.Get(language, "NoContactAccess"),
-                 
+                text: _translationService.Get(language, "NoContactAccess"), 
                 cancellationToken: cancellationToken);
         }
     }

@@ -170,6 +170,7 @@
     "AddLocation": "📍 Add Location",
     "Location": "📍 Location: {0}",
     "LeaveFeedback": "📝 Leave Feedback",
+    "NoBookingFound": "No active booking found for this chat ID.",
     "FeedbackPrompt": "Please leave your feedback about our service below:",
     "FeedbackThankYou": "Thank you for your feedback! We appreciate your opinion.",
     "FeedbackTooLong": "❌ Feedback is too long. Please keep it under 500 characters.",
