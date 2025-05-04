@@ -8,7 +8,9 @@ namespace Telegram.Bot.Services
         Task<Token?> GetTokenByValue(string tokenValue);
         Task<Token?> GetTokenByChatId(long chatId);
         Task AssociateChatIdWithToken(long chatId, string tokenValue);
+        Task AddCompanySetupTokenAsync(long chatId);
     }
+    
     public class TokensService : ITokensService
     {
         private readonly BookingDbContext _dbContext;
@@ -43,6 +45,21 @@ namespace Telegram.Bot.Services
                 token.Used = true;
                 await _dbContext.SaveChangesAsync();
             }
+        }
+
+        public async Task AddCompanySetupTokenAsync(long chatId)
+        {
+            var token = Guid.NewGuid().ToString();
+            var newToken = new Token
+            {
+                TokenValue = token,
+                CreatedAt = DateTime.UtcNow,
+                Used = false,
+                ChatId = chatId
+            };
+
+            await _dbContext.Tokens.AddAsync(newToken);
+            await _dbContext.SaveChangesAsync();
         }
     }
 }

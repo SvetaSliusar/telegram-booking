@@ -48,6 +48,8 @@ builder.Services.AddApplicationInsightsTelemetry(applicationInsightsOptions);
 // ✅ Setup Bot Configuration
 var botConfigurationSection = builder.Configuration.GetSection(BotConfiguration.Configuration);
 builder.Services.Configure<BotConfiguration>(botConfigurationSection);
+var stripeConfigurationSection = builder.Configuration.GetSection(StripeConfiguration.Configuration);
+builder.Services.Configure<StripeConfiguration>(stripeConfigurationSection);
 
 var botConfiguration = botConfigurationSection.Get<BotConfiguration>();
 
@@ -55,6 +57,12 @@ var botConfiguration = botConfigurationSection.Get<BotConfiguration>();
 if (botConfiguration == null || string.IsNullOrEmpty(botConfiguration.Token))
 {
     throw new Exception("Telegram Bot Token is missing from configuration.");
+}
+
+var stripeConfiguration = stripeConfigurationSection.Get<StripeConfiguration>();
+if (stripeConfiguration == null || string.IsNullOrEmpty(stripeConfiguration.Url))
+{
+    throw new Exception("Stripe Configuration is missing from configuration.");
 }
 
 // ✅ Register Named HttpClient for Resilience
@@ -105,6 +113,8 @@ builder.Services.AddTransient<EditCompanyCommandHandler>();
 builder.Services.AddTransient<MainMenuCommandHandler>();
 builder.Services.AddTransient<AddLocationCommandHandler>();
 builder.Services.AddTransient<LeaveFeedbbackCommandHanlder>();
+builder.Services.AddTransient<SubscriptionCommandHandler>();
+builder.Services.AddTransient<ISubscriptionHandler>(provider => provider.GetRequiredService<SubscriptionCommandHandler>());
 #endregion Company Commands
 #region Client Commands
 builder.Services.AddTransient<RequestContactHandler>();
@@ -209,6 +219,9 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "share_username_request",
         "share_phone_request",
         "manual_contact_request"
+    );
+    factory.RegisterCommand<SubscriptionCommandHandler>(
+        "subscribe"
     );
 
     return factory;

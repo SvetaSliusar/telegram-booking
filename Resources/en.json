@@ -158,6 +158,7 @@
     "SendCompanyAlias": "Send a company alias in English:",
     "AliasRequired": "Alias should be set in English. Try again:",
     "AliasAlreadyExists": "❌ Alias already exists. Please choose a different one:",
+    "ChooseNextStep": "Choose the next step:",
     "TheNextStep": "The next step:",
     "EditCompany": "✏️ Edit Company Info",
     "EditCompanyMenuTitle": "🔧 Company Setup Options:",
@@ -198,5 +199,12 @@
     "NoWorkingHours": "❌ No working hours set. Please set up working hours first.",
     "NoServiceSelected" : "❌ No service selected. Please select a service to proceed.",
     "BookingSelectDateHeader": "📅 Select a date: {0:MMMM yyyy}\n🔵 Today \\| ⚫ Fully booked \\| 🚫 Day off\nYou can book appointments only for this and next month\\.",
-    "ThisMonth": "📆 This month"
+    "ThisMonth": "📆 This month",
+    "SubscriptionPlans": "💳 *Choose your subscription plan* \\(includes *7\\-day free trial*\\):\\n\\n🗓 1 Month – 10€\\n📅 3 Months – 27€\\n📆 1 Year – 100€",
+    "1m": "🗓 1 Month – 10€",
+    "3m": "📅 3 Months – 27€",
+    "1y": "📆 1 Year – 100€",
+    "QuickSubscribe": "🟢 Quick Choice through Telegram",
+    "SeeAllPlans": "🔵 See All Plans [Web page]",
+    "ThankYouForSubscription": "🎉 Thank you for subscribing!\n\nUse /menu to set up your company"
   }
