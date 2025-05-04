@@ -93,15 +93,16 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
         try
         {
             var parsedTimezone = Enum.Parse<SupportedTimezone>(timezone);
+            var timezoneId = parsedTimezone.ToTimezoneId();
             // Validate timezone
-            TimeZoneInfo.FindSystemTimeZoneById(parsedTimezone.ToTimezoneId());
+            TimeZoneInfo.FindSystemTimeZoneById(timezoneId);
             
-            client.TimeZoneId = timezone;
+            client.TimeZoneId = timezoneId;
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: _translationService.Get(language, "TimezoneSet", timezone),
+                text: _translationService.Get(language, "TimezoneSet", timezoneId),
                 cancellationToken: cancellationToken);
         }
         catch (TimeZoneNotFoundException)
