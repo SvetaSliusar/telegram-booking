@@ -1,9 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Types;
-using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Commands;
 using Telegram.Bot.Commands.Common;
-using Telegram.Bot.Types.Enums;
 
 namespace Telegram.Bot.Services;
 public class ClientUpdateHandler
@@ -45,6 +43,14 @@ public class ClientUpdateHandler
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoCompanyFound"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+        if (company.PaymentStatus == Enums.PaymentStatus.Failed)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: _translationService.Get(language, "PaymentFailed"),
                 cancellationToken: cancellationToken);
             return;
         }

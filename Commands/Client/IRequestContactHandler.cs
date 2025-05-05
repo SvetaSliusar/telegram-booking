@@ -2,7 +2,7 @@ using Telegram.Bot.Types;
 
 namespace Telegram.Bot.Commands.Client;
 
-public interface IShareContactHandler
+public interface IRequestContactHandler
 {
      Task HandleRequestContactAsync(long chatId, CancellationToken cancellationToken);
 }

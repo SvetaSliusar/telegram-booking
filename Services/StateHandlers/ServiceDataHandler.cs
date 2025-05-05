@@ -214,7 +214,7 @@ public class ServiceDataHandler : BaseStateHandler
 
     private async Task HandleServicePriceInput(long chatId, string priceInput, CancellationToken cancellationToken)
     {
-        var language = UserStateService.GetConversation(chatId);
+        var language = await UserStateService.GetLanguageAsync(chatId, cancellationToken);
         
         if (!decimal.TryParse(priceInput, out decimal price) || price < 0)
         {

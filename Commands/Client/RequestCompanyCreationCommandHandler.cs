@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Telegram.Bot.Commands.Company;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -13,17 +14,20 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
     private readonly BookingDbContext _dbContext;
     private readonly IUserStateService _userStateService;
     private readonly ITranslationService _translationService;
-
+    private readonly ISubscriptionHandler _subscriptionHandler;
+    
     public RequestCompanyCreationCommandHanlder(
         ITelegramBotClient botClient,
         IUserStateService userStateService,
         BookingDbContext dbContext,
-        ITranslationService translationService)
+        ITranslationService translationService,
+        ISubscriptionHandler subscriptionHandler)
     {
         _botClient = botClient;
         _dbContext = dbContext;
         _userStateService = userStateService;
         _translationService = translationService;
+        _subscriptionHandler = subscriptionHandler;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -33,17 +37,14 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
         var chatId = callbackQuery.Message.Chat.Id;
         var (commandKey, _) = SplitCommandData(callbackQuery.Data);
 
-        var commandHandlers = new Dictionary<string, Func<Message, CancellationToken, Task>>(StringComparer.OrdinalIgnoreCase)
+        var commandHandlers = new Dictionary<string, Func<long, CancellationToken, Task>>(StringComparer.OrdinalIgnoreCase)
         {
-            { "share_phone_request", HandlePhoneRequestAsync },
-            { "share_username_request", HandleUsernameRequestAsync },
-            { "request_company_creation", HandleRequestContactAsync },
-            { "manual_contact_request", HanldeManualContactRequestAsync }
+            { "request_company_creation", HandleRequestCompanyCreationAsync }
         };
 
         if (commandHandlers.TryGetValue(commandKey, out var commandHandler))
         {
-            await commandHandler(callbackQuery?.Message, cancellationToken);
+            await commandHandler(chatId, cancellationToken);
         }
         else
         {
@@ -51,113 +52,8 @@ public class RequestCompanyCreationCommandHanlder : ICallbackCommand
         }
     }
 
-    private async Task HandlePhoneRequestAsync(Message message, CancellationToken cancellationToken)
+    private async Task HandleRequestCompanyCreationAsync(long chatId, CancellationToken cancellationToken)
     {
-        var language = await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken);
-        if (message.Contact != null)
-        {
-            var phoneNumber = message.Contact.PhoneNumber;
-
-            var adminChatId = await _dbContext.Companies
-                .Where(c => c.Alias == "demo")
-                .Select(c => c.Token.ChatId)
-                .FirstOrDefaultAsync(cancellationToken);
-            await _botClient.SendMessage(
-                chatId: adminChatId,
-                text: $"📩 New company creation request!\n\nFrom chat ID: {message.Chat.Id}\nPhone number: {phoneNumber}",
-                cancellationToken: cancellationToken);
-            await _botClient.SendMessage(
-                chatId: message.Chat.Id,
-                text: _translationService.Get(language, "NewContactThanks"), 
-                replyMarkup: new ReplyKeyboardRemove(),
-                cancellationToken: cancellationToken);
-            _userStateService.RemoveConversation(message.Chat.Id);
-        }
-        else
-        {
-            await _botClient.SendMessage(
-                chatId: message.Chat.Id,
-                text: _translationService.Get(language, "NoContactAccess"), 
-                cancellationToken: cancellationToken);
-        }
-    }
-
-    private async Task HandleUsernameRequestAsync(Message message, CancellationToken cancellationToken)
-    {
-        var username = message.Chat?.Username;
-        var language = await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken);
-        if (!string.IsNullOrEmpty(username))
-        {
-            var adminChatId = await _dbContext.Companies
-                .Where(c => c.Alias == "demo")
-                .Select(c => c.Token.ChatId)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            await _botClient.SendMessage(
-                chatId: adminChatId,
-                text: $"📨 New company request:\nUsername: @{username} (ChatId: {message.Chat.Id})",
-                cancellationToken: cancellationToken);
-
-            await _botClient.SendMessage(
-                chatId: message.Chat.Id,
-                text: _translationService.Get(language, "ContactRequestSent", username), 
-                replyMarkup: new ReplyKeyboardRemove(),
-                cancellationToken: cancellationToken);
-             _userStateService.RemoveConversation(message.Chat.Id);
-        }
-        else
-        {
-            await _botClient.SendMessage(
-                chatId: message.Chat.Id,
-                text: _translationService.Get(language, "NoUsername"), 
-                replyMarkup: new ReplyKeyboardRemove(),
-                cancellationToken: cancellationToken);
-        }
-    }
-
-    private async Task HanldeManualContactRequestAsync(Message message, CancellationToken cancellationToken)
-    {
-        await _botClient.SendMessage(
-            chatId: message.Chat.Id,
-            parseMode: ParseMode.MarkdownV2,
-            text: _translationService.Get(await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken), "ManualContact"), 
-            replyMarkup: new ReplyKeyboardRemove(),
-            cancellationToken: cancellationToken);
-        
-         _userStateService.SetConversation(message.Chat.Id, "WaitingForContactInfo");
-    }
-
-    private async Task HandleRequestContactAsync(Message message, CancellationToken cancellationToken)
-    {
-        var language = await _userStateService.GetLanguageAsync(message.Chat.Id, cancellationToken);
-        _userStateService.SetConversation(message.Chat.Id, "WaitingForContactInfo");
-        // Reply Keyboard for phone sharing (RequestContact = true)
-        var replyKeyboard = new ReplyKeyboardMarkup(new[]
-        {
-            new[] { new KeyboardButton(_translationService.Get(language, "SharePhone")) { RequestContact = true } }
-        })
-        {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = true
-        };
-
-        // Inline keyboard for username or manual contact
-        var inlineKeyboard = new InlineKeyboardMarkup(new[]
-        {
-            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "UseTelegramUsername"), "share_username_request") },
-            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "TypeContact"), "manual_contact_request") }
-        });
-
-        await _botClient.SendMessage(
-            chatId: message.Chat.Id,
-            text: _translationService.Get(language, "SharePhonePrompt"), 
-            replyMarkup: replyKeyboard,
-            cancellationToken: cancellationToken);
-
-        await _botClient.SendMessage(
-            chatId: message.Chat.Id,
-            text: _translationService.Get(language, "ContactOptions"), 
-            replyMarkup: inlineKeyboard,
-            cancellationToken: cancellationToken);
+       await  _subscriptionHandler.ShowSubscriptionsAsync(chatId, cancellationToken);
     }
 }

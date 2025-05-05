@@ -75,7 +75,7 @@ public class BreakCommandHandler : ICallbackCommand
         {
             await _botClient.SendMessage(
                 chatId, 
-                _translationService.Get(language, "NoEmployeeSelected"), 
+                _translationService.Get(language, "NoEmployeeFoundForCompany"), 
                 cancellationToken: cancellationToken);
             return;
         }

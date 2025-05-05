@@ -48,8 +48,8 @@ builder.Services.AddApplicationInsightsTelemetry(applicationInsightsOptions);
 // ✅ Setup Bot Configuration
 var botConfigurationSection = builder.Configuration.GetSection(BotConfiguration.Configuration);
 builder.Services.Configure<BotConfiguration>(botConfigurationSection);
-var stripeConfigurationSection = builder.Configuration.GetSection(StripeConfiguration.Configuration);
-builder.Services.Configure<StripeConfiguration>(stripeConfigurationSection);
+var stripeConfigurationSection = builder.Configuration.GetSection(CustomStripeConfiguration.Configuration);
+builder.Services.Configure<CustomStripeConfiguration>(stripeConfigurationSection);
 
 var botConfiguration = botConfigurationSection.Get<BotConfiguration>();
 
@@ -59,8 +59,8 @@ if (botConfiguration == null || string.IsNullOrEmpty(botConfiguration.Token))
     throw new Exception("Telegram Bot Token is missing from configuration.");
 }
 
-var stripeConfiguration = stripeConfigurationSection.Get<StripeConfiguration>();
-if (stripeConfiguration == null || string.IsNullOrEmpty(stripeConfiguration.Url))
+var stripeConfiguration = stripeConfigurationSection.Get<CustomStripeConfiguration>();
+if (stripeConfiguration == null || string.IsNullOrEmpty(stripeConfiguration.ApiKey))
 {
     throw new Exception("Stripe Configuration is missing from configuration.");
 }
@@ -76,7 +76,15 @@ builder.Services.AddHttpClient("telegram_bot_client")
 
 // ✅ Register PostgreSQL Database Context
 builder.Services.AddDbContext<BookingDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("BookingDatabase")));
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("BookingDatabase"), 
+        npgsqlOptions => 
+        {
+            npgsqlOptions.CommandTimeout(30); // 30 seconds timeout for commands
+            npgsqlOptions.EnableRetryOnFailure(3); // Retry 3 times on failure
+        });
+});
+builder.Services.AddMemoryCache();
 
 builder.Services.AddSingleton<ITranslationService>(sp =>
     new JsonTranslationService(Path.Combine(Directory.GetCurrentDirectory(), "Resources")));
@@ -91,6 +99,8 @@ builder.Services.AddSingleton<IUserStateService>(sp =>
         sp.GetRequiredService<ILogger<UserStateService>>()));
 builder.Services.AddSingleton<ICompanyCreationStateService, CompanyCreationStateService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddTransient<ITokensService, TokensService>();
+builder.Services.AddTransient<IRequestContactHandler, RequestContactHandler>();
 builder.Services.AddHostedService<BookingReminderService>();
 #region Command Handlers
 
@@ -113,12 +123,12 @@ builder.Services.AddTransient<EditCompanyCommandHandler>();
 builder.Services.AddTransient<MainMenuCommandHandler>();
 builder.Services.AddTransient<AddLocationCommandHandler>();
 builder.Services.AddTransient<LeaveFeedbbackCommandHanlder>();
-builder.Services.AddTransient<SubscriptionCommandHandler>();
 builder.Services.AddTransient<ISubscriptionHandler>(provider => provider.GetRequiredService<SubscriptionCommandHandler>());
+builder.Services.AddTransient<SubscriptionCommandHandler>();
+builder.Services.AddTransient<CancelSubscriptionCommandHandler>();
 #endregion Company Commands
 #region Client Commands
-builder.Services.AddTransient<RequestContactHandler>();
-builder.Services.AddTransient<IShareContactHandler>(provider => provider.GetRequiredService<RequestContactHandler>());
+builder.Services.AddTransient<ShareContactCommandHandler>();
 builder.Services.AddTransient<ICalendarService>(provider => provider.GetRequiredService<ChooseDateTimeCommandHandler>());
 builder.Services.AddTransient<BookAppointmentCommandHandler>();
 builder.Services.AddTransient<ViewBookingsCommandHanlder>();
@@ -188,12 +198,6 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "set_company_timezone"
     );
 
-    factory.RegisterCommand<RequestContactHandler>(
-        "share_contact_request",
-        "share_contact_phone",
-        "share_contact_username"
-    );
-
     factory.RegisterCommand<ConfirmBookingCommand>(
         "confirm_booking"
     );
@@ -215,13 +219,17 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "leave_feedback"
     );
     factory.RegisterCommand<RequestCompanyCreationCommandHanlder>(
-        "request_company_creation",
-        "share_username_request",
-        "share_phone_request",
-        "manual_contact_request"
+        "request_company_creation"
     );
     factory.RegisterCommand<SubscriptionCommandHandler>(
+        "inline_subscription",
         "subscribe"
+    );
+    factory.RegisterCommand<ShareContactCommandHandler>(
+        "share_contact_username"
+    );
+    factory.RegisterCommand<CancelSubscriptionCommandHandler>(
+        "cancel_subscription"
     );
 
     return factory;

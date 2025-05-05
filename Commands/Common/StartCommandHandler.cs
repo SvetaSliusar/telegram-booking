@@ -20,6 +20,7 @@ public class StartCommandHandler : IStartCommandHandler
     private readonly ILogger<StartCommandHandler> _logger;
     private readonly IUserStateService _userStateService;
     private readonly IMainMenuCommandHandler _mainMenuCommandHandler;
+    private readonly ITranslationService _translationService;
     private const string DefaultLanguage = "EN";
     private const string StartCommand = "/start";
     private const string StartCommandWithParameter = "/start=";
@@ -31,7 +32,8 @@ public class StartCommandHandler : IStartCommandHandler
         ICompanyService companyService,
         ILogger<StartCommandHandler> logger,
         IMainMenuCommandHandler mainMenuCommandHandler,
-        IUserStateService userStateService)
+        IUserStateService userStateService,
+        ITranslationService translationService)
     {
         _botClient = botClient;
         _dbContext = dbContext;
@@ -39,6 +41,7 @@ public class StartCommandHandler : IStartCommandHandler
         _logger = logger;
         _mainMenuCommandHandler = mainMenuCommandHandler;
         _userStateService = userStateService;
+        _translationService = translationService;
     }
 
     public async Task<bool> HandleStartCommandAsync(Message message, CancellationToken cancellationToken)
@@ -81,11 +84,33 @@ public class StartCommandHandler : IStartCommandHandler
 
         if (company != null)
         {
+            if (company.PaymentStatus == PaymentStatus.Failed)
+            {
+                await _botClient.SendMessage(
+                    chatId,
+                    text: _translationService.Get(company.Token.Language ?? DefaultLanguage, "PaymentFailedRetryMessage"),
+                    cancellationToken: cancellationToken
+                );
+                return true;
+            }
+
             await _userStateService.AddOrUpdateUserRolesAsync(chatId, UserRole.Company, setActive: true, cancellationToken);
             await _mainMenuCommandHandler.ShowCompanyMainMenuAsync(chatId, company.Token.Language ?? DefaultLanguage, cancellationToken);
             return true;
         }
+
         var name = string.Concat(message.Chat.FirstName, " ", message.Chat.LastName).Trim();
+
+        if (company?.PaymentStatus == PaymentStatus.Failed)
+        {
+            await _botClient.SendMessage(
+                chatId,
+                text: _translationService.Get(DefaultLanguage, "CompanyNotAvailable"),
+                cancellationToken: cancellationToken
+            );
+            return true;
+        }
+
         await AddClientIfNotExists(chatId, name, DemoCompanyId, cancellationToken);
         await _userStateService.AddOrUpdateUserRolesAsync(chatId, UserRole.Client, setActive: true, cancellationToken);
         await ShowInitialLanguageSelection(chatId, cancellationToken);
@@ -117,6 +142,18 @@ public class StartCommandHandler : IStartCommandHandler
         if (company != null)
         {
             var name = string.Concat(message.Chat.FirstName, " ", message.Chat.LastName).Trim();
+
+
+            if (company?.PaymentStatus == PaymentStatus.Failed)
+            {
+                await _botClient.SendMessage(
+                    chatId,
+                    text: _translationService.Get(DefaultLanguage, "CompanyNotAvailable"),
+                    cancellationToken: cancellationToken
+                );
+                return true;
+            }
+
             await AddClientIfNotExists(chatId, name, company.Id, cancellationToken);
             await _userStateService.AddOrUpdateUserRolesAsync(chatId, UserRole.Client, setActive: true, cancellationToken);
             await ShowInitialLanguageSelection(chatId, cancellationToken);

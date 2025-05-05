@@ -111,7 +111,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
     private async Task SaveCompanyData(long chatId, CancellationToken cancellationToken)
     {
         var state = CompanyCreationStateService.GetState(chatId);
-        var token = await DbContext.Tokens.FirstAsync(t => t.ChatId == chatId);
+        var token = await DbContext.Tokens.FirstAsync(t => t.ChatId == chatId && !t.Used);
         
         var company = new Company
         {

@@ -20,6 +20,7 @@ public class CompanyUpdateHandler
     private readonly IUserStateService _userStateService;
     private readonly ITranslationService _translationService;
     private readonly IEnumerable<IStateHandler> _stateHandlers;
+    private readonly ICompanyService _companyService;
 
     public CompanyUpdateHandler(
         ITelegramBotClient botClient,
@@ -28,7 +29,8 @@ public class CompanyUpdateHandler
         ICallbackCommandFactory callbackCommandFactory,
         IUserStateService userStateService,
         IEnumerable<IStateHandler> stateHandlers,
-        ITranslationService translationService)
+        ITranslationService translationService,
+        ICompanyService companyService)
     {
         _botClient = botClient;
         _logger = logger;
@@ -37,6 +39,7 @@ public class CompanyUpdateHandler
         _userStateService = userStateService;
         _stateHandlers = stateHandlers;
         _translationService = translationService;
+        _companyService = companyService;
     }
 
     public async Task<UserRole> GetModeAsync(long chatId, CancellationToken cancellationToken)
@@ -46,6 +49,12 @@ public class CompanyUpdateHandler
 
     public async Task HandleUpdateAsync(Update update, CancellationToken cancellationToken)
     {
+        var result = await CheckSubscriptionAsync(update, cancellationToken);
+        if (!result)
+        {
+            _logger.LogWarning("User {ChatId} is not subscribed.", update.Message?.Chat.Id);
+            return;
+        }
         var handler = update switch
         {
             { Message: { } message } => BotOnMessageReceived(message, cancellationToken),
@@ -58,6 +67,27 @@ public class CompanyUpdateHandler
         await handler;
     }
 
+    private async Task<bool> CheckSubscriptionAsync(Update update, CancellationToken cancellationToken)
+    {
+        if (update.Message?.Chat == null)
+            return true;
+            
+        var language = await _userStateService.GetLanguageAsync(update.Message.Chat.Id, cancellationToken);
+
+        var chatId = update.Message.Chat.Id;
+        var paymentStatus = await _companyService.GetPaymentStatusAsync(chatId, cancellationToken);
+
+        if (paymentStatus == PaymentStatus.Failed)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: _translationService.Get(language, "AccessBlockedPaymentFailed"),
+                cancellationToken: cancellationToken);
+                return false;
+        }
+        return true;
+    }
+    
     private async Task BotOnMessageReceived(Message message, CancellationToken cancellationToken)
     {       
         if (message == null)
@@ -163,7 +193,7 @@ public class CompanyUpdateHandler
         await _botClient.SendMessage(
             chatId: chatId,
             text: _translationService.Get(language, "EnterBusinessName"),
-            parseMode: ParseMode.Markdown,
+            parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
     }
 

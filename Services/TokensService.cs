@@ -8,7 +8,8 @@ namespace Telegram.Bot.Services
         Task<Token?> GetTokenByValue(string tokenValue);
         Task<Token?> GetTokenByChatId(long chatId);
         Task AssociateChatIdWithToken(long chatId, string tokenValue);
-        Task AddCompanySetupTokenAsync(long chatId);
+        Task AddCompanySetupTokenAsync(long chatId, string language, string customerId);
+        Task<long?> GetChatIdByCustomerIdAsync(string customerId, CancellationToken cancellationToken);
     }
     
     public class TokensService : ITokensService
@@ -47,19 +48,40 @@ namespace Telegram.Bot.Services
             }
         }
 
-        public async Task AddCompanySetupTokenAsync(long chatId)
+        public async Task AddCompanySetupTokenAsync(long chatId, string language, string customerId)
         {
-            var token = Guid.NewGuid().ToString();
-            var newToken = new Token
-            {
-                TokenValue = token,
-                CreatedAt = DateTime.UtcNow,
-                Used = false,
-                ChatId = chatId
-            };
+            var existingToken = await _dbContext.Tokens
+                .FirstOrDefaultAsync(t => t.ChatId == chatId);
 
-            await _dbContext.Tokens.AddAsync(newToken);
+            if (existingToken != null)
+            {
+                existingToken.StripeCustomerId = customerId;
+                _dbContext.Tokens.Update(existingToken);
+            }
+            else
+            {
+                var newToken = new Token
+                {
+                    TokenValue = Guid.NewGuid().ToString(),
+                    CreatedAt = DateTime.UtcNow,
+                    Used = false,
+                    ChatId = chatId,
+                    Language = language,
+                    StripeCustomerId = customerId
+                };
+
+                await _dbContext.Tokens.AddAsync(newToken);
+            }
+
             await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task<long?> GetChatIdByCustomerIdAsync(string customerId, CancellationToken cancellationToken)
+        {
+            var token = await _dbContext.Tokens
+                .FirstOrDefaultAsync(t => t.StripeCustomerId == customerId, cancellationToken: cancellationToken);
+
+            return token?.ChatId;
         }
     }
 }

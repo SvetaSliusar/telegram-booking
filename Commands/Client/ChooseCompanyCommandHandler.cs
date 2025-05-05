@@ -63,6 +63,15 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
                 cancellationToken: cancellationToken);
             return;
         }
+        
+        if (company.PaymentStatus == Enums.PaymentStatus.Failed)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: _translationService.Get(language, "CompanyNotAvailable"), 
+                cancellationToken: cancellationToken);
+            return;
+        }
         var services = await (from s in _dbContext.Services
                       join e in _dbContext.Employees on s.EmployeeId equals e.Id
                       where e.CompanyId == company.Id

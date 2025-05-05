@@ -1,5 +1,4 @@
-using System;
-using System.Collections.Generic;
+using Telegram.Bot.Enums;
 namespace Telegram.Bot.Models
 {
     public class Company
@@ -7,9 +6,10 @@ namespace Telegram.Bot.Models
         public int Id { get; set; }
         public required string Name { get; set; }
         public string Location { get; set; } = string.Empty;
+        public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Trial;
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
-        public required string Alias { get; set; } // URL-friendly version of the name without spaces
+        public required string Alias { get; set; }
         public virtual List<Employee> Employees { get; set; } = new();
         public int TokenId { get; set; }
         public required Token Token { get; set; }
