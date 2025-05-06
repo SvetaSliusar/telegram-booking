@@ -180,6 +180,7 @@
     "NoServiceSeleted": "⚠️ No service selected. Please select a service to proceed.",
     "NewContactThanks": "✅ Thanks! We'll contact you soon to set up your company!",
     "ContactOptions": "How would you like us to contact you?",
+    "ProcessOptions": "How would you like to proceed?",
     "NoContactAccess": "⚠️ I don't have an access to your phone number, please use another option.",
     "NoUsername": "⚠️ You don't have a Telegram username set. Please go to Telegram settings and add one.",
     "ContactRequestSent": "✅ Got it! We'll contact you on Telegram at @{0}",

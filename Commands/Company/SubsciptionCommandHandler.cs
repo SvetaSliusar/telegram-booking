@@ -76,7 +76,7 @@ public class SubscriptionCommandHandler : ICallbackCommand, ISubscriptionHandler
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: "How would you like to proceed?",
+            text: _translationService.Get(language, "ProcessOptions"),
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }   
