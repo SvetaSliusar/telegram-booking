@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Telegram.Bot.Commands.Client;
 using Telegram.Bot.Enums;
 using Telegram.Bot.Infrastructure.Configs;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
 using static Telegram.Bot.Commands.Helpers.RoleHandler;
@@ -16,22 +16,24 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
     private readonly ITelegramBotClient _botClient;
     private readonly IUserStateService _userStateService;
     private readonly BookingDbContext _dbContext;
-    private readonly BotConfiguration _botConfig = new BotConfiguration();
     private readonly ITranslationService _translationService;
+    private readonly IRequestContactHandler _contactHandler;
+    private readonly BotConfiguration _botConfig;
 
     public MainMenuCommandHandler(
         IUserStateService userStateService, 
         BookingDbContext dbContext,
         ITelegramBotClient botClient,
         IOptions<BotConfiguration> botOptions,
-        ITranslationService translationService)
+        ITranslationService translationService,
+        IRequestContactHandler contactHandler)
     {
         _translationService = translationService;
         _userStateService = userStateService;
         _dbContext = dbContext;
         _botClient = botClient;
-        if (botOptions != null)
-            _botConfig = botOptions.Value;
+        _contactHandler = contactHandler;
+        _botConfig = botOptions.Value;
     }
 
     public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
@@ -170,13 +172,13 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Client not found.",
+                text: _translationService.Get(language, "NoClientFound"),
                 cancellationToken: cancellationToken);
             return;
         }
 
-        var isDemoClient = client.CompanyInvites
-            .Any(invite => invite.Company.Alias.ToLower() == "demo");
+        var isDemoClient = client.CompanyInvites?.Count == 1 &&
+            client.CompanyInvites.FirstOrDefault()?.Company.Alias.ToLower() == "demo";
 
         if (isDemoClient)
         {
@@ -186,7 +188,6 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
                 new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "MyBookings"), "view_bookings") },
                 new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
                 new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeTimezone"), "change_timezone") },
-                new[] { InlineKeyboardButton.WithUrl(_translationService.Get(language, "LearnMore"), _botConfig.LearMoreUrl) },
                 new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "RequestCompany"), "request_company_creation") }
             };
 
@@ -200,14 +201,23 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         }
         else
         {
-            // Normal Client Menu
-            var buttons = new[]
+            InlineKeyboardButton[][] buttons;
+            if (string.IsNullOrEmpty(client.PhoneNumber) && string.IsNullOrEmpty(client.Username))
             {
-                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BookAppointment"), "book_appointment") },
-                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "MyBookings"), "view_bookings") },
-                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
-                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeTimezone"), "change_timezone") }
-            };
+                await _contactHandler.HandleRequestContactAsync(chatId, cancellationToken);
+                return;
+            }
+            else
+            {
+            // Normal Client Menu
+                buttons = new[]
+                {
+                    new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BookAppointment"), "book_appointment") },
+                    new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "MyBookings"), "view_bookings") },
+                    new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
+                    new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeTimezone"), "change_timezone") }
+                };
+            }
 
             var keyboard = new InlineKeyboardMarkup(buttons);
 
@@ -221,23 +231,74 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
 
     public async Task ShowCompanyMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)
     {
-        var company = await _dbContext.Companies.FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
+        var company = await _dbContext.Companies
+            .Include(c => c.Employees)
+            .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
-        if (company == null)
+        if (company?.PaymentStatus == PaymentStatus.Failed)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: _translationService.Get(language, "AccessBlockedPaymentFailed"),
+                cancellationToken: cancellationToken);
+
+            if (company != null)
+            {
+                var buttons = new List<List<InlineKeyboardButton>>
+                {
+                    new()
+                    {
+                        InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ManageSubscription"), "cancel_subscription")
+                    }
+                };
+                var keyboardButton = new InlineKeyboardMarkup(buttons);
+
+                await _botClient.SendMessage(
+                    chatId: chatId,
+                    text: _translationService.Get(language, "AccessBlockedPaymentFailed"),
+                    replyMarkup: keyboardButton,
+                    cancellationToken: cancellationToken);
+                return;
+            }
+            return;
+        }
+
+        if (company == null || company.Employees.Count == 0)
         {
             await ShowEmptyCompanyStateAsync(chatId, language, cancellationToken);
             return;
         }
 
         var keyboardButtons = new List<List<InlineKeyboardButton>>
+        {
+            new()
             {
-                new(){ InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "EditCompany"), "edit_company_menu") },
-                new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ListServices"), "list_services") },
-                new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "GetClientLink"), "get_client_link") },
-                new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ViewDailyBookings"), "view_daily_bookings") },
-                new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), "change_language") },
-                new() { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "LeaveFeedback"), "leave_feedback") },
-            };
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "EditCompany"), "edit_company_menu"),
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ListServices"), "list_services")
+            },
+            // Row 2: Booking tools
+            new()
+            {
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "GetClientLink"), "get_client_link"),
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ViewDailyBookings"), "view_daily_bookings")
+            },
+            // Row 3: Settings and feedback
+            new()
+            {
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), "change_language"),
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "LeaveFeedback"), "leave_feedback")
+            },
+            // Row 4: Support
+            new()
+            {
+                InlineKeyboardButton.WithUrl(_translationService.Get(language, "ContactSupport"), _botConfig.SupportUrl),
+            },
+            // Row 5: Critical action
+            new()
+            {
+                InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ManageSubscription"), "cancel_subscription")
+            }
+        };
 
         var keyboard = new InlineKeyboardMarkup(keyboardButtons);
 

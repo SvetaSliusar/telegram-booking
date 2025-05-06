@@ -51,7 +51,7 @@ public class WorkStartTimeHandler : BaseStateHandler
 
         await BotClient.SendMessage(
             chatId: chatId,
-            text: TranslationService.Get(language, "WorkTimeEnd"),
+            text: TranslationService.Get(language, "WorkEndTime"),
             replyMarkup: new InlineKeyboardMarkup(new[]
             {
                 new[] { InlineKeyboardButton.WithCallbackData(TranslationService.Get(language, "Back"), $"change_work_time") }

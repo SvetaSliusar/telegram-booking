@@ -67,6 +67,7 @@ public class BreakStartTimeHandler : BaseStateHandler
                 cancellationToken: cancellationToken);
             return;
         }
+        
         UserStateService.SetConversation(chatId, $"WaitingForBreakEnd_{employeeId}_{(int)day}_{startTime}");
 
         await BotClient.SendMessage(

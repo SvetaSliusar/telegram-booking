@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
@@ -111,14 +112,15 @@ public class InitialCompanyDataHandler : BaseStateHandler
     private async Task SaveCompanyData(long chatId, CancellationToken cancellationToken)
     {
         var state = CompanyCreationStateService.GetState(chatId);
-        var token = await DbContext.Tokens.FirstAsync(t => t.ChatId == chatId);
+        var token = await DbContext.Tokens.FirstAsync(t => t.ChatId == chatId && !t.Used);
         
         var company = new Company
         {
             Name = state.CompanyName,
             Alias = state.CompanyAlias,
             TokenId = token.Id,
-            Token = token
+            Token = token,
+            PaymentStatus = PaymentStatus.Active
         };
 
         company.Employees = state.Employees.Select(e => new Employee
@@ -136,6 +138,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
         };
 
         DbContext.Companies.Add(company);
+        token.Used = true;
         await DbContext.SaveChangesAsync(cancellationToken);
     }
 

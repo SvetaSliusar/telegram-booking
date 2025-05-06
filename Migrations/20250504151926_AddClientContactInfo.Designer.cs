@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Telegram.Bot;
@@ -11,9 +12,11 @@ using Telegram.Bot;
 namespace TelegramBookingBot.Migrations
 {
     [DbContext(typeof(BookingDbContext))]
-    partial class BookingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250504151926_AddClientContactInfo")]
+    partial class AddClientContactInfo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -177,9 +180,6 @@ namespace TelegramBookingBot.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("PaymentStatus")
-                        .HasColumnType("integer");
-
                     b.Property<int>("TokenId")
                         .HasColumnType("integer");
 
@@ -316,14 +316,7 @@ namespace TelegramBookingBot.Migrations
                     b.Property<long?>("ChatId")
                         .HasColumnType("bigint");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("Language")
-                        .HasColumnType("text");
-
-                    b.Property<string>("StripeCustomerId")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("TokenValue")
@@ -332,9 +325,6 @@ namespace TelegramBookingBot.Migrations
 
                     b.Property<bool>("Used")
                         .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("UsedAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 

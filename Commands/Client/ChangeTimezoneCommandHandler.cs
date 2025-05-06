@@ -55,23 +55,37 @@ public class ChangeTimezoneCommandHandler : ICallbackCommand
 
     private async Task ShowTimezoneSelection(long chatId, string data, CancellationToken cancellationToken)
     {
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
+        var client = await _dbContext.Clients.FirstOrDefaultAsync(c => c.ChatId == chatId, cancellationToken);
+
+        var currentTz = client?.TimeZoneId ?? "Europe/Lisbon";
+
         var timezoneButtons = Enum.GetValues(typeof(SupportedTimezone))
             .Cast<SupportedTimezone>()
-            .Select(tz => new[] {
-                InlineKeyboardButton.WithCallbackData(tz.ToString().Replace('_', '/'), $"set_timezone:{tz}")
-            })
-            .ToArray();
+            .Select(tz =>
+            {
+                var tzString = tz.ToString().Replace('_', '/');
+                var label = tzString == currentTz ? $"✅ {tzString}" : tzString;
 
-        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
-        
-        var keyboard = new InlineKeyboardMarkup(timezoneButtons.Concat(new[] 
-        { 
-            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu") }
-        }));
+                return new[] {
+                    InlineKeyboardButton.WithCallbackData(label, $"set_timezone:{tz}")
+                };
+            })
+            .ToList();
+
+        timezoneButtons.Add(new[] {
+            InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu")
+        });
+
+        var keyboard = new InlineKeyboardMarkup(timezoneButtons);
+
+        var text = _translationService.Get(language, "SelectTimezone") + 
+                $"\n\n{_translationService.Get(language, "CurrentTimezone")}: *{currentTz}*";
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: _translationService.Get(language, "SelectTimezone"),
+            text: text,
+            parseMode: ParseMode.Markdown,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }

@@ -1,10 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Telegram.Bot.Commands.Common;
 using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types;
-using static Telegram.Bot.Commands.Helpers.RoleHandler;
+using Telegram.Bot.Filters;
 
 namespace Telegram.Bot.Controllers;
 
@@ -33,6 +34,8 @@ public class BotController : ControllerBase
     }
 
     [HttpPost]
+    [RequestTimeout(300)]
+    [ValidateTelegramBot]
     public async Task<IActionResult> Post([FromBody] Update? update, CancellationToken cancellationToken)
     {
         if (update == null)
@@ -43,42 +46,51 @@ public class BotController : ControllerBase
 
         _logger.LogInformation("Received update: {Update}", update);
 
-        var message = update.Message;
-        var callback = update.CallbackQuery;
-
-        var chatId = message?.Chat.Id ?? callback?.Message?.Chat.Id;
-
-        if (message != null)
+        try
         {
-            var messageText = message.Text;
+            var message = update.Message;
+            var callback = update.CallbackQuery;
 
-            // handle /start
-            if (await _startCommandHandler.HandleStartCommandAsync(messageText, message.Chat.Id, cancellationToken))
-                return Ok();
+            var chatId = message?.Chat.Id ?? callback?.Message?.Chat.Id;
 
-            // handle /menu
-            if (messageText == "/menu")
+            if (message != null)
             {
-                await _mainMenuHandler.ShowMainMenuAsync(message.Chat.Id, cancellationToken);
-                return Ok();
-            }
-        }
+                var messageText = message.Text;
 
-        if (chatId.HasValue)
+                // handle /start
+                if (await _startCommandHandler.HandleStartCommandAsync(message, cancellationToken))
+                    return Ok();
+
+                // handle /menu
+                if (messageText == "/menu")
+                {
+                    await _mainMenuHandler.ShowMainMenuAsync(message.Chat.Id, cancellationToken);
+                    return Ok();
+                }
+            }
+
+            if (chatId.HasValue)
+            {
+                var activeRole = await _companyUpdateHandler.GetModeAsync(chatId.Value, cancellationToken);
+                
+                switch (activeRole)
+                {
+                    case UserRole.Company:
+                        await _companyUpdateHandler.HandleUpdateAsync(update, cancellationToken);
+                        break;
+                    case UserRole.Client:
+                        await _clientUpdateHandler.HandleUpdateAsync(update, cancellationToken);
+                        break;
+                }
+            }
+
+            return Ok();
+        }
+        catch (Exception ex)
         {
-            var activeRole = await _companyUpdateHandler.GetModeAsync(chatId.Value, cancellationToken);
-            
-            switch (activeRole)
-            {
-                case UserRole.Company:
-                    await _companyUpdateHandler.HandleUpdateAsync(update, cancellationToken);
-                    break;
-                case UserRole.Client:
-                    await _clientUpdateHandler.HandleUpdateAsync(update, cancellationToken);
-                    break;
-            }
-        }
+            _logger.LogError(ex, "Error processing update");
 
-        return Ok();
+            return Ok();
+        }
     }
 }

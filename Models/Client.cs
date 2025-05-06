@@ -11,6 +11,8 @@ public class Client
 
     [Required]
     public string Name { get; set; } = string.Empty;
+    public string? PhoneNumber { get; set; }
+    public string? Username { get; set; }
 
     [Required]
     public string TimeZoneId { get; set; } = "Europe/Lisbon";

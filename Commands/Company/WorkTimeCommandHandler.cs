@@ -107,6 +107,7 @@ public class WorkTimeCommandHandler : ICallbackCommand
 
     private async Task HandleChangeWorkTimeAsync(long chatId, string data, CancellationToken cancellationToken)
     {
+        _userStateService.RemoveConversation(chatId);
         var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .Include(c => c.Employees)

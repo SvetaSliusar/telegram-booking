@@ -73,7 +73,7 @@ public class WorkDayCommandHandler : ICallbackCommand
         var employee = company?.Employees.FirstOrDefault();
         if (employee == null)
         {
-            await _botClient.SendMessage(chatId, _translationService.Get(language, "NoEmployeeSelected"), cancellationToken: cancellationToken);
+            await _botClient.SendMessage(chatId, _translationService.Get(language, "NoEmployeeFoundForCompany"), cancellationToken: cancellationToken);
             return;
         }
         _companyCreationStateService.ClearState(chatId);

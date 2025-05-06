@@ -14,6 +14,7 @@ using Telegram.Bot.Commands.Company;
 using Telegram.Bot.Commands.Common;
 using Telegram.Bot.Command.Company;
 using Telegram.Bot.Commands.Client;
+using Azure.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +48,8 @@ builder.Services.AddApplicationInsightsTelemetry(applicationInsightsOptions);
 // ✅ Setup Bot Configuration
 var botConfigurationSection = builder.Configuration.GetSection(BotConfiguration.Configuration);
 builder.Services.Configure<BotConfiguration>(botConfigurationSection);
+var stripeConfigurationSection = builder.Configuration.GetSection(CustomStripeConfiguration.Configuration);
+builder.Services.Configure<CustomStripeConfiguration>(stripeConfigurationSection);
 
 var botConfiguration = botConfigurationSection.Get<BotConfiguration>();
 
@@ -54,6 +57,12 @@ var botConfiguration = botConfigurationSection.Get<BotConfiguration>();
 if (botConfiguration == null || string.IsNullOrEmpty(botConfiguration.Token))
 {
     throw new Exception("Telegram Bot Token is missing from configuration.");
+}
+
+var stripeConfiguration = stripeConfigurationSection.Get<CustomStripeConfiguration>();
+if (stripeConfiguration == null || string.IsNullOrEmpty(stripeConfiguration.ApiKey))
+{
+    throw new Exception("Stripe Configuration is missing from configuration.");
 }
 
 // ✅ Register Named HttpClient for Resilience
@@ -67,10 +76,27 @@ builder.Services.AddHttpClient("telegram_bot_client")
 
 // ✅ Register PostgreSQL Database Context
 builder.Services.AddDbContext<BookingDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("BookingDatabase")));
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("BookingDatabase"), 
+        npgsqlOptions => 
+        {
+            npgsqlOptions.CommandTimeout(30); // 30 seconds timeout for commands
+            npgsqlOptions.EnableRetryOnFailure(3); // Retry 3 times on failure
+        });
+});
+builder.Services.AddMemoryCache();
 
 builder.Services.AddSingleton<ITranslationService>(sp =>
     new JsonTranslationService(Path.Combine(Directory.GetCurrentDirectory(), "Resources")));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowWebflow", policy =>
+    {
+        policy.WithOrigins("https://www.telegrambooking.com") // ✅ your Webflow domain here
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
 // ✅ Dependency Injection for Services
 builder.Services.AddScoped<ClientUpdateHandler>();
@@ -82,6 +108,8 @@ builder.Services.AddSingleton<IUserStateService>(sp =>
         sp.GetRequiredService<ILogger<UserStateService>>()));
 builder.Services.AddSingleton<ICompanyCreationStateService, CompanyCreationStateService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddTransient<ITokensService, TokensService>();
+builder.Services.AddTransient<IRequestContactHandler, RequestContactHandler>();
 builder.Services.AddHostedService<BookingReminderService>();
 #region Command Handlers
 
@@ -104,8 +132,12 @@ builder.Services.AddTransient<EditCompanyCommandHandler>();
 builder.Services.AddTransient<MainMenuCommandHandler>();
 builder.Services.AddTransient<AddLocationCommandHandler>();
 builder.Services.AddTransient<LeaveFeedbbackCommandHanlder>();
+builder.Services.AddTransient<ISubscriptionHandler>(provider => provider.GetRequiredService<SubscriptionCommandHandler>());
+builder.Services.AddTransient<SubscriptionCommandHandler>();
+builder.Services.AddTransient<CancelSubscriptionCommandHandler>();
 #endregion Company Commands
 #region Client Commands
+builder.Services.AddTransient<ShareContactCommandHandler>();
 builder.Services.AddTransient<ICalendarService>(provider => provider.GetRequiredService<ChooseDateTimeCommandHandler>());
 builder.Services.AddTransient<BookAppointmentCommandHandler>();
 builder.Services.AddTransient<ViewBookingsCommandHanlder>();
@@ -132,7 +164,8 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "choose_this_month", 
         "choose_next_month", 
         "choose_previous_month",
-        "choose_time"
+        "choose_time",
+        "ignore"
     );
 
     factory.RegisterCommand<BreakCommandHandler>(
@@ -141,6 +174,7 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "remove_break",
         "select_day_for_breaks",
         "remove_break_confirmation",
+        "back_to_days",
         "back_to_breaks"
     );
     factory.RegisterCommand<GenerateClientLinkHandler>(
@@ -196,10 +230,17 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "leave_feedback"
     );
     factory.RegisterCommand<RequestCompanyCreationCommandHanlder>(
-        "request_company_creation",
-        "share_username_request",
-        "share_phone_request",
-        "manual_contact_request"
+        "request_company_creation"
+    );
+    factory.RegisterCommand<SubscriptionCommandHandler>(
+        "inline_subscription",
+        "subscribe"
+    );
+    factory.RegisterCommand<ShareContactCommandHandler>(
+        "share_contact_username"
+    );
+    factory.RegisterCommand<CancelSubscriptionCommandHandler>(
+        "cancel_subscription"
     );
 
     return factory;
@@ -237,7 +278,7 @@ app.Use(async (context, next) =>
     context.Request.EnableBuffering(); // Allows multiple reads
     await next();
 });
-
+app.UseCors("AllowWebflow");
 // ✅ FIX: Ensure Correct Webhook Route
 if (string.IsNullOrEmpty(botConfiguration.Route))
 {

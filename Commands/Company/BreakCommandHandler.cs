@@ -43,13 +43,12 @@ public class BreakCommandHandler : ICallbackCommand
         var commandHandlers = new Dictionary<string, Func<long, string, CancellationToken, Task>>(StringComparer.OrdinalIgnoreCase)
         {
             { "add_break", HandleAddBreakAsync },
-            { "select_break_start", HandleSelectBreakStartAsync },
-            { "select_break_end", HandleSelectBreakEndAsync },
             { "remove_break", HandleRemoveBreakAsync },
             { "remove_break_confirmation", HandleRemoveBreakConfirmationAsync },
             { "back_to_breaks", HandleBackToBreaksAsync },
             { "manage_breaks", HandleManageBreaksAsync },
-            { "select_day_for_breaks", HandleDaySelectionForBreaksAsync }
+            { "select_day_for_breaks", HandleDaySelectionForBreaksAsync },
+            { "back_to_days", HandleManageBreaksAsync }
         };
 
         if (commandHandlers.TryGetValue(commandKey, out var handler))
@@ -65,36 +64,20 @@ public class BreakCommandHandler : ICallbackCommand
     private async Task HandleAddBreakAsync(long chatId, string data, CancellationToken cancellationToken)
     {
         var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
-        var company = await _dbContext.Companies
-            .Include(c => c.Employees)
-                .ThenInclude(e => e.WorkingHours)
-            .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
-
-        var employee = company?.Employees.FirstOrDefault();
-        if (employee == null)
+        _userStateService.SetConversation(chatId, $"WaitingForBreakStart_{data}");
+        var keyboard = new List<InlineKeyboardButton[]>();
+        keyboard.Add(new[]
         {
-            await _botClient.SendMessage(
-                chatId, 
-                _translationService.Get(language, "NoEmployeeSelected"), 
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var workingHours = new WorkingHours
-        {
-            DayOfWeek = Enum.Parse<DayOfWeek>(data),
-            Employee = employee,
-            StartTime = new TimeSpan(9, 0, 0),
-            EndTime = new TimeSpan(17, 0, 0)
-        };
-
-        employee.WorkingHours.Add(workingHours);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+            InlineKeyboardButton.WithCallbackData(
+                _translationService.Get(language, "Back"),
+                "back_to_days")
+        });
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: _translationService.Get(language, "BreakAdded"),
-            cancellationToken: cancellationToken);
+            text: _translationService.Get(language, "BreakStartTime"),
+            replyMarkup: new InlineKeyboardMarkup(keyboard),
+            cancellationToken: cancellationToken);        
     }
 
     private async Task HandleRemoveBreakAsync(long chatId, string data, CancellationToken cancellationToken)
@@ -220,112 +203,6 @@ public class BreakCommandHandler : ICallbackCommand
             cancellationToken: cancellationToken);
     }
 
-    private async Task HandleSelectBreakStartAsync(long chatId, string data, CancellationToken cancellationToken)
-    {
-        var (day, startTime) = ParseDayAndTimeFromData(data);
-
-        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
-        
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.DayOfWeek == day && 
-                                     wh.Employee.Company.Token.ChatId == chatId, 
-                              cancellationToken);
-
-        if (workingHours == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "NoWorkingHoursSet"), 
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var keyboard = new List<InlineKeyboardButton[]>();
-        var currentTime = startTime.Add(TimeSpan.FromMinutes(30));
-
-        while (currentTime <= workingHours.EndTime)
-        {
-            var row = new List<InlineKeyboardButton>();
-            for (int i = 0; i < 4 && currentTime <= workingHours.EndTime; i++)
-            {
-                row.Add(InlineKeyboardButton.WithCallbackData(
-                    currentTime.ToString(@"hh\:mm"),
-                    $"select_break_end:{day}:{startTime}:{currentTime}"));
-                currentTime = currentTime.Add(TimeSpan.FromMinutes(30));
-            }
-            keyboard.Add(row.ToArray());
-        }
-
-        keyboard.Add(new[]
-        {
-            InlineKeyboardButton.WithCallbackData(
-                _translationService.Get(language, "Back"),
-                $"back_to_breaks:{day}")
-        });
-
-        await _botClient.SendMessage(
-            chatId: chatId,
-            text: _translationService.Get(language, "SelectBreakEndTime"),
-            replyMarkup: new InlineKeyboardMarkup(keyboard),
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleSelectBreakEndAsync(long chatId, string data, CancellationToken cancellationToken)
-    {
-        var (day, startTime, endTime) = ParseDayStartEndTimeFromData(data);
-
-        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
-        
-        // Get working hours for this day
-        var workingHours = await _dbContext.WorkingHours
-            .Include(wh => wh.Breaks)
-            .FirstOrDefaultAsync(wh => wh.DayOfWeek == day && 
-                                     wh.Employee.Company.Token.ChatId == chatId, 
-                              cancellationToken);
-
-        if (workingHours == null)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "NoWorkingHoursSet"), 
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Check if the break overlaps with any existing breaks
-        if (workingHours.Breaks.Any(b => 
-            (startTime >= b.StartTime && startTime < b.EndTime) ||
-            (endTime > b.StartTime && endTime <= b.EndTime) ||
-            (startTime <= b.StartTime && endTime >= b.EndTime)))
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "BreakOverlap"),
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        // Add the break
-        workingHours.Breaks.Add(new Break
-        {
-            StartTime = startTime,
-            EndTime = endTime,
-            WorkingHours = workingHours
-        });
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        await _botClient.SendMessage(
-            chatId: chatId, 
-            text: _translationService.Get(language, "BreakAdded", 
-                startTime.ToString(@"hh\:mm"), 
-                endTime.ToString(@"hh\:mm")),
-            cancellationToken: cancellationToken);
-
-        await HandleWorkingHoursSelection(chatId, day, workingHours.StartTime, workingHours.EndTime, cancellationToken);
-    }
-
     private async Task HandleRemoveBreakConfirmationAsync(long chatId, string data, CancellationToken cancellationToken)
     {
         var (day, breakId) = ParseDayAndIdFromData(data);
@@ -388,6 +265,7 @@ public class BreakCommandHandler : ICallbackCommand
 
     private async Task HandleManageBreaksAsync(long chatId, string data, CancellationToken cancellationToken)
     {
+        _userStateService.RemoveConversation(chatId);
         var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         var company = await _dbContext.Companies
             .Include(c => c.Employees)
@@ -504,9 +382,10 @@ public class BreakCommandHandler : ICallbackCommand
         {
             foreach (var breakTime in workingHours.Breaks.OrderBy(b => b.StartTime))
             {
-                messageBuilder.AppendLine(string.Format(_translationService.Get(language, "BreakFormat"),
+                messageBuilder.AppendLine(string.Format(_translationService.Get(
+                    language, "BreakFormat",
                     breakTime.StartTime.ToString(@"hh\:mm"),
-                    breakTime.EndTime.ToString(@"hh\:mm")));
+                    breakTime.EndTime.ToString(@"hh\:mm"))));
             }
         }
         else
@@ -520,13 +399,13 @@ public class BreakCommandHandler : ICallbackCommand
             {
                 InlineKeyboardButton.WithCallbackData(
                     _translationService.Get(language, "AddBreak"),
-                    $"add_break:{day}")
+                    $"add_break:{employee.Id}_{day}")
             },
             new[]
             {
                 InlineKeyboardButton.WithCallbackData(
                     _translationService.Get(language, "RemoveBreak"),
-                    $"remove_break:{day}")
+                    $"remove_break:{employee.Id}_{day}")
             },
             new[]
             {

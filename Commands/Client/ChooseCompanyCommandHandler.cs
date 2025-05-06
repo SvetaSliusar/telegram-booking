@@ -63,6 +63,15 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
                 cancellationToken: cancellationToken);
             return;
         }
+        
+        if (company.PaymentStatus == Enums.PaymentStatus.Failed)
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: _translationService.Get(language, "CompanyNotAvailable"), 
+                cancellationToken: cancellationToken);
+            return;
+        }
         var services = await (from s in _dbContext.Services
                       join e in _dbContext.Employees on s.EmployeeId equals e.Id
                       where e.CompanyId == company.Id
@@ -77,13 +86,22 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
                 cancellationToken: cancellationToken);
             return;
         }
-
+        var minutes = _translationService.Get(language, "min");
+        var hours = _translationService.Get(language, "hours");
         var serviceButtons = services
-            .Select(service => new[]
+            .Select(service =>
             {
-                InlineKeyboardButton.WithCallbackData(
-                    $"{service.Name} - {service.Price:0.##} {service.Currency}", 
-                    $"choose_service:{service.Id}")
+                var duration = service.Duration;
+                string formattedDuration = duration.Hours > 0
+                    ? $"{duration.Hours} {hours} {duration.Minutes} {minutes}"
+                    : $"{duration.Minutes} {minutes}";
+
+                return new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        $"{service.Name} - {service.Price:0.##} {service.Currency} - {formattedDuration}",
+                        $"choose_service:{service.Id}")
+                };
             })
             .ToArray();
 
