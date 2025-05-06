@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
@@ -118,7 +119,8 @@ public class InitialCompanyDataHandler : BaseStateHandler
             Name = state.CompanyName,
             Alias = state.CompanyAlias,
             TokenId = token.Id,
-            Token = token
+            Token = token,
+            PaymentStatus = PaymentStatus.Active
         };
 
         company.Employees = state.Employees.Select(e => new Employee

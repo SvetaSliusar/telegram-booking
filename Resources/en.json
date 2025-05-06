@@ -214,6 +214,7 @@
     "ManageSubscription": "Manage Subscription",
     "NoSubscriptionFound": "⚠️ No subscription found.",
     "SubscriptionUpdated": "🔄 Your subscription was successfully updated.",
+    "SubscriptionWillCancelAfterTrial": "Your subscription will be cancelled after the trial period ends.",
     "SubscriptionCancelled": "Your subscription was cancelled.",
     "TrialEndingNotice": "⏳ Your free trial is ending soon.",
     "PaymentFailedRetryMessage": "⚠️ Your last payment failed. Please update your payment method to avoid losing access. \n\n👉 <a href=\"{0}\">Click here to update</a>.",

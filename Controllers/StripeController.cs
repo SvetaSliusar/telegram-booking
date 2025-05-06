@@ -3,6 +3,7 @@ using Stripe;
 using Stripe.Checkout;
 using Telegram.Bot.Commands.Common;
 using Telegram.Bot.Commands.Company;
+using Telegram.Bot.Enums;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types.Enums;
 
@@ -136,7 +137,6 @@ public class StripeWebhookController : ControllerBase
         public long ChatId { get; set; }
         public string Plan { get; set; }
     }
-
     
     private async Task HandleCustomerSubscriptionUpdatedAsync(Stripe.Subscription subscription, CancellationToken cancellationToken)
     {
@@ -147,37 +147,43 @@ public class StripeWebhookController : ControllerBase
             var chatId = await _tokenService.GetChatIdByCustomerIdAsync(customerId, cancellationToken);
             if (chatId != null)
             {
-                if (subscription.Status == "active")
-                {
-                    var language = await _userStateService.GetLanguageAsync(chatId.Value, cancellationToken);
-                    var message = _translationService.Get(language, "SubscriptionUpdated");
+                var language = await _userStateService.GetLanguageAsync(chatId.Value, cancellationToken);
 
-                    await _botClient.SendMessage(
-                        chatId.Value,
-                        text: message,
-                        cancellationToken: cancellationToken
-                    );
-                    await _companyService.EnableCompanyAsync(chatId.Value, cancellationToken);
-                }
-                else if (subscription.Status == "incomplete_expired")
+                switch (subscription.Status)
                 {
-                    await _companyService.DisableCompanyAsync(chatId.Value, cancellationToken);
-                }
-                else if (subscription.Status == "cancelled")
-                {
-                    await _companyService.DisableCompanyAsync(chatId.Value, cancellationToken);
-                    var language = await _userStateService.GetLanguageAsync(chatId.Value, cancellationToken);
-                    var message = _translationService.Get(language, "SubscriptionCancelled");
+                    case "active":
+                        var activeMessage = _translationService.Get(language, "SubscriptionUpdated");
+                        await _botClient.SendMessage(chatId.Value, text: activeMessage, cancellationToken: cancellationToken);
+                        await _companyService.EnableCompanyAsync(chatId.Value, cancellationToken);
+                        break;
 
-                    await _botClient.SendMessage(
-                        chatId.Value,
-                        text: message,
-                        cancellationToken: cancellationToken
-                    );
-                }
-                else
-                {
-                    _logger.LogInformation("Subscription updated but not active: {Status}", subscription.Status);
+                    case "trialing":
+                        if (subscription.CancelAt.HasValue &&
+                            subscription.CancellationDetails?.Reason == "cancellation_requested")
+                        {
+                            var trialCancelMsg = _translationService.Get(language, "SubscriptionWillCancelAfterTrial");
+                            await _botClient.SendMessage(chatId.Value, text: trialCancelMsg, cancellationToken: cancellationToken);
+                        }
+                        else
+                        {
+                            await _companyService.EnableCompanyAsync(chatId.Value, cancellationToken);
+                        }
+                        break;
+
+                    case "incomplete_expired":
+                        await _companyService.DisableCompanyAsync(chatId.Value, cancellationToken);
+                        break;
+
+                    case "canceled":
+                    case "cancelled": // just in case
+                        await _companyService.DisableCompanyAsync(chatId.Value, cancellationToken);
+                        var cancelledMsg = _translationService.Get(language, "SubscriptionCancelled");
+                        await _botClient.SendMessage(chatId.Value, text: cancelledMsg, cancellationToken: cancellationToken);
+                        break;
+
+                    default:
+                        _logger.LogInformation("Unhandled subscription status: {Status}", subscription.Status);
+                        break;
                 }
             }
         }
@@ -286,7 +292,8 @@ public class StripeWebhookController : ControllerBase
                 return;
             }
 
-            await _companyService.EnableCompanyAsync(chatId,  cancellationToken);  
+            await _companyService.EnableCompanyAsync(chatId,  cancellationToken);
+            await _userStateService.AddOrUpdateUserRolesAsync(chatId, UserRole.Company, setActive: true, cancellationToken);
             var cancelText = _translationService.Get(language, "CancelSubscriptionLinkText", portalUrl);
 
             await _botClient.SendMessage(
