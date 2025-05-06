@@ -91,7 +91,7 @@
     "NoBookingsForDate": "📅 No bookings found for {0}.",
     "BookingsForDate": "📅 Bookings for {0}:",
     "BookingDetailsForCompany": "• {0} with {1}\n  ⏰ {2}\n  📩 {3}",
-    "ReminderMessage": "⏰ Reminder: You have an appointment tomorrow\\!\n\nService: {0}\nCompany: {1}\nDate: {2}\nTime: {3}",
+    "ReminderMessage": "⏰ Reminder: Your appointment for *{0}* at *{1}* is scheduled on *{2}* at *{3}*\\.",
     "ReminderSettings": "⏰ Reminder Settings",
     "SetReminderTime": "Set reminder time (hours before appointment):",
     "ReminderTimeUpdated": "✅ Reminder time has been updated to {0} hours before appointment.",

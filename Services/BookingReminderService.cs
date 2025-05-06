@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services.Constants;
@@ -35,57 +36,66 @@ public class BookingReminderService : BackgroundService
                 using var scope = _serviceProvider.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
 
-                // Get all companies with their reminder settings
                 var companies = await dbContext.Companies
                     .Include(c => c.ReminderSettings)
                     .ToListAsync(stoppingToken);
 
                 foreach (var company in companies)
                 {
-                    var reminderHours = company.ReminderSettings?.HoursBeforeReminder ?? 24; // Default to 24 hours
+                    var reminderHours = company.ReminderSettings?.HoursBeforeReminder ?? 24;
+                    var reminderTargetTime = DateTime.UtcNow.AddHours(reminderHours);
 
-                    // Calculate the time range for tomorrow's bookings
-                    var tomorrow = DateTime.UtcNow.Date.AddDays(1);
-                    var reminderTime = DateTime.UtcNow.AddHours(reminderHours);
-
-                    // Get bookings that need reminders
                     var bookings = await dbContext.Bookings
                         .Include(b => b.Service)
                             .ThenInclude(s => s.Employee)
                         .Include(b => b.Client)
                         .Where(b => b.CompanyId == company.Id &&
-                                   b.BookingTime.Date == tomorrow &&
-                                   b.BookingTime <= reminderTime &&
-                                   !b.ReminderSent)
+                                    b.BookingTime <= reminderTargetTime &&
+                                    b.BookingTime >= DateTime.UtcNow &&
+                                    !b.ReminderSent &&
+                                    b.Status == BookingStatus.Confirmed)
                         .ToListAsync(stoppingToken);
 
                     foreach (var booking in bookings)
                     {
-                        var language = (await dbContext.Clients.FirstOrDefaultAsync(c => c.Id == booking.ClientId))?.Language ?? "EN";
-                        var localTime = booking.BookingTime.ToLocalTime();
+                        var client = booking.Client;
+                        var clientLanguage = client?.Language ?? "EN";
+                        var clientTimeZoneId = client?.TimeZoneId ?? "Europe/Lisbon";
 
-                        var message = _translationService.Get(language, "ReminderMessage",
-                            booking.Service.Name,
-                            company.Name,
+                        DateTime localTime;
+                        try
+                        {
+                            var clientTimeZone = TimeZoneInfo.FindSystemTimeZoneById(clientTimeZoneId);
+                            localTime = TimeZoneInfo.ConvertTimeFromUtc(booking.BookingTime, clientTimeZone);
+                        }
+                        catch
+                        {
+                            localTime = booking.BookingTime.ToLocalTime(); // fallback
+                        }
+
+                        var message = _translationService.Get(clientLanguage, "ReminderMessage",
+                            EscapeMarkdown(booking.Service.Name),
+                            EscapeMarkdown(company.Name),
                             localTime.ToString("dddd, MMMM d, yyyy"),
-                            localTime.ToString("hh:mm tt"));
+                            localTime.ToString("HH:mm"));
 
                         try
                         {
                             await _botClient.SendMessage(
-                                chatId: booking.ClientId,
+                                chatId: booking.Client.ChatId,
                                 text: message,
                                 parseMode: ParseMode.MarkdownV2,
                                 cancellationToken: stoppingToken);
 
                             booking.ReminderSent = true;
-                            await dbContext.SaveChangesAsync(stoppingToken);
                         }
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, "Failed to send reminder for booking {BookingId}", booking.Id);
                         }
                     }
+
+                    await dbContext.SaveChangesAsync(stoppingToken);
                 }
             }
             catch (Exception ex)
@@ -93,8 +103,11 @@ public class BookingReminderService : BackgroundService
                 _logger.LogError(ex, "Error processing booking reminders");
             }
 
-            // Check every hour
+            // Run hourly
             await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
         }
     }
+
+    private string EscapeMarkdown(string text) =>
+        Regex.Replace(text ?? "", @"([_*\[\]()~`>#+=|{}.!\\-])", @"\\$1");
 } 
