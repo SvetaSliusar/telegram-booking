@@ -70,7 +70,7 @@ public class SubscriptionCommandHandler : ICallbackCommand, ISubscriptionHandler
             },
             new[]
             {
-                InlineKeyboardButton.WithUrl(_translationService.Get(language, "SeeAllPlans"), _botConfig.LearMoreUrl + "?chat_id=" + chatId)
+                InlineKeyboardButton.WithUrl(_translationService.Get(language, "SeeAllPlans"), _botConfig.LearnMoreUrl + "?chat_id=" + chatId)
             }
         });
 
