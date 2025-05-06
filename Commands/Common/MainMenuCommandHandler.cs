@@ -188,7 +188,8 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
                 new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "MyBookings"), "view_bookings") },
                 new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeLanguage"), CallbackResponses.ChangeLanguage) },
                 new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ChangeTimezone"), "change_timezone") },
-                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "RequestCompany"), "request_company_creation") }
+                new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "RequestCompany"), "request_company_creation") },
+                new[] { InlineKeyboardButton.WithUrl(_translationService.Get(language, "ContactSupport"), _botConfig.SupportUrl) }
             };
 
             var demoKeyboard = new InlineKeyboardMarkup(demoButtons);
