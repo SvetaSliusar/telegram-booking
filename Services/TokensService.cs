@@ -8,7 +8,7 @@ namespace Telegram.Bot.Services
         Task<Token?> GetTokenByValue(string tokenValue);
         Task<Token?> GetTokenByChatId(long chatId);
         Task AssociateChatIdWithToken(long chatId, string tokenValue);
-        Task AddCompanySetupTokenAsync(long chatId, string language, string customerId);
+        Task<bool> AddCompanySetupTokenAsync(long chatId, string language, string customerId);
         Task<long?> GetChatIdByCustomerIdAsync(string customerId, CancellationToken cancellationToken);
     }
     
@@ -48,8 +48,8 @@ namespace Telegram.Bot.Services
             }
         }
 
-        public async Task AddCompanySetupTokenAsync(long chatId, string language, string customerId)
-        {
+        public async Task<bool> AddCompanySetupTokenAsync(long chatId, string language, string customerId)
+        {            
             var existingToken = await _dbContext.Tokens
                 .FirstOrDefaultAsync(t => t.ChatId == chatId);
 
@@ -74,6 +74,7 @@ namespace Telegram.Bot.Services
             }
 
             await _dbContext.SaveChangesAsync();
+            return true;
         }
 
         public async Task<long?> GetChatIdByCustomerIdAsync(string customerId, CancellationToken cancellationToken)

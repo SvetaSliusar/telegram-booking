@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
+using Stripe.Checkout;
 using Telegram.Bot.Commands.Common;
+using Telegram.Bot.Commands.Company;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types.Enums;
 
@@ -18,6 +20,7 @@ public class StripeWebhookController : ControllerBase
     private readonly IUserStateService _userStateService;
     private readonly ITranslationService _translationService;
     private readonly ICompanyService _companyService;
+    private readonly ISubscriptionHandler _subscriptionHandler;
 
     public StripeWebhookController(
         IConfiguration config,
@@ -27,7 +30,8 @@ public class StripeWebhookController : ControllerBase
         IMainMenuCommandHandler mainMenuCommandHandler,
         IUserStateService userStateService,
         ITranslationService translationService,
-        ICompanyService companyService)
+        ICompanyService companyService,
+        ISubscriptionHandler subscriptionHandler)
     {
         _config = config;
         _logger = logger;
@@ -37,6 +41,18 @@ public class StripeWebhookController : ControllerBase
         _userStateService = userStateService;
         _translationService = translationService;
         _companyService = companyService;
+        _subscriptionHandler = subscriptionHandler;
+    }
+
+    [HttpPost("checkout-session")]
+    public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateSessionRequest request)
+    {
+        var url = await _subscriptionHandler.CreateStripeSessionAsync(request.ChatId, request.Plan, CancellationToken.None);
+        if (string.IsNullOrEmpty(url))
+        {
+            return BadRequest("Failed to create checkout session.");
+        }
+        return Ok(new { url = url });
     }
 
     [HttpPost]
@@ -114,6 +130,13 @@ public class StripeWebhookController : ControllerBase
 
         return Ok();
     }
+
+    public class CreateSessionRequest
+    {
+        public long ChatId { get; set; }
+        public string Plan { get; set; }
+    }
+
     
     private async Task HandleCustomerSubscriptionUpdatedAsync(Stripe.Subscription subscription, CancellationToken cancellationToken)
     {
@@ -243,8 +266,13 @@ public class StripeWebhookController : ControllerBase
         {
             var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
-            await _tokenService.AddCompanySetupTokenAsync(chatId, language, customerId);
-
+            var result = await _tokenService.AddCompanySetupTokenAsync(chatId, language, customerId);
+            if (!result)
+            {
+                _logger.LogWarning("Failed to add company setup token for chat {ChatId}", chatId);
+                return;
+            }
+            
             await _botClient.SendMessage(
                 chatId,
                 text: _translationService.Get(language, "ThankYouForSubscription"),
@@ -258,7 +286,7 @@ public class StripeWebhookController : ControllerBase
                 return;
             }
 
-            await _companyService.EnableCompanyAsync(chatId, cancellationToken);  
+            await _companyService.EnableCompanyAsync(chatId,  cancellationToken);  
             var cancelText = _translationService.Get(language, "CancelSubscriptionLinkText", portalUrl);
 
             await _botClient.SendMessage(

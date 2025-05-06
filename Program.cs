@@ -88,6 +88,15 @@ builder.Services.AddMemoryCache();
 
 builder.Services.AddSingleton<ITranslationService>(sp =>
     new JsonTranslationService(Path.Combine(Directory.GetCurrentDirectory(), "Resources")));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowWebflow", policy =>
+    {
+        policy.WithOrigins("https://www.telegrambooking.com") // ✅ your Webflow domain here
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
 // ✅ Dependency Injection for Services
 builder.Services.AddScoped<ClientUpdateHandler>();
@@ -155,7 +164,8 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "choose_this_month", 
         "choose_next_month", 
         "choose_previous_month",
-        "choose_time"
+        "choose_time",
+        "ignore"
     );
 
     factory.RegisterCommand<BreakCommandHandler>(
@@ -267,7 +277,7 @@ app.Use(async (context, next) =>
     context.Request.EnableBuffering(); // Allows multiple reads
     await next();
 });
-
+app.UseCors("AllowWebflow");
 // ✅ FIX: Ensure Correct Webhook Route
 if (string.IsNullOrEmpty(botConfiguration.Route))
 {

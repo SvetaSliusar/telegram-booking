@@ -34,7 +34,7 @@ public class ContactInfoHandler : BaseStateHandler
             {
                 await BotClient.SendMessage(
                     chatId: message.Chat.Id,
-                    text: TranslationService.Get(language, "ClientNotFound"), 
+                    text: TranslationService.Get(language, "NoClientFound"), 
                     replyMarkup: new ReplyKeyboardRemove(),
                     cancellationToken: cancellationToken);
                 return;
@@ -46,7 +46,7 @@ public class ContactInfoHandler : BaseStateHandler
             UserStateService.RemoveConversation(chatId);
             await BotClient.SendMessage(
                 chatId: message.Chat.Id,
-                text: TranslationService.Get(language, "UsernameSaved"), 
+                text: TranslationService.Get(language, "DataSaved"), 
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
             await _mainMenuCommandHandler.ShowClientMainMenuAsync(chatId, language, cancellationToken);

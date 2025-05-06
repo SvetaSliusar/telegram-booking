@@ -172,13 +172,13 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
         {
             await _botClient.SendMessage(
                 chatId: chatId,
-                text: "❌ Client not found.",
+                text: _translationService.Get(language, "NoClientFound"),
                 cancellationToken: cancellationToken);
             return;
         }
 
-        var isDemoClient = client.CompanyInvites
-            .Any(invite => invite.Company.Alias.ToLower() == "demo");
+        var isDemoClient = client.CompanyInvites?.Count == 1 &&
+            client.CompanyInvites.FirstOrDefault()?.Company.Alias.ToLower() == "demo";
 
         if (isDemoClient)
         {
@@ -232,8 +232,8 @@ public class MainMenuCommandHandler : ICallbackCommand, IMainMenuCommandHandler
     public async Task ShowCompanyMainMenuAsync(long chatId, string language, CancellationToken cancellationToken)
     {
         var company = await _dbContext.Companies
-        .Include(c => c.Employees)
-        .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
+            .Include(c => c.Employees)
+            .FirstOrDefaultAsync(c => c.Token.ChatId == chatId, cancellationToken);
 
         if (company?.PaymentStatus == PaymentStatus.Failed)
         {

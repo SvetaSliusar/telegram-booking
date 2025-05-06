@@ -136,6 +136,7 @@ public class InitialCompanyDataHandler : BaseStateHandler
         };
 
         DbContext.Companies.Add(company);
+        token.Used = true;
         await DbContext.SaveChangesAsync(cancellationToken);
     }
 

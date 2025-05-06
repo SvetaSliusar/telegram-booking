@@ -218,5 +218,6 @@
     "TrialEndingNotice": "⏳ Your free trial is ending soon.",
     "PaymentFailedRetryMessage": "⚠️ Your last payment failed. Please update your payment method to avoid losing access. \n\n👉 <a href=\"{0}\">Click here to update</a>.",
     "AccessBlockedPaymentFailed": "🚫 Your subscription is inactive. Please renew to continue using the service.",
-    "CompanyNotAvailable": "⚠️ This company is currently unavailable. Please try again later."
+    "CompanyNotAvailable": "⚠️ This company is currently unavailable. Please try again later.",
+    "IgnoreCommand": "Please choose a valid option, try again"
   }

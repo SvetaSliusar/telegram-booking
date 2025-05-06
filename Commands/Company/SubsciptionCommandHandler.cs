@@ -70,7 +70,7 @@ public class SubscriptionCommandHandler : ICallbackCommand, ISubscriptionHandler
             },
             new[]
             {
-                InlineKeyboardButton.WithUrl(_translationService.Get(language, "SeeAllPlans"), _botConfig.LearMoreUrl)
+                InlineKeyboardButton.WithUrl(_translationService.Get(language, "SeeAllPlans"), _botConfig.LearMoreUrl + "?chat_id=" + chatId)
             }
         });
 
@@ -101,9 +101,8 @@ public class SubscriptionCommandHandler : ICallbackCommand, ISubscriptionHandler
             cancellationToken: cancellationToken);
     }
 
-    private async Task HandleChooseSubscriptionAsync(long chatId, string data, CancellationToken cancellationToken)
+    public async Task<string?> CreateStripeSessionAsync(long chatId, string data, CancellationToken cancellationToken)
     {
-        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
         string? priceId = data switch
         {
             "1m" => _stripeConfig.MonthlyPrice,
@@ -143,11 +142,24 @@ public class SubscriptionCommandHandler : ICallbackCommand, ISubscriptionHandler
             var session = await service.CreateAsync(options);
             var stripeUrl = session.Url;
 
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "ClickToSubscribe", stripeUrl),
-                parseMode: ParseMode.Html,
-                cancellationToken: cancellationToken);
+            return stripeUrl;
         }
+        return default;
+    }
+
+    private async Task HandleChooseSubscriptionAsync(long chatId, string data, CancellationToken cancellationToken)
+    {
+        var url = await CreateStripeSessionAsync(chatId, data, cancellationToken);
+        if (string.IsNullOrEmpty(url))
+        {
+            return;
+        }
+
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: _translationService.Get(language, "ClickToSubscribe", url),
+            parseMode: ParseMode.Html,
+            cancellationToken: cancellationToken);
     }
 }

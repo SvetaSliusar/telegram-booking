@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
-using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -43,7 +42,8 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             { "choose_this_month", ShowCurrentMonth },
             { "choose_prev_month", ShowPreviousMonth },
             { "choose_next_month", ShowNextMonth },
-            { "choose_time", HandleTimeSelectionAsync }
+            { "choose_time", HandleTimeSelectionAsync },
+            { "ignore", HandleIgnoreAsync}
         };
 
         if (commandHandlers.TryGetValue(commandKey, out var commandHandler))
@@ -274,6 +274,26 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             text: _translationService.Get(language, "BookingSelectDateHeader", selectedDate),
             replyMarkup: keyboard,
             parseMode: ParseMode.MarkdownV2,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task HandleIgnoreAsync(long chatId, string data, CancellationToken cancellationToken)
+    {
+        var state = _userStateService.GetConversation(chatId);
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
+
+        if (string.IsNullOrEmpty(state))
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: _translationService.Get(language, "NoServiceSelected"), 
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        await _botClient.SendMessage(
+            chatId: chatId,
+            text: _translationService.Get(language, "IgnoreCommand"),
             cancellationToken: cancellationToken);
     }
 
@@ -528,7 +548,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
                 chatId: companyOwnerChatId.Value,
                 text: _translationService.Get(companyOwnerLanguage, "NewBookingNotification",
                     service.Name,
-                    client.Name + " (" + contactInfo +")",
+                    client.Name + " \\(@" + contactInfo +"\\)",
                     localCompanyTime.ToString("dddd, MMMM d, yyyy"),
                     localCompanyTime.ToString("HH:mm"),
                     timezoneId),

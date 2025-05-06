@@ -50,13 +50,19 @@ public class ShareContactCommandHandler : ICallbackCommand
                 _dbContext.Clients.Update(client);
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 _userStateService.RemoveConversation(message.Chat.Id);
+                await _botClient.SendMessage(
+                    chatId: message.Chat.Id,
+                    text: _translationService.Get(language, "DataSaved"), 
+                    replyMarkup: new ReplyKeyboardRemove(),
+                    cancellationToken: cancellationToken);
+
                 await _mainMenuCommandHandler.ShowActiveMainMenuAsync(message.Chat.Id, cancellationToken);
             }
             else
             {
                 await _botClient.SendMessage(
                     chatId: message.Chat.Id,
-                    text: _translationService.Get(language, "ClientNotFound"), 
+                    text: _translationService.Get(language, "NoClientFound"), 
                     replyMarkup: new ReplyKeyboardRemove(),
                     cancellationToken: cancellationToken);
             }
