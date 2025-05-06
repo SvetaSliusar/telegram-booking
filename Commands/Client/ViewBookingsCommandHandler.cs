@@ -57,7 +57,9 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
             .Include(b => b.Service)
                 .ThenInclude(s => s.Employee)
             .Include(b => b.Company)
-            .Where(b => b.ClientId == client.Id && b.BookingTime >= DateTime.UtcNow && b.Status == BookingStatus.Confirmed)
+            .Where(b => b.ClientId == client.Id &&
+                        b.BookingTime >= DateTime.UtcNow &&
+                        b.Status == BookingStatus.Confirmed)
             .OrderBy(b => b.BookingTime)
             .ToListAsync(cancellationToken);
 
@@ -66,44 +68,50 @@ public class ViewBookingsCommandHanlder : ICallbackCommand
             await _botClient.SendMessage(
                 chatId: chatId,
                 text: _translationService.Get(language, "NoUpcomingBookings"),
-                replyMarkup: new InlineKeyboardMarkup(new[] 
-                { 
+                replyMarkup: new InlineKeyboardMarkup(new[]
+                {
                     new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu") }
                 }),
                 cancellationToken: cancellationToken);
             return;
         }
 
-        var messageBuilder = new StringBuilder();
-        messageBuilder.AppendLine(_translationService.Get(language, "UpcomingBookings"));
-        messageBuilder.AppendLine();
-
         var clientTimezoneId = client.TimeZoneId ?? "Europe/Lisbon";
         var clientTimeZone = TimeZoneInfo.FindSystemTimeZoneById(clientTimezoneId);
+
+        var sb = new StringBuilder();
+        sb.AppendLine(_translationService.Get(language, "UpcomingBookings"));
+        sb.AppendLine();
 
         foreach (var booking in bookings)
         {
             var localTime = TimeZoneInfo.ConvertTimeFromUtc(booking.BookingTime, clientTimeZone);
-            messageBuilder.AppendLine(_translationService.Get(language, "BookingDetails",
-                booking.Company.Name,
-                booking.Service.Name, 
-                booking.Service.Employee.Name,
+            var offset = clientTimeZone.GetUtcOffset(localTime);
+            var offsetString = (offset < TimeSpan.Zero ? "-" : "+") + offset.ToString(@"hh\:mm");
+
+            var companyName = booking.Company?.Name ?? "N/A";
+            var serviceName = booking.Service?.Name ?? "N/A";
+            var employeeName = booking.Service?.Employee?.Name ?? "N/A";
+
+            var bookingDetails = _translationService.Get(language, "BookingDetails",
+                companyName,
+                serviceName,
+                employeeName,
                 localTime.ToString("dddd, MMMM d, yyyy"),
                 localTime.ToString("HH:mm"),
-                clientTimeZone.Id));
-            messageBuilder.AppendLine();
-        }
+                $"UTC{offsetString}");
 
-        var message = messageBuilder.ToString();
+            sb.AppendLine(bookingDetails);
+            sb.AppendLine();
+        }
 
         await _botClient.SendMessage(
             chatId: chatId,
-            text: message, 
-            replyMarkup: new InlineKeyboardMarkup(new[] 
-            { 
+            text: sb.ToString(),
+            replyMarkup: new InlineKeyboardMarkup(new[]
+            {
                 new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), "back_to_menu") }
             }),
             cancellationToken: cancellationToken);
     }
-
 }

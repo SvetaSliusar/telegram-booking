@@ -86,13 +86,22 @@ public class ChooseCompanyCommandHandler : ICallbackCommand
                 cancellationToken: cancellationToken);
             return;
         }
-
+        var minutes = _translationService.Get(language, "min");
+        var hours = _translationService.Get(language, "hours");
         var serviceButtons = services
-            .Select(service => new[]
+            .Select(service =>
             {
-                InlineKeyboardButton.WithCallbackData(
-                    $"{service.Name} - {service.Price:0.##} {service.Currency}", 
-                    $"choose_service:{service.Id}")
+                var duration = service.Duration;
+                string formattedDuration = duration.Hours > 0
+                    ? $"{duration.Hours} {hours} {duration.Minutes} {minutes}"
+                    : $"{duration.Minutes} {minutes}";
+
+                return new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        $"{service.Name} - {service.Price:0.##} {service.Currency} - {formattedDuration}",
+                        $"choose_service:{service.Id}")
+                };
             })
             .ToArray();
 

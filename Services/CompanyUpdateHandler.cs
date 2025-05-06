@@ -347,16 +347,40 @@ public class CompanyUpdateHandler
             return;
         }
 
-        var message = _translationService.Get(language, "BookingsForDate", selectedDate.ToString("dddd, MMMM d, yyyy")) + "\n\n";
+        var sb = new StringBuilder();
+
+        sb.AppendLine(_translationService.Get(language, "BookingsForDate", selectedDate.ToString("dddd, MMMM d, yyyy")));
+        sb.AppendLine();
+
         foreach (var booking in bookings)
         {
-            var localTime = booking.BookingTime.ToLocalTime();
-            message += _translationService.Get(language, "BookingDetailsForCompany", 
+            var timezoneId = await _dbContext.WorkingHours
+                .Where(wh => wh.EmployeeId == booking.Service.EmployeeId)
+                .Select(wh => wh.Timezone)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timezoneId);
+            var localTime = TimeZoneInfo.ConvertTimeFromUtc(booking.BookingTime, timeZone);
+
+            var offset = timeZone.GetUtcOffset(localTime);
+            var offsetString = (offset < TimeSpan.Zero ? "-" : "+") +
+                offset.ToString(@"hh\:mm");
+
+            var contact = string.IsNullOrEmpty(booking.Client.PhoneNumber)
+                ? "@" + booking.Client.Username
+                : booking.Client.PhoneNumber;
+
+            var bookingDetails = _translationService.Get(language, "BookingDetailsForCompany",
                 booking.Service.Name,
                 booking.Client.Name ?? "N/A",
-                localTime.ToString("hh:mm"),
-                booking.Client.Name ?? "N/A") + "\n\n";
+                $"{localTime:HH\\:mm} UTC{offsetString}",
+                contact);
+
+            sb.AppendLine(bookingDetails);
+            sb.AppendLine();
         }
+
+        var message = sb.ToString();
 
         await _botClient.SendMessage(
             chatId: chatId,
@@ -396,15 +420,27 @@ public class CompanyUpdateHandler
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        var keyboard = new InlineKeyboardMarkup(new[]
+        var currentSetting = company.ReminderSettings.HoursBeforeReminder;
+
+        int[] options = { 1, 3, 6, 12, 24 };
+        var keyboardButtons = options.Select(hours =>
         {
-            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "1hour"), "reminder_time:1") },
-            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "3hours"), "reminder_time:3") },
-            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "6hours"), "reminder_time:6") },
-            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "12hours"), "reminder_time:12") },
-            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "24hours"), "reminder_time:24") },
-            new[] { InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), CallbackResponses.BackToMenu) }
+            var label = _translationService.Get(language, $"{hours}hours");
+            if (hours == currentSetting)
+            {
+                label = $"✅ {label}";
+            }
+
+            return new[] {
+                InlineKeyboardButton.WithCallbackData(label, $"reminder_time:{hours}")
+            };
+        }).ToList();
+
+        keyboardButtons.Add(new[] {
+            InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "BackToMenu"), CallbackResponses.BackToMenu)
         });
+
+        var keyboard = new InlineKeyboardMarkup(keyboardButtons);
 
         await _botClient.SendMessage(
             chatId: chatId,

@@ -1,4 +1,5 @@
 
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Enums;
 using Telegram.Bot.Models;
@@ -56,48 +57,11 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         }
     }
 
-    public async Task ShowPreviousMonth(long chatId, string data, CancellationToken cancellationToken)
-    {
-        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
-        var isParsed = DateTime.TryParse(data, out var parsedDate);
-        
-        if (!isParsed)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "InvalidDaySelected"), 
-                cancellationToken: cancellationToken);
-            return;
-        }
+    public Task ShowPreviousMonth(long chatId, string data, CancellationToken cancellationToken) =>
+        ShowRelativeMonth(-1, chatId, data, cancellationToken);
 
-        var previousMonth = parsedDate.AddMonths(-1);
-
-        await ShowCalendar(
-            chatId: chatId,
-            selectedDate: previousMonth,
-            cancellationToken: cancellationToken);
-    }
-
-    public async Task ShowNextMonth(long chatId, string data, CancellationToken cancellationToken)
-    {
-        var isParsed = DateTime.TryParse(data, out var parsedDate);
-        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
-        if (!isParsed)
-        {
-            await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "InvalidDaySelected"), 
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var nextMonth = parsedDate.AddMonths(1);
-
-        await ShowCalendar(
-            chatId: chatId,
-            selectedDate: nextMonth,
-            cancellationToken: cancellationToken);
-    }
+    public Task ShowNextMonth(long chatId, string data, CancellationToken cancellationToken) =>
+        ShowRelativeMonth(1, chatId, data, cancellationToken);
 
     public async Task ShowCurrentMonth(long chatId, string data, CancellationToken cancellationToken)
     {
@@ -109,30 +73,51 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             cancellationToken: cancellationToken);
     }
 
+    public async Task ShowRelativeMonth(int offsetInMonths, long chatId, string data, CancellationToken cancellationToken)
+    {
+        var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
+        
+        if (!DateTime.TryParse(data, out var parsedDate))
+        {
+            await _botClient.SendMessage(
+                chatId: chatId,
+                text: _translationService.Get(language, "InvalidDaySelected"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var targetMonth = parsedDate.AddMonths(offsetInMonths);
+
+        await ShowCalendar(
+            chatId: chatId,
+            selectedDate: targetMonth,
+            cancellationToken: cancellationToken);
+    }
+
     public async Task ShowCalendar(long chatId, DateTime selectedDate, CancellationToken cancellationToken)
     {
         var currentDate = DateTime.UtcNow.Date;
         var currentMonthStart = new DateTime(currentDate.Year, currentDate.Month, 1);
         var nextMonthStart = currentMonthStart.AddMonths(1);
-        var nextMonthEnd = nextMonthStart.AddMonths(1).AddDays(-1);
+        var nextMonthEnd = nextMonthStart.AddMonths(1).AddTicks(-1);
 
-        // Restrict booking window
         if (selectedDate < currentMonthStart || selectedDate > nextMonthEnd)
         {
             await _botClient.SendMessage(
-                chatId: chatId,
-                text: "⚠️ You can only book for this and next month.",
+                chatId,
+                "⚠️ You can only book for this and next month.",
                 cancellationToken: cancellationToken);
             return;
         }
 
         var state = _userStateService.GetConversation(chatId);
         var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
+
         if (!state.StartsWith("WaitingForDate_"))
         {
             await _botClient.SendMessage(
-                chatId: chatId, 
-                text: _translationService.Get(language, "NoServiceSelected"), 
+                chatId,
+                _translationService.Get(language, "NoServiceSelected"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -144,84 +129,65 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
                     .ThenInclude(wh => wh.Breaks)
             .FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
 
-        if (service == null || service.Employee == null)
+        if (service?.Employee == null)
         {
             await _botClient.SendMessage(
-                chatId: chatId, 
-                text: "❌ Service or employee not found.", 
+                chatId,
+                _translationService.Get(language, "EmployeeNotFound"),
                 cancellationToken: cancellationToken);
             return;
         }
 
-        var daysInMonth = DateTime.DaysInMonth(selectedDate.Year, selectedDate.Month);
-        var firstDayOfMonth = new DateTime(selectedDate.Year, selectedDate.Month, 1);
+        var firstDayOfMonth = new DateTime(selectedDate.Year, selectedDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var daysInMonth = DateTime.DaysInMonth(firstDayOfMonth.Year, firstDayOfMonth.Month);
         var startIndex = ((int)firstDayOfMonth.DayOfWeek + 6) % 7;
 
-        var monthStart = DateTime.SpecifyKind(firstDayOfMonth, DateTimeKind.Utc);
-        var monthEnd = DateTime.SpecifyKind(firstDayOfMonth.AddMonths(1).AddDays(-1), DateTimeKind.Utc);
+        var monthEnd = firstDayOfMonth.AddMonths(1).AddTicks(-1);
 
         var bookedTimes = await _dbContext.Bookings
-            .Where(b => b.ServiceId == serviceId && b.BookingTime >= monthStart && b.BookingTime <= monthEnd)
+            .Where(b => b.ServiceId == serviceId &&
+                        b.BookingTime >= firstDayOfMonth &&
+                        b.BookingTime <= monthEnd)
             .Select(b => b.BookingTime)
             .ToListAsync(cancellationToken);
 
-        List<List<InlineKeyboardButton>> calendarButtons = new();
-
-        calendarButtons.Add(new List<InlineKeyboardButton>
+        var calendarButtons = new List<List<InlineKeyboardButton>>
         {
-            InlineKeyboardButton.WithCallbackData("Mo", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Tu", "ignore"),
-            InlineKeyboardButton.WithCallbackData("We", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Th", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Fr", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Sa", "ignore"),
-            InlineKeyboardButton.WithCallbackData("Su", "ignore"),
-        });
+            new() // Weekday headers
+            {
+                InlineKeyboardButton.WithCallbackData("Mo", "ignore"),
+                InlineKeyboardButton.WithCallbackData("Tu", "ignore"),
+                InlineKeyboardButton.WithCallbackData("We", "ignore"),
+                InlineKeyboardButton.WithCallbackData("Th", "ignore"),
+                InlineKeyboardButton.WithCallbackData("Fr", "ignore"),
+                InlineKeyboardButton.WithCallbackData("Sa", "ignore"),
+                InlineKeyboardButton.WithCallbackData("Su", "ignore"),
+            }
+        };
 
-        List<InlineKeyboardButton> weekRow = new();
+        var serviceDuration = service.Duration;
+        var weekRow = new List<InlineKeyboardButton>();
 
         for (int i = 0; i < startIndex; i++)
             weekRow.Add(InlineKeyboardButton.WithCallbackData(" ", "ignore"));
 
         for (int day = 1; day <= daysInMonth; day++)
         {
-            var date = DateTime.SpecifyKind(new DateTime(selectedDate.Year, selectedDate.Month, day), DateTimeKind.Utc);
-            var isToday = date.Date == currentDate;
+            var date = new DateTime(selectedDate.Year, selectedDate.Month, day, 0, 0, 0, DateTimeKind.Utc);
+            var isToday = date == currentDate;
             var workingHours = service.Employee.WorkingHours.FirstOrDefault(wh => wh.DayOfWeek == date.DayOfWeek);
 
             string label = day.ToString();
             string callbackData = "ignore";
 
-            if (workingHours != null && date.Date >= currentDate && date <= nextMonthEnd)
+            if (workingHours != null && date >= currentDate && date <= nextMonthEnd)
             {
-                var dayBookings = bookedTimes.Where(b => b.Date == date.Date).Select(b => b.TimeOfDay).ToList();
-                var currentTime = workingHours.StartTime;
-                bool hasAvailableSlot = false;
+                var dayBookings = bookedTimes
+                    .Where(b => b.Date == date)
+                    .Select(b => b.TimeOfDay)
+                    .ToList();
 
-                while (currentTime < workingHours.EndTime)
-                {
-                    var slotEnd = currentTime.Add(service.Duration);
-
-                    if (slotEnd > workingHours.EndTime)
-                        break;
-
-                    bool isDuringBreak = workingHours.Breaks.Any(b =>
-                        (currentTime >= b.StartTime && currentTime < b.EndTime) ||
-                        (slotEnd > b.StartTime && slotEnd <= b.EndTime) ||
-                        (currentTime <= b.StartTime && slotEnd >= b.EndTime));
-
-                    bool isBooked = dayBookings.Any(bookedTime =>
-                        (currentTime <= bookedTime && bookedTime < slotEnd) ||
-                        (bookedTime <= currentTime && currentTime < bookedTime.Add(service.Duration)));
-
-                    if (!isDuringBreak && !isBooked)
-                    {
-                        hasAvailableSlot = true;
-                        break;
-                    }
-
-                    currentTime = currentTime.Add(service.Duration);
-                }
+                bool hasAvailableSlot = HasAvailableSlot(workingHours, dayBookings, serviceDuration);
 
                 if (hasAvailableSlot)
                 {
@@ -229,12 +195,12 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
                 }
                 else
                 {
-                    label += "⚫";
+                    label += "⚫"; // Fully booked
                 }
             }
             else
             {
-                label += workingHours == null ? "🚫" : "⚫";
+                label += workingHours == null ? "🚫" : "⚫"; // Not working or no slots
             }
 
             if (isToday)
@@ -270,11 +236,34 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         var keyboard = new InlineKeyboardMarkup(calendarButtons);
 
         await _botClient.SendMessage(
-            chatId: chatId, 
-            text: _translationService.Get(language, "BookingSelectDateHeader", selectedDate),
+            chatId,
+            _translationService.Get(language, "BookingSelectDateHeader", selectedDate),
             replyMarkup: keyboard,
             parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
+    }
+
+    private bool HasAvailableSlot(WorkingHours workingHours, List<TimeSpan> dayBookings, TimeSpan serviceDuration)
+    {
+        var currentTime = workingHours.StartTime;
+
+        while (currentTime + serviceDuration <= workingHours.EndTime)
+        {
+            var slotEnd = currentTime + serviceDuration;
+
+            bool duringBreak = workingHours.Breaks.Any(b =>
+                currentTime < b.EndTime && slotEnd > b.StartTime);
+
+            bool overlapsBooking = dayBookings.Any(booked =>
+                booked < slotEnd && booked + serviceDuration > currentTime);
+
+            if (!duringBreak && !overlapsBooking)
+                return true;
+
+            currentTime += serviceDuration;
+        }
+
+        return false;
     }
 
     private async Task HandleIgnoreAsync(long chatId, string data, CancellationToken cancellationToken)
@@ -297,7 +286,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             cancellationToken: cancellationToken);
     }
 
-   private async Task HandleDateSelectionAsync(long chatId, string data, CancellationToken cancellationToken)
+    private async Task HandleDateSelectionAsync(long chatId, string data, CancellationToken cancellationToken)
     {
         var state = _userStateService.GetConversation(chatId);
         var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
@@ -305,15 +294,14 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         if (string.IsNullOrEmpty(state))
         {
             await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "NoServiceSelected"), 
+                chatId,
+                _translationService.Get(language, "NoServiceSelected"),
                 cancellationToken: cancellationToken);
             return;
         }
 
         var serviceId = int.Parse(state.Split('_')[1]);
 
-        // Load service, employee, working hours
         var service = await _dbContext.Services
             .Include(s => s.Employee)
                 .ThenInclude(e => e.WorkingHours)
@@ -324,8 +312,8 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         if (service?.Employee == null || service.Employee.Company == null)
         {
             await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "NoServiceFound"), 
+                chatId,
+                _translationService.Get(language, "NoServiceFound"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -333,41 +321,33 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         if (!DateTime.TryParse(data, out var userSelectedDate))
         {
             await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "InvalidDaySelected"), 
+                chatId,
+                _translationService.Get(language, "InvalidDaySelected"),
                 cancellationToken: cancellationToken);
             return;
         }
 
-        // Find working hours for selected day
         var dayOfWeek = userSelectedDate.DayOfWeek;
-        var workingHours = service.Employee.WorkingHours
-            .FirstOrDefault(wh => wh.DayOfWeek == dayOfWeek);
+        var workingHours = service.Employee.WorkingHours.FirstOrDefault(wh => wh.DayOfWeek == dayOfWeek);
 
         if (workingHours == null)
         {
             await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "NotWorkingOnDay"),
+                chatId,
+                _translationService.Get(language, "NotWorkingOnDay"),
                 cancellationToken: cancellationToken);
             return;
         }
 
-        // Get timezone for that day's working hours
         var timezoneId = workingHours.Timezone ?? "Europe/Lisbon";
         var companyTimezone = TimeZoneInfo.FindSystemTimeZoneById(timezoneId);
 
-        // Treat selected date as local in company timezone
         var localSelectedDate = DateTime.SpecifyKind(userSelectedDate.Date, DateTimeKind.Unspecified);
-
-        // Save state with date and timezone
         _userStateService.SetConversation(chatId, $"WaitingForTime_{serviceId}_{localSelectedDate:yyyy-MM-dd}_{timezoneId}");
 
-        // Convert selected local day to UTC range
         var dayStartUtc = TimeZoneInfo.ConvertTimeToUtc(localSelectedDate, companyTimezone);
         var dayEndUtc = TimeZoneInfo.ConvertTimeToUtc(localSelectedDate.AddDays(1), companyTimezone);
 
-        // Find existing bookings in UTC
         var bookedTimes = await _dbContext.Bookings
             .Where(b => b.ServiceId == serviceId &&
                         b.BookingTime >= dayStartUtc &&
@@ -375,10 +355,9 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             .Select(b => b.BookingTime)
             .ToListAsync(cancellationToken);
 
-        // Generate time slots
         var timeSlots = new List<InlineKeyboardButton[]>();
         var currentTime = workingHours.StartTime;
-        var currentHourGroup = new List<InlineKeyboardButton>();
+        var currentRow = new List<InlineKeyboardButton>();
 
         while (currentTime < workingHours.EndTime)
         {
@@ -398,21 +377,21 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
                 var bookingTimeUtc = TimeZoneInfo.ConvertTimeToUtc(bookingTimeLocal, companyTimezone);
 
                 var isBooked = bookedTimes.Any(booked =>
-                    (bookingTimeUtc <= booked && booked < bookingTimeUtc + service.Duration) ||
-                    (booked <= bookingTimeUtc && bookingTimeUtc < booked + service.Duration));
+                    bookingTimeUtc < booked + service.Duration &&
+                    bookingTimeUtc + service.Duration > booked);
 
                 var isPastTime = bookingTimeUtc <= DateTime.UtcNow;
 
                 if (!isBooked && !isPastTime)
                 {
-                    currentHourGroup.Add(InlineKeyboardButton.WithCallbackData(
+                    currentRow.Add(InlineKeyboardButton.WithCallbackData(
                         currentTime.ToString(@"hh\:mm"),
-                        $"choose_time:{currentTime}"));
+                        $"choose_time:{(int)currentTime.TotalMinutes}"));
 
-                    if (currentHourGroup.Count == 4 || currentTime + TimeSpan.FromMinutes(30) >= workingHours.EndTime)
+                    if (currentRow.Count == 4)
                     {
-                        timeSlots.Add(currentHourGroup.ToArray());
-                        currentHourGroup = new List<InlineKeyboardButton>();
+                        timeSlots.Add(currentRow.ToArray());
+                        currentRow = new List<InlineKeyboardButton>();
                     }
                 }
             }
@@ -420,17 +399,17 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             currentTime += TimeSpan.FromMinutes(30);
         }
 
-        if (currentHourGroup.Any())
+        if (currentRow.Any())
         {
-            timeSlots.Add(currentHourGroup.ToArray());
+            timeSlots.Add(currentRow.ToArray());
         }
 
         if (!timeSlots.Any())
         {
             _userStateService.SetConversation(chatId, $"WaitingForDate_{serviceId}");
             await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "NoAvailableTimes"),  
+                chatId,
+                _translationService.Get(language, "NoAvailableTimes"),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -441,8 +420,8 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         });
 
         await _botClient.SendMessage(
-            chatId: chatId,
-            text: _translationService.Get(language, "SelectTime", timezoneId), 
+            chatId,
+            _translationService.Get(language, "SelectTime", timezoneId),
             replyMarkup: new InlineKeyboardMarkup(timeSlots),
             cancellationToken: cancellationToken);
     }
@@ -469,21 +448,29 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         if (service == null)
         {
             await _botClient.SendMessage(
-                chatId: chatId,
-                text: _translationService.Get(language, "NoServiceFound"),
+                chatId,
+                _translationService.Get(language, "NoServiceFound"),
                 cancellationToken: cancellationToken);
             return;
         }
 
         var companyTimezone = TimeZoneInfo.FindSystemTimeZoneById(timezoneId);
 
-        TimeSpan selectedTime = TimeSpan.Parse(time);
+        if (!double.TryParse(time, out var totalMinutes))
+        {
+            await _botClient.SendMessage(
+                chatId,
+                _translationService.Get(language, "InvalidTimeFormat"),
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var selectedTime = TimeSpan.FromMinutes(totalMinutes);
 
         var localBookingTime = DateTime.SpecifyKind(selectedLocalDate.Date.Add(selectedTime), DateTimeKind.Unspecified);
         var bookingTimeUtc = TimeZoneInfo.ConvertTimeToUtc(localBookingTime, companyTimezone);
 
         var client = await _dbContext.Clients.FirstOrDefaultAsync(c => c.ChatId == chatId);
-
         if (client == null)
         {
             client = new Models.Client { ChatId = chatId, Name = "Test" };
@@ -508,8 +495,8 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
 
         _userStateService.RemoveConversation(chatId);
 
-        // Send confirmation to Client
-        var clientTimezoneId = client.TimeZoneId ?? "Europe/Lisbon"; // safe fallback
+        // --- Client Confirmation ---
+        var clientTimezoneId = client.TimeZoneId ?? "Europe/Lisbon";
         var clientTimezone = TimeZoneInfo.FindSystemTimeZoneById(clientTimezoneId);
         var localClientTime = TimeZoneInfo.ConvertTimeFromUtc(bookingTimeUtc, clientTimezone);
 
@@ -517,15 +504,14 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             chatId: chatId,
             parseMode: ParseMode.MarkdownV2,
             text: _translationService.Get(language, "BookingPendingConfirmation",
-                service.Name,
-                service.Employee.Name,
+                EscapeMarkdown(service.Name),
+                EscapeMarkdown(service.Employee.Name),
                 localClientTime.ToString("dddd, MMMM d, yyyy"),
-                clientTimezoneId,
+                EscapeMarkdown(clientTimezoneId),
                 localClientTime.ToString("HH:mm")),
-             
             cancellationToken: cancellationToken);
 
-        // Send notification to Company Owner
+        // --- Company Notification ---
         var companyOwnerChatId = service.Employee.Company.Token.ChatId;
         if (companyOwnerChatId.HasValue)
         {
@@ -536,25 +522,35 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             {
                 new[]
                 {
-                    InlineKeyboardButton.WithCallbackData(_translationService.Get(companyOwnerLanguage, "Confirm"), $"{CallbackResponses.ConfirmBooking}:{booking.Id}"),
-                    InlineKeyboardButton.WithCallbackData(_translationService.Get(companyOwnerLanguage, "Reject"), $"{CallbackResponses.RejectBooking}:{booking.Id}")
+                    InlineKeyboardButton.WithCallbackData(
+                        _translationService.Get(companyOwnerLanguage, "Confirm"),
+                        $"{CallbackResponses.ConfirmBooking}:{booking.Id}"),
+                    InlineKeyboardButton.WithCallbackData(
+                        _translationService.Get(companyOwnerLanguage, "Reject"),
+                        $"{CallbackResponses.RejectBooking}:{booking.Id}")
                 }
             });
 
             var contactInfo = string.IsNullOrEmpty(client.PhoneNumber)
-                ? client.Username : client.PhoneNumber;
+                ? "@" + client.Username
+                : client.PhoneNumber;
+
+            var contactDisplay = EscapeMarkdown(client.Name) + " \\(" + EscapeMarkdown(contactInfo) + "\\)";
 
             await _botClient.SendMessage(
                 chatId: companyOwnerChatId.Value,
                 text: _translationService.Get(companyOwnerLanguage, "NewBookingNotification",
-                    service.Name,
-                    client.Name + " \\(@" + contactInfo +"\\)",
+                    EscapeMarkdown(service.Name),
+                    contactDisplay,
                     localCompanyTime.ToString("dddd, MMMM d, yyyy"),
                     localCompanyTime.ToString("HH:mm"),
-                    timezoneId),
+                    EscapeMarkdown(timezoneId)),
                 replyMarkup: keyboard,
                 parseMode: ParseMode.MarkdownV2,
                 cancellationToken: cancellationToken);
         }
     }
+
+    private string EscapeMarkdown(string text) =>
+        Regex.Replace(text ?? "", @"([_*\[\]()~`>#+=|{}.!\\-])", @"\\$1");
 }

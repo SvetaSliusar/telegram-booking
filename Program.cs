@@ -174,6 +174,7 @@ builder.Services.AddScoped<ICallbackCommandFactory>(serviceProvider =>
         "remove_break",
         "select_day_for_breaks",
         "remove_break_confirmation",
+        "back_to_days",
         "back_to_breaks"
     );
     factory.RegisterCommand<GenerateClientLinkHandler>(

@@ -86,15 +86,11 @@ public class BotController : ControllerBase
 
             return Ok();
         }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogWarning(ex, "Request was cancelled");
-            return StatusCode(499);
-        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing update");
-            return StatusCode(500, "Internal server error");
+
+            return Ok();
         }
     }
 }
