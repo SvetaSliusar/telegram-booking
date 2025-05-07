@@ -504,10 +504,10 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             chatId: chatId,
             parseMode: ParseMode.MarkdownV2,
             text: _translationService.Get(language, "BookingPendingConfirmation",
-                EscapeMarkdown(service.Name),
-                EscapeMarkdown(service.Employee.Name),
+                EscapeMarkdownV2(service.Name),
+                EscapeMarkdownV2(service.Employee.Name),
                 localClientTime.ToString("dddd, MMMM d, yyyy"),
-                EscapeMarkdown(clientTimezoneId),
+                EscapeMarkdownV2(clientTimezoneId),
                 localClientTime.ToString("HH:mm")),
             cancellationToken: cancellationToken);
 
@@ -532,25 +532,35 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             });
 
             var contactInfo = string.IsNullOrEmpty(client.PhoneNumber)
-                ? "@" + client.Username
+                ? client.Username
                 : client.PhoneNumber;
 
-            var contactDisplay = EscapeMarkdown(client.Name) + " \\(" + EscapeMarkdown(contactInfo) + "\\)";
+            var contactDisplay = client.Name + " (@"+contactInfo+")";
 
             await _botClient.SendMessage(
                 chatId: companyOwnerChatId.Value,
                 text: _translationService.Get(companyOwnerLanguage, "NewBookingNotification",
-                    EscapeMarkdown(service.Name),
+                    service.Name,
                     contactDisplay,
                     localCompanyTime.ToString("dddd, MMMM d, yyyy"),
                     localCompanyTime.ToString("HH:mm"),
-                    EscapeMarkdown(timezoneId)),
+                    timezoneId),
                 replyMarkup: keyboard,
-                parseMode: ParseMode.MarkdownV2,
+                parseMode: ParseMode.Html,
                 cancellationToken: cancellationToken);
         }
     }
 
-    private string EscapeMarkdown(string text) =>
-        Regex.Replace(text ?? "", @"([_*\[\]()~`>#+=|{}.!\\-])", @"\\$1");
+    private static string EscapeMarkdownV2(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+
+        var result = Regex.Replace(
+            text,
+            @"(?<!\\)([_*\[\]()~`>#+=|{}.!-])",
+            @"$1"
+        );
+        return result;
+    }
+
 }

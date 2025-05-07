@@ -84,7 +84,7 @@
     "NoServicesAvailable": "⚠️ No services available for {0}.",
     "CompanyServices": "📋 Services offered by {0}:",
     "LanguageSet": "🌎 Language set to: {0}",
-    "NewBookingNotification": "📅 New Booking\\!\n\nService: {0}\nClient: {1}\nDate: {2}\nTime: {3}",
+    "NewBookingNotification": "📅 New Booking!\n\nService: {0}\nClient: {1}\nDate: {2}\nTime: {3}",
     "BookingConfirmation": "✅ Your booking for {0} with {1} on {2} at {3} has been confirmed!",
     "ViewDailyBookings": "📅 View Daily Bookings",
     "SelectDateForBookings": "Select a date to view bookings:",
