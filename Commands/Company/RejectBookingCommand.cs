@@ -4,6 +4,7 @@ using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types.Enums;
+using System.Globalization;
 
 namespace Telegram.Bot.Commands.Company
 {
@@ -29,16 +30,14 @@ namespace Telegram.Bot.Commands.Company
         public async Task ExecuteAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(callbackQuery.Data)) return;
+
             var data = callbackQuery.Data.Split(':');
-            if (data.Length < 2) return;
+            if (data.Length < 2 || !int.TryParse(data[1], out int bookingId)) return;
 
-            var bookingId = int.Parse(data[1]);
-            var language = await _userStateService.GetLanguageAsync(callbackQuery.From.Id, cancellationToken);
+            if (callbackQuery.Message == null) return;
 
-            if (callbackQuery.Message == null)
-            {
-                return;
-            }
+            var chatId = callbackQuery.Message.Chat.Id;
+            var language = await _userStateService.GetLanguageAsync(chatId, cancellationToken);
 
             var booking = await _dbContext.Bookings
                 .Include(b => b.Service)
@@ -50,7 +49,7 @@ namespace Telegram.Bot.Commands.Company
             if (booking == null)
             {
                 await _botClient.SendMessage(
-                    chatId: callbackQuery.Message.Chat.Id,  
+                    chatId: chatId,
                     text: _translationService.Get(language, "BookingNotFound"),
                     cancellationToken: cancellationToken);
                 return;
@@ -61,7 +60,7 @@ namespace Telegram.Bot.Commands.Company
 
             // Notify company
             await _botClient.SendMessage(
-                chatId: callbackQuery.Message.Chat.Id,
+                chatId: chatId,
                 text: _translationService.Get(language, "BookingRejected"),
                 cancellationToken: cancellationToken);
 
@@ -69,15 +68,23 @@ namespace Telegram.Bot.Commands.Company
             var clientTimeZone = TimeZoneInfo.FindSystemTimeZoneById(booking.Client.TimeZoneId);
             var localBookingTime = TimeZoneInfo.ConvertTimeFromUtc(booking.BookingTime, clientTimeZone);
 
+            string date = localBookingTime.ToString("dddd, MMMM d, yyyy", CultureInfo.InvariantCulture);
+            string time = localBookingTime.ToString("HH:mm", CultureInfo.InvariantCulture);
+
+            string message = _translationService.Get(language, "BookingRejectedByCompany",
+                HtmlEncode(booking.Service.Name),
+                HtmlEncode(booking.Service.Employee.Name),
+                HtmlEncode(date),
+                HtmlEncode(time));
+
             await _botClient.SendMessage(
                 chatId: booking.Client.ChatId,
-                text: _translationService.Get(language, "BookingRejectedByCompany",
-                    booking.Service.Name,
-                    booking.Service.Employee.Name,
-                    localBookingTime.ToString("dddd, MMMM d, yyyy"),
-                    localBookingTime.ToString("hh:mm")), 
-                parseMode: ParseMode.MarkdownV2,
+                text: message,
+                parseMode: ParseMode.Html,
                 cancellationToken: cancellationToken);
         }
+        private static string HtmlEncode(string input) =>
+            System.Net.WebUtility.HtmlEncode(input);
+
     }
 } 
