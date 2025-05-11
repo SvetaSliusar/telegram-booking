@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Types;
 using Telegram.Bot.Models;
-using Telegram.Bot.Services.Constants;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types.Enums;
+using static Telegram.Bot.Commands.Helpers.HtmlHelper;
 
 namespace Telegram.Bot.Commands.Company
 {
@@ -72,13 +72,14 @@ namespace Telegram.Bot.Commands.Company
             await _botClient.SendMessage(
                 chatId: booking.Client.ChatId,
                 text: _translationService.Get(clientLanguage, "BookingConfirmedByCompany",
-                    booking.Service.Name,
-                    booking.Service.Employee.Name,
-                    localBookingTime.ToString("dddd, MMMM d, yyyy"),
-                    clientTimeZoneId,
-                    localBookingTime.ToString("HH:mm")),
-                    parseMode: ParseMode.MarkdownV2,
-                    cancellationToken: cancellationToken);
+                    HtmlEncode(booking.Service.Name),
+                    HtmlEncode(booking.Service.Employee.Name),
+                    HtmlEncode(localBookingTime.ToString("dddd, MMMM d, yyyy")),
+                    HtmlEncode(clientTimeZoneId),
+                    HtmlEncode(localBookingTime.ToString("HH:mm"))),
+                parseMode: ParseMode.Html,
+                cancellationToken: cancellationToken);
+
 
             if (booking.Company.Latitude.HasValue && booking.Company.Longitude.HasValue)
             {
@@ -89,6 +90,5 @@ namespace Telegram.Bot.Commands.Company
                     cancellationToken: cancellationToken);
             }
         }
-
     }
 }

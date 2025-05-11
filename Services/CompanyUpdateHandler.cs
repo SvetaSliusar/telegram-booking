@@ -8,6 +8,7 @@ using System.Text;
 using Telegram.Bot.Commands;
 using System.Globalization;
 using Telegram.Bot.Enums;
+using static Telegram.Bot.Commands.Helpers.HtmlHelper;
 
 namespace Telegram.Bot.Services;
 
@@ -236,13 +237,13 @@ public class CompanyUpdateHandler
 
         // Get all bookings for this company in the current month
         var monthStart = DateTime.SpecifyKind(new DateTime(selectedDate.Year, selectedDate.Month, 1), DateTimeKind.Utc);
-        var monthEnd = DateTime.SpecifyKind(monthStart.AddMonths(1).AddDays(-1), DateTimeKind.Utc);
+        var monthEnd = DateTime.SpecifyKind(monthStart.AddMonths(1).AddTicks(-1), DateTimeKind.Utc);
         
         var bookedDates = _dbContext.Bookings != null
             ? await _dbContext.Bookings
                 .Where(b => b.CompanyId == company.Id && 
                             b.BookingTime >= monthStart && 
-                            b.BookingTime <= monthEnd)
+                            b.BookingTime <= monthEnd && b.Status == BookingStatus.Confirmed)
                 .Select(b => b.BookingTime.Date)
                 .Distinct()
                 .ToListAsync(cancellationToken)
@@ -292,16 +293,19 @@ public class CompanyUpdateHandler
 
         var keyboard = new InlineKeyboardMarkup(calendarButtons);
 
-        var messageText = _translationService.Get(language, "SelectDateForBookings") + "\n" +
-                         $"{selectedDate:MMMM yyyy}\n" +
-                         (isPastMonth ? "⚠️ Past month\n" : "") +
-                         (isFutureMonth ? "⚠️ Future month\n" : "") +
-                         "📅 Dates with bookings\n" +
-                         "⚫ Past dates";
+        var monthLabel = selectedDate.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+        var warningPast = isPastMonth ? "⚠️ <i>Past month</i>\n" : "";
+        var warningFuture = isFutureMonth ? "⚠️ <i>Future month</i>\n" : "";
+
+        string messageText = _translationService.Get(language, "SelectDate",
+            HtmlEncode(monthLabel),
+            warningPast,
+            warningFuture);
 
         await _botClient.SendMessage(
             chatId: chatId,
             text: messageText,
+            parseMode: ParseMode.Html,
             replyMarkup: keyboard,
             cancellationToken: cancellationToken);
     }
@@ -330,7 +334,7 @@ public class CompanyUpdateHandler
             .Include(b => b.Client)
             .Where(b => b.CompanyId == company.Id && 
                         b.BookingTime >= dayStart && 
-                        b.BookingTime < dayEnd)
+                        b.BookingTime < dayEnd && b.Status == BookingStatus.Confirmed)
             .OrderBy(b => b.BookingTime)
             .ToListAsync(cancellationToken);
 
@@ -590,5 +594,4 @@ public class CompanyUpdateHandler
             replyMarkup: new InlineKeyboardMarkup(buttons),
             cancellationToken: cancellationToken);
     }
-
 }

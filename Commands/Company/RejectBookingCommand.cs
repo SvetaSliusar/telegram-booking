@@ -5,6 +5,7 @@ using Telegram.Bot.Models;
 using Telegram.Bot.Services;
 using Telegram.Bot.Types.Enums;
 using System.Globalization;
+using static Telegram.Bot.Commands.Helpers.HtmlHelper;
 
 namespace Telegram.Bot.Commands.Company
 {
@@ -83,8 +84,5 @@ namespace Telegram.Bot.Commands.Company
                 parseMode: ParseMode.Html,
                 cancellationToken: cancellationToken);
         }
-        private static string HtmlEncode(string input) =>
-            System.Net.WebUtility.HtmlEncode(input);
-
     }
 } 

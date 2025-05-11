@@ -8,6 +8,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using static Telegram.Bot.Commands.Helpers.BreakCommandParser;
+using static Telegram.Bot.Commands.Helpers.HtmlHelper;
 
 namespace Telegram.Bot.Commands.Client;
 
@@ -138,22 +139,24 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             return;
         }
 
+        var employeeId = service.EmployeeId;
         var firstDayOfMonth = new DateTime(selectedDate.Year, selectedDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var daysInMonth = DateTime.DaysInMonth(firstDayOfMonth.Year, firstDayOfMonth.Month);
         var startIndex = ((int)firstDayOfMonth.DayOfWeek + 6) % 7;
-
         var monthEnd = firstDayOfMonth.AddMonths(1).AddTicks(-1);
 
         var bookedTimes = await _dbContext.Bookings
-            .Where(b => b.ServiceId == serviceId &&
-                        b.BookingTime >= firstDayOfMonth &&
-                        b.BookingTime <= monthEnd)
+            .Where(b =>
+                (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending) &&
+                b.Service.EmployeeId == employeeId &&
+                b.BookingTime >= firstDayOfMonth &&
+                b.BookingTime <= monthEnd)
             .Select(b => b.BookingTime)
             .ToListAsync(cancellationToken);
 
         var calendarButtons = new List<List<InlineKeyboardButton>>
         {
-            new() // Weekday headers
+            new()
             {
                 InlineKeyboardButton.WithCallbackData("Mo", "ignore"),
                 InlineKeyboardButton.WithCallbackData("Tu", "ignore"),
@@ -174,7 +177,7 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         for (int day = 1; day <= daysInMonth; day++)
         {
             var date = new DateTime(selectedDate.Year, selectedDate.Month, day, 0, 0, 0, DateTimeKind.Utc);
-            var isToday = date == currentDate;
+            var isToday = date.Date == currentDate;
             var workingHours = service.Employee.WorkingHours.FirstOrDefault(wh => wh.DayOfWeek == date.DayOfWeek);
 
             string label = day.ToString();
@@ -182,12 +185,37 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
 
             if (workingHours != null && date >= currentDate && date <= nextMonthEnd)
             {
-                var dayBookings = bookedTimes
-                    .Where(b => b.Date == date)
-                    .Select(b => b.TimeOfDay)
-                    .ToList();
+                bool hasAvailableSlot = false;
+                var currentTime = workingHours.StartTime;
 
-                bool hasAvailableSlot = HasAvailableSlot(workingHours, dayBookings, serviceDuration);
+                while (currentTime + serviceDuration <= workingHours.EndTime)
+                {
+                    var slotEnd = currentTime + serviceDuration;
+
+                    bool duringBreak = workingHours.Breaks.Any(b =>
+                        (currentTime >= b.StartTime && currentTime < b.EndTime) ||
+                        (slotEnd > b.StartTime && slotEnd <= b.EndTime) ||
+                        (currentTime <= b.StartTime && slotEnd >= b.EndTime));
+
+                    if (!duringBreak)
+                    {
+                        var slotUtc = date.Add(currentTime);
+
+                        bool isBooked = bookedTimes.Any(booked =>
+                            slotUtc < booked + serviceDuration &&
+                            slotUtc + serviceDuration > booked);
+
+                        bool isPastTime = slotUtc <= DateTime.UtcNow;
+
+                        if (!isBooked && !isPastTime)
+                        {
+                            hasAvailableSlot = true;
+                            break;
+                        }
+                    }
+
+                    currentTime += TimeSpan.FromMinutes(30);
+                }
 
                 if (hasAvailableSlot)
                 {
@@ -195,12 +223,12 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
                 }
                 else
                 {
-                    label += "⚫"; // Fully booked
+                    label += "⚫";
                 }
             }
             else
             {
-                label += workingHours == null ? "🚫" : "⚫"; // Not working or no slots
+                label += workingHours == null ? "🚫" : "⚫";
             }
 
             if (isToday)
@@ -218,10 +246,6 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         if (weekRow.Any())
             calendarButtons.Add(weekRow);
 
-        var prevButton = selectedDate <= currentMonthStart
-            ? InlineKeyboardButton.WithCallbackData("⬅️", "ignore")
-            : InlineKeyboardButton.WithCallbackData("⬅️", $"choose_prev_month:{selectedDate:yyyy-MM-dd}");
-
         var nextButton = selectedDate >= nextMonthStart
             ? InlineKeyboardButton.WithCallbackData("➡️", "ignore")
             : InlineKeyboardButton.WithCallbackData("➡️", $"choose_next_month:{selectedDate:yyyy-MM-dd}");
@@ -229,7 +253,6 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         calendarButtons.Add(new List<InlineKeyboardButton>
         {
             InlineKeyboardButton.WithCallbackData(_translationService.Get(language, "ThisMonth"), $"choose_this_month:{currentDate:yyyy-MM-dd}"),
-            prevButton,
             nextButton
         });
 
@@ -241,29 +264,6 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
             replyMarkup: keyboard,
             parseMode: ParseMode.MarkdownV2,
             cancellationToken: cancellationToken);
-    }
-
-    private bool HasAvailableSlot(WorkingHours workingHours, List<TimeSpan> dayBookings, TimeSpan serviceDuration)
-    {
-        var currentTime = workingHours.StartTime;
-
-        while (currentTime + serviceDuration <= workingHours.EndTime)
-        {
-            var slotEnd = currentTime + serviceDuration;
-
-            bool duringBreak = workingHours.Breaks.Any(b =>
-                currentTime < b.EndTime && slotEnd > b.StartTime);
-
-            bool overlapsBooking = dayBookings.Any(booked =>
-                booked < slotEnd && booked + serviceDuration > currentTime);
-
-            if (!duringBreak && !overlapsBooking)
-                return true;
-
-            currentTime += serviceDuration;
-        }
-
-        return false;
     }
 
     private async Task HandleIgnoreAsync(long chatId, string data, CancellationToken cancellationToken)
@@ -351,7 +351,8 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
         var bookedTimes = await _dbContext.Bookings
             .Where(b => b.ServiceId == serviceId &&
                         b.BookingTime >= dayStartUtc &&
-                        b.BookingTime < dayEndUtc)
+                        b.BookingTime < dayEndUtc
+                        && (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending))
             .Select(b => b.BookingTime)
             .ToListAsync(cancellationToken);
 
@@ -502,13 +503,13 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
 
         await _botClient.SendMessage(
             chatId: chatId,
-            parseMode: ParseMode.MarkdownV2,
+            parseMode: ParseMode.Html,
             text: _translationService.Get(language, "BookingPendingConfirmation",
-                EscapeMarkdownV2(service.Name),
-                EscapeMarkdownV2(service.Employee.Name),
-                localClientTime.ToString("dddd, MMMM d, yyyy"),
-                EscapeMarkdownV2(clientTimezoneId),
-                localClientTime.ToString("HH:mm")),
+                HtmlEncode(service.Name),
+                HtmlEncode(service.Employee.Name),
+                HtmlEncode(localClientTime.ToString("dddd, MMMM d, yyyy")),
+                HtmlEncode(clientTimezoneId),
+                HtmlEncode(localClientTime.ToString("HH:mm"))),
             cancellationToken: cancellationToken);
 
         // --- Company Notification ---
@@ -550,17 +551,4 @@ public class ChooseDateTimeCommandHandler : ICallbackCommand, ICalendarService
                 cancellationToken: cancellationToken);
         }
     }
-
-    private static string EscapeMarkdownV2(string text)
-    {
-        if (string.IsNullOrEmpty(text)) return string.Empty;
-
-        var result = Regex.Replace(
-            text,
-            @"(?<!\\)([_*\[\]()~`>#+=|{}.!-])",
-            @"$1"
-        );
-        return result;
-    }
-
 }

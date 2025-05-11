@@ -193,9 +193,9 @@
     "ContinueAsCompany": "Continue as Company",
     "ChooseYourRole": "Please choose your role:",
     "ContactInfoRequired": "Please provide your contact information to proceed:",
-    "BookingPendingConfirmation": "📩 *Booking request sent\\!*\n\n📌 *Service*: {0}\n👤 *Employee*: {1}\n📅 *Date*: {2}\n🕒 *Time* \\({3}\\): {4}\n\n⏳ Please wait — you\\'ll be notified once the company confirms your booking\\.",
-    "BookingConfirmedByCompany": "✅ *Your booking is confirmed\\!*\n\n📌 *Service*: {0}\n👤 *Employee*: {1}\n📅 *Date*: {2}\n🕒 *Time* \\({3}\\): {4}",
-    "BookingRejectedByCompany": "❌ <b>Your booking has been rejected by the company.</b><br><br>📌 <b>Service</b>: {0}<br>👤 <b>Employee</b>: {1}<br>📅 <b>Date</b>: {2}<br>🕒 <b>Time</b>: {3}",
+    "BookingPendingConfirmation": "📩 <b>Booking request sent!</b>\n\n📌 <b>Service</b>: {0}\n👤 <b>Employee</b>: {1}\n📅 <b>Date</b>: {2}\n🕒 <b>Time</b> ({3}): {4}\n\n⏳ Please wait — you'll be notified once the company confirms your booking.",
+    "BookingConfirmedByCompany": "✅ <b>Your booking is confirmed!</b>\n\n📌 <b>Service</b>: {0}\n👤 <b>Employee</b>: {1}\n📅 <b>Date</b>: {2}\n🕒 <b>Time</b> ({3}): {4}",
+    "BookingRejectedByCompany": "❌ <b>Your booking has been rejected by the company.</b>\n\n📌 <b>Service</b>: {0}\n👤 <b>Employee</b>: {1}\n📅 <b>Date</b>: {2}\n🕒 <b>Time</b>: {3}",
     "Reject": "❌ Reject",
     "NoWorkingHours": "⚠️ No working hours set. Please set up working hours first.",
     "NoServiceSelected" : "⚠️ No service selected. Please select a service to proceed.",
@@ -223,5 +223,6 @@
     "CompanyNotAvailable": "⚠️ This company is currently unavailable. Please try again later.",
     "IgnoreCommand": "Please choose a valid option, try again",
     "min": "min",
-    "hours": "h"
+    "hours": "h",
+    "SelectBooking": "<b>Select a date</b>\n{0}\n{1}{2}📅 <b>Dates with bookings</b>\n⚫ <i>Past dates</i>"
   }
